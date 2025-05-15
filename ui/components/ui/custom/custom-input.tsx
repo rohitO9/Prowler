@@ -102,7 +102,8 @@ export const CustomInput = <T extends FieldValues>({
               classNames={{
                 label:
                   "tracking-tight font-light !text-default-500 text-xs !z-0",
-                input: "text-default-500 text-small",
+                  input: "text- text-small",
+                  
               }}
               isRequired={inputIsRequired}
               label={inputLabel}
@@ -116,7 +117,12 @@ export const CustomInput = <T extends FieldValues>({
               endContent={endContent}
               isDisabled={isDisabled}
               isReadOnly={isReadOnly}
-              {...field}
+              // Forwarding react-hook-form handlers and value
+              value={field.value}
+              onChange={field.onChange}
+              onBlur={field.onBlur}
+              name={field.name}
+              ref={field.ref}
             />
           </FormControl>
           {showFormMessage && (

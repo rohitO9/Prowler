@@ -77,7 +77,7 @@
     "typescript": "^5.5.4",
     "usehooks-ts": "^3.1.0"
   },
-  "name": "prowler-next-app",
+  "name": "securestack-next-app",
   "private": true,
   "scripts": {
     "dev": "next dev",

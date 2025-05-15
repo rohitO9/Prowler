@@ -9,7 +9,6 @@ import { z } from "zod";
 
 import { authenticate, createNewUser } from "@/actions/auth";
 import { NotificationIcon, ProwlerExtended } from "@/components/icons";
-import { ThemeSwitch } from "@/components/ThemeSwitch";
 import { useToast } from "@/components/ui";
 import { CustomButton, CustomInput } from "@/components/ui/custom";
 import {
@@ -86,7 +85,7 @@ export const AuthForm = ({
 
       if (!newUser.errors) {
         toast({
-          title: "Success!",
+          title: "Success! ",
           description: "The user was registered successfully.",
         });
         form.reset();
@@ -137,22 +136,27 @@ export const AuthForm = ({
   };
 
   return (
-    <div className="relative flex h-screen w-screen">
-      {/* Auth Form */}
-      <div className="relative flex w-full items-center justify-center lg:w-full">
-        {/* Background Pattern */}
-        <div className="absolute h-full w-full bg-[radial-gradient(#6af400_1px,transparent_1px)] [background-size:16px_16px] [mask-image:radial-gradient(ellipse_50%_50%_at_50%_50%,#000_10%,transparent_80%)]"></div>
+    <div className="flex h-screen w-screen  overflow-hidden">
+      {/* Left Section */}
+      <div className="hidden w-1/2 flex-col items-center justify-center bg-[#1f497a] px-10 text-white lg:flex">
+        <img
+          src="/securestack.png" 
+          alt="SecureStack Logo"
+          className="h-auto w-32"
+        />
+        <h2 className="mt-10 text-3xl font-bold">Welcome to SecureStack!</h2>
+        <p className="mt-4 max-w-md text-center text-lg text-white/90">
+          Simplify  your  infrastructure    and  compliance  workflows  with
+          ease.
+        </p>
+      </div>
 
-        <div className="relative z-10 flex w-full max-w-sm flex-col gap-4 rounded-large border-1 border-divider bg-white/90 px-8 py-10 shadow-small dark:bg-background/85 md:max-w-md">
-          {/* Prowler Logo */}
-          <div className="absolute -top-[100px] left-1/2 z-10 flex h-fit w-fit -translate-x-1/2">
-            <ProwlerExtended width={300} />
-          </div>
-          <div className="flex items-center justify-between">
-            <p className="pb-2 text-xl font-medium">
-              {type === "sign-in" ? "Sign In" : "Sign Up"}
-            </p>
-            <ThemeSwitch aria-label="Toggle theme" />
+      {/* Right Section */}
+      <div className="relative flex w-full items-center bg-white justify-center  px-6 lg:w-1/2">
+      
+        <div className="relative   z-10 w-full max-w-sm flex-col gap-4 rounded-large border-1 border-divider  px-8 py-10 text-black md:max-w-md">
+          <div className="pb-4 text-xl font-semibold text-black">
+            {type === "sign-in" ? "Sign In" : "Sign Up"}
           </div>
 
           <Form {...form}>
@@ -190,6 +194,7 @@ export const AuthForm = ({
                 placeholder="Enter your email"
                 isInvalid={!!form.formState.errors.email}
                 showFormMessage={type !== "sign-in"}
+                
               />
 
               <CustomInput
@@ -202,16 +207,6 @@ export const AuthForm = ({
                 }
               />
 
-              {/* {type === "sign-in" && (
-                <div className="flex items-center justify-between px-1 py-2">
-                  <Checkbox name="remember" size="sm">
-                    Remember me
-                  </Checkbox>
-                  <Link className="text-default-500" href="#">
-                    Forgot password?
-                  </Link>
-                </div>
-              )} */}
               {type === "sign-up" && (
                 <>
                   <CustomInput
@@ -232,7 +227,6 @@ export const AuthForm = ({
                       isDisabled={invitationToken !== null && true}
                     />
                   )}
-
                   {process.env.NEXT_PUBLIC_IS_CLOUD_ENV === "true" && (
                     <FormField
                       control={form.control}
@@ -258,7 +252,7 @@ export const AuthForm = ({
                               &nbsp;of Prowler
                             </Checkbox>
                           </FormControl>
-                          <FormMessage className="text-system-error dark:text-system-error" />
+                          <FormMessage className="text-red-500" />
                         </>
                       )}
                     />
@@ -267,9 +261,25 @@ export const AuthForm = ({
               )}
 
               {type === "sign-in" && form.formState.errors?.email && (
-                <div className="flex flex-row items-center text-system-error">
+                <div className="flex flex-row items-center text-red-500">
                   <NotificationIcon size={16} />
-                  <p className="text-small">Invalid email or password</p>
+                  <p className="text-sm">Invalid email or password</p>
+                </div>
+              )}
+              {type === "sign-in" && (
+                <div className="flex items-center justify-between px-1 py-2">
+                  <Checkbox
+                    name="remember"
+                    size="sm"
+                    classNames={{
+                      label: "text-black font-medium", // Darker and slightly bolder
+                    }}
+                  >
+                    Remember me
+                  </Checkbox>
+                  <Link className="text-blue-500" href="#">
+                    Forgot password?
+                  </Link>
                 </div>
               )}
 
@@ -277,7 +287,7 @@ export const AuthForm = ({
                 type="submit"
                 ariaLabel={type === "sign-in" ? "Log In" : "Sign Up"}
                 ariaDisabled={isLoading}
-                className="w-full"
+                className="w-full bg-blue-500 text-white hover:bg-[#2a5a90]"
                 variant="solid"
                 color="action"
                 size="md"
@@ -298,18 +308,18 @@ export const AuthForm = ({
             <>
               <div className="flex items-center gap-4 py-2">
                 <Divider className="flex-1" />
-                <p className="shrink-0 text-tiny text-default-500">OR</p>
+                <p className="shrink-0 text-xs text-gray-500">OR</p>
                 <Divider className="flex-1" />
               </div>
               <div className="flex flex-col gap-2">
                 <Tooltip
                   content={
-                    <div className="flex-inline text-small">
+                    <div className="flex-inline text-sm">
                       Social Login with Google is not enabled.{" "}
                       <Link
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-xs font-medium text-primary"
+                        className="text-xs font-medium text-blue-600"
                       >
                         Read the docs
                       </Link>
@@ -326,7 +336,7 @@ export const AuthForm = ({
                         <Icon icon="flat-color-icons:google" width={24} />
                       }
                       variant="bordered"
-                      className="w-full"
+                      className="w-full text-black"
                       as="a"
                       href={googleAuthUrl}
                       isDisabled={!isGoogleOAuthEnabled}
@@ -337,12 +347,12 @@ export const AuthForm = ({
                 </Tooltip>
                 <Tooltip
                   content={
-                    <div className="flex-inline text-small">
+                    <div className="flex-inline text-sm">
                       Social Login with Github is not enabled.{" "}
                       <Link
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-xs font-medium text-primary"
+                        className="text-xs font-medium text-blue-600"
                       >
                         Read the docs
                       </Link>
@@ -363,7 +373,7 @@ export const AuthForm = ({
                         />
                       }
                       variant="bordered"
-                      className="w-full"
+                      className="w-full text-black"
                       as="a"
                       href={githubAuthUrl}
                       isDisabled={!isGithubOAuthEnabled}
@@ -375,15 +385,20 @@ export const AuthForm = ({
               </div>
             </>
           )}
+
           {type === "sign-in" ? (
-            <p className="text-center text-small">
+            <p className="text-center text-sm text-gray-700">
               Need to create an account?&nbsp;
-              <Link href="/sign-up">Sign Up</Link>
+              <Link href="/sign-up" className="text-blue-500">
+                Sign Up
+              </Link>
             </p>
           ) : (
-            <p className="text-center text-small">
+            <p className="text-center text-sm text-gray-700">
               Already have an account?&nbsp;
-              <Link href="/sign-in">Log In</Link>
+              <Link href="/sign-in" className="text-blue-500">
+                Log In
+              </Link>
             </p>
           )}
         </div>
