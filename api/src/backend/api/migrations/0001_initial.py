@@ -782,36 +782,9 @@ class Migration(migrations.Migration):
                 ),
                 (
                     "text_search",
-                    models.GeneratedField(
-                        db_persist=True,
-                        expression=django.contrib.postgres.search.CombinedSearchVector(
-                            django.contrib.postgres.search.CombinedSearchVector(
-                                django.contrib.postgres.search.CombinedSearchVector(
-                                    django.contrib.postgres.search.SearchVector(
-                                        "uid", config="simple", weight="A"
-                                    ),
-                                    "||",
-                                    django.contrib.postgres.search.SearchVector(
-                                        "name", config="simple", weight="B"
-                                    ),
-                                    django.contrib.postgres.search.SearchConfig(
-                                        "simple"
-                                    ),
-                                ),
-                                "||",
-                                django.contrib.postgres.search.SearchVector(
-                                    "region", config="simple", weight="C"
-                                ),
-                                django.contrib.postgres.search.SearchConfig("simple"),
-                            ),
-                            "||",
-                            django.contrib.postgres.search.SearchVector(
-                                "service", "type", config="simple", weight="D"
-                            ),
-                            django.contrib.postgres.search.SearchConfig("simple"),
-                        ),
+                    django.contrib.postgres.search.SearchVectorField(
                         null=True,
-                        output_field=django.contrib.postgres.search.SearchVectorField(),
+                        editable=False,
                     ),
                 ),
                 (
@@ -860,20 +833,9 @@ class Migration(migrations.Migration):
                 ("value", models.TextField()),
                 (
                     "text_search",
-                    models.GeneratedField(
-                        db_persist=True,
-                        expression=django.contrib.postgres.search.CombinedSearchVector(
-                            django.contrib.postgres.search.SearchVector(
-                                "key", config="simple", weight="A"
-                            ),
-                            "||",
-                            django.contrib.postgres.search.SearchVector(
-                                "value", config="simple", weight="B"
-                            ),
-                            django.contrib.postgres.search.SearchConfig("simple"),
-                        ),
+                    django.contrib.postgres.search.SearchVectorField(
                         null=True,
-                        output_field=django.contrib.postgres.search.SearchVectorField(),
+                        editable=False,
                     ),
                 ),
                 (
@@ -1117,16 +1079,9 @@ class Migration(migrations.Migration):
                 migrations.AddField(
                     model_name="finding",
                     name="text_search",
-                    field=models.GeneratedField(
-                        db_persist=True,
-                        expression=django.contrib.postgres.search.SearchVector(
-                            "impact_extended",
-                            "status_extended",
-                            config="simple",
-                            weight="A",
-                        ),
+                    field=django.contrib.postgres.search.SearchVectorField(
                         null=True,
-                        output_field=django.contrib.postgres.search.SearchVectorField(),
+                        editable=False,
                     ),
                 ),
             ],

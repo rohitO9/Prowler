@@ -4,6 +4,9 @@ from config.env import env
 DEBUG = env.bool("DJANGO_DEBUG", default=False)
 ALLOWED_HOSTS = env.list("DJANGO_ALLOWED_HOSTS", default=["localhost", "127.0.0.1"])
 
+print("DEBUG =", DEBUG)
+print("ALLOWED_HOSTS =", ALLOWED_HOSTS)
+
 # Database
 # TODO Use Django database routers https://docs.djangoproject.com/en/5.0/topics/db/multi-db/#automatic-database-routing
 DATABASES = {
