@@ -163,8 +163,8 @@ export const VerticalSteps = React.forwardRef<
     }, [color, className]);
 
     return (
-      <nav aria-label="Progress" className="max-w-fit">
-        <ol className={cn("flex flex-col gap-y-3", colors, className)}>
+      <nav aria-label="Progress" className="w-full max-w-4xl">
+        <ol className={cn("flex flex-row gap-x-6", colors, className)}>
           {steps?.map((step, stepIdx) => {
             const status =
               currentStep === stepIdx
@@ -174,8 +174,8 @@ export const VerticalSteps = React.forwardRef<
                   : "complete";
 
             return (
-              <li key={stepIdx} className="relative">
-                <div className="flex w-full max-w-full items-center">
+              <li key={stepIdx} className="relative min-w-[250px] ">
+                <div className="flex w-100  max-w-full items-center">
                   <button
                     key={stepIdx}
                     ref={ref}
@@ -190,43 +190,13 @@ export const VerticalSteps = React.forwardRef<
                     <div className="flex h-full items-center">
                       <LazyMotion features={domAnimation}>
                         <div className="relative">
-                          <m.div
-                            animate={status}
-                            className={cn(
-                              "relative flex h-[34px] w-[34px] items-center justify-center rounded-full border-medium text-large font-semibold text-default-foreground",
-                              {
-                                "shadow-lg": status === "complete",
-                              },
+                          <div className="flex items-center justify-center text-large font-semibold">
+                            {status === "complete" ? (
+                              <CheckIcon className="h-6 w-6" style={{ color: '#4F46E5' }} />
+                            ) : (
+                              <span style={status === 'active' ? { color: '#4F46E5' } : {}}>{stepIdx + 1}</span>
                             )}
-                            data-status={status}
-                            initial={false}
-                            transition={{ duration: 0.25 }}
-                            variants={{
-                              inactive: {
-                                backgroundColor: "transparent",
-                                borderColor: "var(--inactive-border-color)",
-                                color: "var(--inactive-color)",
-                              },
-                              active: {
-                                backgroundColor: "transparent",
-                                borderColor: "var(--active-border-color)",
-                                color: "var(--active-color)",
-                              },
-                              complete: {
-                                backgroundColor:
-                                  "var(--complete-background-color)",
-                                borderColor: "var(--complete-border-color)",
-                              },
-                            }}
-                          >
-                            <div className="flex items-center justify-center">
-                              {status === "complete" ? (
-                                <CheckIcon className="h-6 w-6 text-[var(--active-fg-color)]" />
-                              ) : (
-                                <span>{stepIdx + 1}</span>
-                              )}
-                            </div>
-                          </m.div>
+                          </div>
                         </div>
                       </LazyMotion>
                     </div>
@@ -256,29 +226,6 @@ export const VerticalSteps = React.forwardRef<
                     </div>
                   </button>
                 </div>
-                {stepIdx < steps.length - 1 && !hideProgressBars && (
-                  <div
-                    aria-hidden="true"
-                    className={cn(
-                      "pointer-events-none absolute left-3 top-[calc(64px_*_var(--idx)_+_1)] flex h-1/2 -translate-y-1/3 items-center px-4",
-                    )}
-                    style={{
-                      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-                      // @ts-expect-error
-                      "--idx": stepIdx,
-                    }}
-                  >
-                    <div
-                      className={cn(
-                        "relative h-full w-0.5 bg-[var(--inactive-bar-color)] transition-colors duration-300",
-                        "after:absolute after:block after:h-0 after:w-full after:bg-[var(--active-border-color)] after:transition-[height] after:duration-300 after:content-['']",
-                        {
-                          "after:h-full": stepIdx < currentStep,
-                        },
-                      )}
-                    />
-                  </div>
-                )}
               </li>
             );
           })}

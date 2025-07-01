@@ -1,6 +1,7 @@
 "use client";
 
 import { Card, CardBody } from "@nextui-org/react";
+import { useState } from "react";
 
 import { AddIcon } from "@/components/icons/Icons";
 import {
@@ -10,6 +11,7 @@ import {
   KS8ProviderBadge,
   M365ProviderBadge,
 } from "@/components/icons/providers-badge";
+import { ProviderDetailsModal } from "@/components/overview/provider-details-modal/provider-details-modal";
 import { CustomButton } from "@/components/ui/custom/custom-button";
 import { ProviderOverviewProps } from "@/types";
 
@@ -18,6 +20,16 @@ export const ProvidersOverview = ({
 }: {
   providersOverview: ProviderOverviewProps;
 }) => {
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedProvider, setSelectedProvider] = useState<string | null>(null);
+
+  const handleProviderClick = (providerId: string) => {
+    console.log("Provider clicked:", providerId);
+    setSelectedProvider(providerId);
+    setIsModalOpen(true);
+    console.log("Modal should open for provider:", providerId);
+  };
+
   const calculatePassingPercentage = (pass: number, total: number) =>
     total > 0 ? ((pass / total) * 100).toFixed(2) : "0.00";
 
@@ -46,150 +58,117 @@ export const ProvidersOverview = ({
     { id: "kubernetes", name: "Kubernetes" },
   ];
 
+  // If no data, show empty cards
   if (!providersOverview || !Array.isArray(providersOverview.data)) {
     return (
-      <Card className="h-full dark:bg-prowler-blue-400">
-        <CardBody>
-          <div className="my-auto grid grid-cols-1 gap-3">
-            <div className="grid grid-cols-4 border-b pb-2 text-xs font-semibold">
-              <span className="text-center">Provider</span>
-              <span className="flex flex-col items-center text-center">
-                <span>Percent</span>
-                <span>Passing</span>
-              </span>
-              <span className="flex flex-col items-center text-center">
-                <span>Failing</span>
-                <span>Checks</span>
-              </span>
-              <span className="flex flex-col items-center text-center">
-                <span>Total</span>
-                <span>Resources</span>
-              </span>
-            </div>
-
-            {providers.map((providerTemplate) => (
-              <div
-                key={providerTemplate.id}
-                className="grid grid-cols-4 items-center border-b py-2 text-sm"
+      <>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
+          {providers.map((providerTemplate) => (
+            <div 
+              key={providerTemplate.id}
+              onClick={() => handleProviderClick(providerTemplate.id)}
+              className="cursor-pointer"
+            >
+              <Card 
+                className="h-full dark:bg-prowler-blue-400 flex flex-col items-center justify-center p-4 transition-all duration-300 ease-in-out hover:scale-105 hover:shadow-lg dark:hover:shadow-xl hover:shadow-indigo-100 dark:hover:shadow-gray-800 border border-transparent hover:border-transparent dark:hover:border-gray-600 relative overflow-hidden group"
               >
-                <span className="flex items-center justify-center px-4">
+                <div className="absolute inset-0 bg-gradient-to-r from-indigo-500/10 to-purple-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-lg"></div>
+                <CardBody className="flex flex-col items-center justify-center relative z-10">
                   {renderProviderBadge(providerTemplate.id)}
-                </span>
-                <span className="text-center">0.00%</span>
-                <span className="text-center">-</span>
-                <span className="text-center">-</span>
-              </div>
-            ))}
-
-            <div className="grid grid-cols-4 items-center border-b py-2 text-sm font-semibold">
-              <span className="flex items-center justify-center px-4">
-                Total
-              </span>
-              <span className="text-center">0.00%</span>
-              <span className="text-center">-</span>
-              <span className="text-center">-</span>
+                  <div className="mt-2 text-lg font-semibold">{providerTemplate.name}</div>
+                  <div className="mt-2 text-center">
+                    <div className="text-sm">Pass: 0.00%</div>
+                    <div className="text-sm">Failing: -</div>
+                    <div className="text-sm">Resources: -</div>
+                  </div>
+                </CardBody>
+              </Card>
             </div>
-          </div>
-        </CardBody>
-      </Card>
-    );
-  }
-
-  return (
-    <Card className="h-full dark:bg-prowler-blue-400">
-      <CardBody>
-        <div className="my-auto grid grid-cols-1 gap-3">
-          <div className="grid grid-cols-4 border-b pb-2 text-xs font-semibold">
-            <span className="text-center">Provider</span>
-            <span className="flex flex-col items-center text-center">
-              <span>Percent</span>
-              <span>Passing</span>
-            </span>
-            <span className="flex flex-col items-center text-center">
-              <span>Failing</span>
-              <span>Checks</span>
-            </span>
-            <span className="flex flex-col items-center text-center">
-              <span>Total</span>
-              <span>Resources</span>
-            </span>
-          </div>
-
-          {providers.map((providerTemplate) => {
-            const providerData = providersOverview.data.find(
-              (p) => p.id === providerTemplate.id,
-            );
-
-            return (
-              <div
-                key={providerTemplate.id}
-                className="grid grid-cols-4 items-center border-b py-2 text-sm"
-              >
-                <span className="flex items-center justify-center px-4">
-                  {renderProviderBadge(providerTemplate.id)}
-                </span>
-                <span className="text-center">
-                  {providerData
-                    ? calculatePassingPercentage(
-                        providerData.attributes.findings.pass,
-                        providerData.attributes.findings.total,
-                      )
-                    : "0.00"}
-                  %
-                </span>
-                <span className="text-center">
-                  {providerData ? providerData.attributes.findings.fail : "-"}
-                </span>
-                <span className="text-center">
-                  {providerData ? providerData.attributes.resources.total : "-"}
-                </span>
-              </div>
-            );
-          })}
-
-          {/* Totals row */}
-          <div className="grid grid-cols-4 items-center border-b py-2 text-sm font-semibold">
-            <span className="flex items-center justify-center px-4">Total</span>
-            <span className="text-center">
-              {calculatePassingPercentage(
-                providersOverview.data.reduce(
-                  (sum, provider) => sum + provider.attributes.findings.pass,
-                  0,
-                ),
-                providersOverview.data.reduce(
-                  (sum, provider) => sum + provider.attributes.findings.total,
-                  0,
-                ),
-              )}
-              %
-            </span>
-            <span className="text-center">
-              {providersOverview.data.reduce(
-                (sum, provider) => sum + provider.attributes.findings.fail,
-                0,
-              )}
-            </span>
-            <span className="text-center">
-              {providersOverview.data.reduce(
-                (sum, provider) => sum + provider.attributes.resources.total,
-                0,
-              )}
-            </span>
-          </div>
+          ))}
         </div>
-        <div className="mt-4 flex w-full items-center justify-end">
+        <div className="mt-8 flex w-full items-center justify-center">
           <CustomButton
             asLink="/providers"
             ariaLabel="Go to Providers page"
             variant="solid"
             color="action"
-            size="sm"
+            size="md"
             endContent={<AddIcon size={20} />}
           >
             Add Provider
           </CustomButton>
         </div>
-      </CardBody>
-    </Card>
+        <ProviderDetailsModal
+          isOpen={isModalOpen}
+          onOpenChange={setIsModalOpen}
+          selectedProvider={selectedProvider}
+        />
+      </>
+    );
+  }
+
+  // Map provider data to cards
+  return (
+    <>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
+        {providers.map((providerTemplate) => {
+          const providerData = providersOverview.data.find(
+            (p) => p.id === providerTemplate.id,
+          );
+
+          return (
+            <div 
+              key={providerTemplate.id}
+              onClick={() => handleProviderClick(providerTemplate.id)}
+              className="cursor-pointer"
+            >
+              <Card 
+                className="h-full dark:bg-prowler-blue-400 flex flex-col items-center justify-center p-4 transition-all duration-300 ease-in-out hover:scale-105 hover:shadow-lg dark:hover:shadow-xl hover:shadow-indigo-100 dark:hover:shadow-gray-800 border border-transparent hover:border-transparent dark:hover:border-gray-600 relative overflow-hidden group"
+              >
+                <div className="absolute inset-0 bg-gradient-to-r from-indigo-500/10 to-purple-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-lg"></div>
+                <CardBody className="flex flex-col items-center justify-center relative z-10">
+                  {renderProviderBadge(providerTemplate.id)}
+                  <div className="mt-2 text-lg font-semibold">{providerTemplate.name}</div>
+                  <div className="mt-2 text-center">
+                    <div className="text-sm">
+                      Pass: {providerData
+                        ? calculatePassingPercentage(
+                            providerData.attributes.findings.pass,
+                            providerData.attributes.findings.total,
+                          )
+                        : "0.00"}
+                      %
+                    </div>
+                    <div className="text-sm">
+                      Failing: {providerData ? providerData.attributes.findings.fail : "-"}
+                    </div>
+                    <div className="text-sm">
+                      Resources: {providerData ? providerData.attributes.resources.total : "-"}
+                    </div>
+                  </div>
+                </CardBody>
+              </Card>
+            </div>
+          );
+        })}
+      </div>
+      <div className="mt-4 flex w-full items-center justify-center">
+        <CustomButton
+          asLink="/providers"
+          ariaLabel="Go to Providers page"
+          variant="solid"
+          color="action"
+          size="sm"
+          endContent={<AddIcon size={20} />}
+        >
+          Add Provider
+        </CustomButton>
+      </div>
+      <ProviderDetailsModal
+        isOpen={isModalOpen}
+        onOpenChange={setIsModalOpen}
+        selectedProvider={selectedProvider}
+      />
+    </>
   );
 };

@@ -1,21 +1,25 @@
 "use client";
 
 import {
-  AlertCircle,
-  Bookmark,
-  CloudCog,
-  Group,
-  LayoutGrid,
-  Mail,
-  Settings,
-  ShieldCheck,
-  SquareChartGantt,
-  SquarePen,
+  ActivitySquare,
+  BookOpen,
+  Cloud,
+  Users2,
+  Layout,
+  MailOpen,
+  Sliders,
+  Shield,
+  BarChart2,
+  Edit2,
   Tag,
-  Timer,
-  User,
-  UserCog,
-  Users,
+  TimerReset,
+  User2,
+  UsersRound,
+  HelpCircle,
+  FileText,
+  BookCopy,
+  LifeBuoy,
+  Settings,
 } from "lucide-react";
 
 import {
@@ -38,19 +42,19 @@ export const getMenuList = (pathname: string): GroupProps[] => {
       menus: [
         {
           href: "",
-          label: "Analytics",
-          icon: LayoutGrid,
+          label: "Dashboard",
+          icon: Layout,
           submenus: [
             {
               href: "/",
               label: "Overview",
-              icon: SquareChartGantt,
+              icon: BarChart2,
               active: pathname === "/",
             },
             {
               href: "/compliance",
-              label: "Compliance",
-              icon: ShieldCheck,
+              label: "Compliance Reports",
+              icon: Shield,
               active: pathname === "/compliance",
             },
           ],
@@ -60,62 +64,62 @@ export const getMenuList = (pathname: string): GroupProps[] => {
     },
 
     {
-      groupLabel: "Issues",
+      groupLabel: "Findings",
       menus: [
         {
           href: "",
-          label: "Top failed issues",
-          icon: Bookmark,
+          label: "Failed Checks",
+          icon: BookCopy,
           submenus: [
             {
               href: "/findings?filter[status__in]=FAIL&sort=severity,-inserted_at",
               label: "Misconfigurations",
-              icon: AlertCircle,
+              icon: ActivitySquare,
             },
             {
               href: "/findings?filter[status__in]=FAIL&filter[severity__in]=critical%2Chigh%2Cmedium&filter[provider_type__in]=aws%2Cazure%2Cgcp%2Ckubernetes&filter[service__in]=iam%2Crbac&sort=-inserted_at",
               label: "IAM Issues",
-              icon: ShieldCheck,
+              icon: Shield,
             },
           ],
           defaultOpen: false,
         },
         {
           href: "",
-          label: "High-risk findings",
-          icon: SquarePen,
+          label: "Critical Risks",
+          icon: Edit2,
           submenus: [
             {
               href: "/findings?filter[status__in]=FAIL&filter[severity__in]=critical%2Chigh%2Cmedium&filter[provider_type__in]=aws&sort=severity,-inserted_at",
               label: "Amazon Web Services",
-              icon: AWSIcon,
+              icon: Cloud,
             },
             {
               href: "/findings?filter[status__in]=FAIL&filter[severity__in]=critical%2Chigh%2Cmedium&filter[provider_type__in]=azure&sort=severity,-inserted_at",
               label: "Microsoft Azure",
-              icon: AzureIcon,
+              icon: Cloud,
             },
             {
               href: "/findings?filter[status__in]=FAIL&filter[severity__in]=critical%2Chigh%2Cmedium&filter[provider_type__in]=m365&sort=severity,-inserted_at",
               label: "Microsoft 365",
-              icon: M365Icon,
+              icon: Users2,
             },
             {
               href: "/findings?filter[status__in]=FAIL&filter[severity__in]=critical%2Chigh%2Cmedium&filter[provider_type__in]=gcp&sort=severity,-inserted_at",
               label: "Google Cloud",
-              icon: GCPIcon,
+              icon: Cloud,
             },
             {
               href: "/findings?filter[status__in]=FAIL&filter[severity__in]=critical%2Chigh%2Cmedium&filter[provider_type__in]=kubernetes&sort=severity,-inserted_at",
               label: "Kubernetes",
-              icon: KubernetesIcon,
+              icon: Cloud,
             },
           ],
           defaultOpen: false,
         },
         {
           href: "/findings",
-          label: "Browse all findings",
+          label: "All Findings",
           icon: Tag,
         },
       ],
@@ -127,45 +131,47 @@ export const getMenuList = (pathname: string): GroupProps[] => {
         {
           href: "",
           label: "Configuration",
-          icon: Settings,
+          icon: Sliders,
           submenus: [
-            { href: "/providers", label: "Cloud Providers", icon: CloudCog },
-            { href: "/manage-groups", label: "Provider Groups", icon: Group },
-            { href: "/scans", label: "Scan Jobs", icon: Timer },
-            { href: "/roles", label: "Roles", icon: UserCog },
+            { href: "/providers", label: "Cloud Providers", icon: Cloud },
+            { href: "/manage-groups", label: "Provider Groups", icon: UsersRound },
+            { href: "/scans", label: "Scan Jobs", icon: TimerReset },
+            { href: "/roles", label: "Roles", icon: Settings },
           ],
           defaultOpen: true,
         },
       ],
     },
+
     {
-      groupLabel: "Workspace",
+      groupLabel: "User Management",
       menus: [
         {
           href: "",
-          label: "Memberships",
-          icon: Users,
+          label: "Access Control",
+          icon: Users2,
           submenus: [
-            { href: "/users", label: "Users", icon: User },
-            { href: "/invitations", label: "Invitations", icon: Mail },
+            { href: "/users", label: "Users", icon: User2 },
+            { href: "/invitations", label: "Invitations", icon: MailOpen },
           ],
           defaultOpen: false,
         },
       ],
     },
+
     {
       groupLabel: "",
       menus: [
         {
           href: "",
-          label: "Support & Help",
-          icon: SupportIcon,
+          label: "Support",
+          icon: LifeBuoy,
           submenus: [
             {
               href: "https://docs.prowler.com/",
               target: "_blank",
               label: "Documentation",
-              icon: DocIcon,
+              icon: BookOpen,
             },
             {
               href:
@@ -173,14 +179,14 @@ export const getMenuList = (pathname: string): GroupProps[] => {
                   ? "https://api.prowler.com/api/v1/docs"
                   : `${process.env.NEXT_PUBLIC_API_DOCS_URL}`,
               target: "_blank",
-              label: "API reference",
-              icon: APIdocIcon,
+              label: "API Reference",
+              icon: FileText,
             },
             {
               href: "https://github.com/prowler-cloud/prowler/issues",
               target: "_blank",
-              label: "Support",
-              icon: CircleHelpIcon,
+              label: "Support Portal",
+              icon: HelpCircle,
             },
           ],
           defaultOpen: false,

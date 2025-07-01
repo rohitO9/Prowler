@@ -124,6 +124,9 @@ module.exports = {
         down: "inset 0.2rem 0.2rem 0.5rem #c8d0e7, inset -0.2rem -0.2rem 0.5rem #fff",
         box: "rgba(0, 0, 0, 0.05) 0px 0px 0px 1px",
       },
+      rotate: {
+        '360': '360deg',
+      },
       animation: {
         "fade-in": "fade-in 200ms ease-out 0s 1 normal forwards running",
         "fade-out": "fade-out 200ms ease-in 0s 1 normal forwards running",
@@ -131,6 +134,7 @@ module.exports = {
         "slide-in": "slide-in 400ms linear 0s 1 normal forwards running",
         "slide-out": "slide-out 400ms linear 0s 1 normal forwards running",
         collapse: "collapse 400ms linear 0s 1 normal forwards running",
+        slideDownFade: "slideDownFade 0.6s forwards",
       },
       keyframes: {
         "accordion-down": {
@@ -175,6 +179,10 @@ module.exports = {
           "50%": { opacity: "1" },
           "100%": { transform: "translateY(0)", opacity: "1" },
         },
+        slideDownFade: {
+          "0%": { opacity: "0", transform: "translateY(-40px)" },
+          "100%": { opacity: "1", transform: "translateY(0)" },
+        },
       },
       animation: {
         "collapsible-down": "collapsible-down 0.2s ease-out",
@@ -183,6 +191,11 @@ module.exports = {
       },
       screens: {
         "3xl": "1920px", // Add breakpoint to optimize layouts for large screens.
+      },
+      transitionDuration: {
+        1500: '1500ms',
+        2000: '2000ms',
+        3000: '3000ms',
       },
     },
   },

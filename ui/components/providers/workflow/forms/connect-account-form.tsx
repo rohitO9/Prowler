@@ -2,6 +2,7 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
+import { FaAws } from "react-icons/fa";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
@@ -218,9 +219,8 @@ export const ConnectAccountForm = () => {
             <CustomButton
               type="submit"
               ariaLabel="Next"
-              className="w-1/2"
+              className="w-1/2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-md transition-all duration-200 hover:from-indigo-700 hover:to-purple-700"
               variant="solid"
-              color="action"
               size="lg"
               isLoading={isLoading}
               endContent={!isLoading && <ChevronRightIcon size={24} />}

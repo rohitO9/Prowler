@@ -8,21 +8,15 @@ import { VerticalSteps } from "./vertical-steps";
 
 const steps = [
   {
-    title: "Choose your Cloud Provider",
-    description:
-      "Select the cloud provider you wish to connect and specify your preferred authentication method from the supported options.",
+    title: "Select a Cloud Service",
     href: "/providers/connect-account",
   },
   {
-    title: "Enter Authentication Details",
-    description:
-      "Provide the necessary credentials to establish a secure connection to your selected cloud provider.",
+    title: "Provide Authentication Info",
     href: "/providers/add-credentials",
   },
   {
-    title: "Verify Connection & Start Scan",
-    description:
-      "Ensure your credentials are correct and start scanning your cloud environment.",
+    title: "Validate Setup & Launch Scan",
     href: "/providers/test-connection",
   },
 ];
@@ -30,20 +24,19 @@ const steps = [
 export const WorkflowAddProvider = () => {
   const pathname = usePathname();
 
-  // Calculate current step based on pathname
+  // Determine current step from path
   const currentStepIndex = steps.findIndex((step) =>
     pathname.endsWith(step.href),
   );
   const currentStep = currentStepIndex === -1 ? 0 : currentStepIndex;
 
   return (
-    <section className="max-w-sm">
-      <h1 className="mb-2 text-xl font-medium" id="getting-started">
-        Add a Cloud Provider
+    <section className="w-full max-w-4xl mt-8">
+      <h1 className="mb-2 text-xl text-center font-medium" id="getting-started">
+        Connect Your Cloud Service
       </h1>
-      <p className="mb-5 text-small text-default-500">
-        Complete these steps to configure your cloud provider and initiate your
-        first scan.
+      <p className="mb-5 text-small text-center text-default-500">
+        Follow the guided process below to set up your cloud environment and begin scanning.
       </p>
       <Progress
         classNames={{

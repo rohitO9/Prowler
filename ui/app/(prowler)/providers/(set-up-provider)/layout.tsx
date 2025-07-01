@@ -5,6 +5,7 @@ import React from "react";
 
 import { WorkflowAddProvider } from "@/components/providers/workflow";
 import { NavigationHeader } from "@/components/ui";
+import { FileBarChart } from "lucide-react";
 
 interface ProviderLayoutProps {
   children: React.ReactNode;
@@ -13,17 +14,13 @@ interface ProviderLayoutProps {
 export default function ProviderLayout({ children }: ProviderLayoutProps) {
   return (
     <>
-      <NavigationHeader
-        title="Connect a Cloud Provider"
-        icon="icon-park-outline:close-small"
-        href="/providers"
-      />
-      <Spacer y={8} />
-      <div className="grid grid-cols-1 gap-8 lg:grid-cols-12">
-        <div className="order-1 my-auto hidden h-full lg:col-span-4 lg:col-start-2 lg:block">
+      <div className="w-full border-b-2 border-gray-400 dark:border-gray-500 my-10" />
+      <Spacer y={0} />
+      <div className="flex flex-col items-center w-full">
+        <div className="w-full max-w-4xl">
           <WorkflowAddProvider />
         </div>
-        <div className="order-2 my-auto lg:col-span-5 lg:col-start-6">
+        <div className="w-full max-w-4xl mt-8">
           {children}
         </div>
       </div>

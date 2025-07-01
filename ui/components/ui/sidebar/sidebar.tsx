@@ -2,6 +2,7 @@
 
 import clsx from "clsx";
 import Link from "next/link";
+import React, { useEffect, useState } from "react";
 
 import { ProwlerShort } from "@/components/icons";
 import { ProwlerExtended } from "@/components/icons";
@@ -31,40 +32,23 @@ export function Sidebar() {
         onMouseLeave={() => setIsHover(false)}
         className="no-scrollbar relative flex h-full flex-col overflow-y-auto overflow-x-hidden px-3 py-4 shadow-md dark:shadow-primary"
       >
-        <Button
-          className={cn(
-            "mb-1 transition-transform duration-300 ease-in-out",
-            !getOpenState() ? "translate-x-1" : "translate-x-0",
-          )}
-          variant="link"
-          asChild
-        >
-          <Link
-            href="/"
-            className={clsx(
-              "mb-6 flex w-full flex-col items-center justify-center px-3",
-              {
-                "gap-0": !isOpen,
-              },
+        <div className="flex flex-col items-center justify-center my-4">
+          <Link href="/" className="group flex flex-col items-center">
+            <div className="bg-gradient-to-r from-indigo-500 to-purple-600 rounded-xl w-14 h-14 flex items-center justify-center shadow-lg transition-transform duration-1500 group-hover:scale-125 group-hover:rotate-360">
+              <span className="text-3xl font-black text-white select-none">SS</span>
+            </div>
+            {getOpenState() && (
+              <>
+                <span className="mt-1 text-3xl font-extrabold tracking-tight text-black dark:text-white font-serif bg-gradient-to-r from-indigo-500 to-purple-600 bg-clip-text text-transparent">
+                  SecureStack
+                </span>
+                <span className="block text-xs text-gray-400 mt-1 tracking-wide">
+                  Cloud Security Platform
+                </span>
+              </>
             )}
-          >
-            <div
-              className={clsx({
-                hidden: isOpen,
-              })}
-            >
-              <ProwlerShort />
-            </div>
-            <div
-              className={clsx({
-                hidden: !isOpen,
-                "!mt-0": isOpen,
-              })}
-            >
-              <ProwlerExtended />
-            </div>
           </Link>
-        </Button>
+        </div>
 
         <Menu isOpen={getOpenState()} />
       </div>

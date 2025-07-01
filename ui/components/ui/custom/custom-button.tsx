@@ -11,7 +11,7 @@ export const buttonClasses = {
   primary:
     "bg-default-100 hover:bg-default-200 text-default-800 dark:bg-prowler-blue-800",
   secondary: "bg-prowler-grey-light dark:bg-prowler-grey-medium text-white",
-  action: "bg-prowler-theme-green font-bold text-prowler-theme-midnight",
+  action: "bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600 text-white font-bold",
   dashed:
     "border border-default border-dashed bg-transparent  justify-center whitespace-nowrap font-medium shadow-sm hover:border-solid hover:bg-default-100 active:bg-default-200 active:border-solid",
   transparent: "border-0 border-transparent bg-transparent",
@@ -54,6 +54,7 @@ interface CustomButtonProps {
   isIconOnly?: boolean;
   ref?: React.RefObject<HTMLButtonElement>;
   asLink?: string;
+  style?: React.CSSProperties;
 }
 
 export const CustomButton = React.forwardRef<
@@ -79,6 +80,7 @@ export const CustomButton = React.forwardRef<
       isLoading = false,
       isIconOnly,
       asLink,
+      style,
       ...props
     },
     ref,
@@ -106,6 +108,7 @@ export const CustomButton = React.forwardRef<
         },
         className,
       )}
+      style={style}
       startContent={startContent}
       endContent={endContent}
       size={size}

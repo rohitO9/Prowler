@@ -1,12 +1,14 @@
 "use client";
 
 import { Divider } from "@nextui-org/react";
+import { Search } from "lucide-react";
 import { Ellipsis, LogOut } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 import { logOut } from "@/actions/auth";
 import { AddIcon, InfoIcon } from "@/components/icons";
+import { FileBarChart } from "lucide-react";
 import { CollapseMenuButton } from "@/components/ui/sidebar/collapse-menu-button";
 import {
   Tooltip,
@@ -20,6 +22,7 @@ import { cn } from "@/lib/utils";
 import { Button } from "../button/button";
 import { CustomButton } from "../custom/custom-button";
 import { ScrollArea } from "../scroll-area/scroll-area";
+import { ThemeSwitch } from "@/components/ThemeSwitch";
 
 export const Menu = ({ isOpen }: { isOpen: boolean }) => {
   const pathname = usePathname();
@@ -27,21 +30,48 @@ export const Menu = ({ isOpen }: { isOpen: boolean }) => {
 
   return (
     <>
-      <div className="px-2">
-        <CustomButton
-          asLink="/scans"
-          className={cn(isOpen ? "w-full" : "w-fit")}
-          ariaLabel="Launch Scan"
-          variant="solid"
-          color="action"
-          size="md"
-          endContent={isOpen ? <AddIcon size={20} /> : null}
+      <div className=" space-y-2 px-2">
+        <div className="relative w-full">
+          <Search
+            className="text-muted-foreground absolute left-3 top-1/2 -translate-y-1/2"
+            size={16}
+          />
+          <input
+            type="text"
+            placeholder="Search menu..."
+            className={cn(
+              "border-input placeholder:text-muted-foreground w-full rounded-xl border bg-background py-2 pl-10 pr-4 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500",
+              isOpen ? "" : "hidden",
+            )}
+            onChange={(e) => {
+              // add filtering logic if needed
+            }}
+          />
+        </div>
+
+        <Button
+          asChild
+          className={cn(
+            "w-full rounded-xl  bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-md transition-all duration-200 hover:from-indigo-700 hover:to-purple-700",
+            isOpen
+              ? "justify-between px-4 py-3 text-base"
+              : "justify-center p-2",
+          )}
         >
-          {isOpen ? "Launch Scan" : <AddIcon size={20} />}
-        </CustomButton>
+          <Link href="/scans">
+            {isOpen ? (
+              <>
+                <span className="font-semibold">Generate Report</span>
+                <FileBarChart size={20} />
+              </>
+            ) : (
+              <FileBarChart size={20} />
+            )}
+          </Link>
+        </Button>
       </div>
       <ScrollArea className="[&>div>div[style]]:!block">
-        <nav className="mt-2 h-full w-full lg:mt-6">
+        <nav className="mt-4 h-full w-full">
           <ul className="flex min-h-[calc(100vh-16px-60px-40px-16px-32px-40px-32px-44px)] flex-col items-start space-y-1 px-2 lg:min-h-[calc(100vh-16px-60px-40px-16px-64px-16px-41px)]">
             {menuList.map(({ groupLabel, menus }, index) => (
               <li
@@ -140,32 +170,37 @@ export const Menu = ({ isOpen }: { isOpen: boolean }) => {
         </nav>
       </ScrollArea>
       <div className="flex w-full grow items-end">
-        <TooltipProvider disableHoverableContent>
-          <Tooltip delayDuration={100}>
-            <TooltipTrigger asChild>
-              <Button
-                onClick={() => logOut()}
-                variant="outline"
-                className="mt-5 h-10 w-full justify-center"
-              >
-                <span className={cn(isOpen === false ? "" : "mr-4")}>
-                  <LogOut size={18} />
-                </span>
-                <p
+        <div className="flex w-full items-center justify-between px-2 pb-4">
+          <ThemeSwitch />
+          <TooltipProvider disableHoverableContent>
+            <Tooltip delayDuration={100}>
+              <TooltipTrigger asChild>
+                <Button
+                  onClick={() => logOut()}
+                  variant="ghost"
                   className={cn(
-                    "whitespace-nowrap",
-                    isOpen === false ? "hidden opacity-0" : "opacity-100",
+                    "rounded-xl bg-gradient-to-r from-rose-600 to-red-500 text-white shadow-md transition-all duration-200 hover:from-rose-700 hover:to-red-600",
+                    isOpen
+                      ? "px-4 py-3 text-base"
+                      : "p-2",
                   )}
                 >
-                  Sign out
-                </p>
-              </Button>
-            </TooltipTrigger>
-            {isOpen === false && (
-              <TooltipContent side="right">Sign out</TooltipContent>
-            )}
-          </Tooltip>
-        </TooltipProvider>
+                  {isOpen ? (
+                    <>
+                      <span className="font-semibold">Sign Out</span>
+                      <LogOut size={20} />
+                    </>
+                  ) : (
+                    <LogOut size={20} />
+                  )}
+                </Button>
+              </TooltipTrigger>
+              {isOpen === false && (
+                <TooltipContent side="right">Sign out</TooltipContent>
+              )}
+            </Tooltip>
+          </TooltipProvider>
+        </div>
       </div>
 
       <div className="text-muted-foreground border-border mt-2 flex items-center justify-center gap-2 border-t pt-2 text-center text-xs">

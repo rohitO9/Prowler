@@ -77,7 +77,7 @@ export const ColumnNewFindingsToDate: ColumnDef<FindingProps>[] = [
     accessorKey: "check",
     header: "Finding",
     cell: ({ row }) => {
-      const { checktitle } = getFindingsMetadata(row);
+      const { checktitle = "" } = getFindingsMetadata(row) || {};
       const {
         attributes: { muted },
       } = getFindingsData(row);
@@ -168,7 +168,7 @@ export const ColumnNewFindingsToDate: ColumnDef<FindingProps>[] = [
     accessorKey: "service",
     header: "Service",
     cell: ({ row }) => {
-      const { servicename } = getFindingsMetadata(row);
+      const { servicename = "" } = getFindingsMetadata(row) || {};
       return <p className="max-w-96 truncate text-small">{servicename}</p>;
     },
   },

@@ -8,32 +8,29 @@ import { CustomButton } from "../ui/custom";
 
 export const NoProvidersAdded = () => {
   return (
-    <div className="flex min-h-screen items-center justify-center dark:bg-prowler-blue-800">
-      <div className="mx-auto w-full max-w-7xl px-4">
-        <Card className="mx-auto w-full max-w-3xl rounded-lg dark:bg-prowler-blue-400">
-          <CardBody className="flex flex-col items-center space-y-4 p-6 text-center sm:p-8">
-            <div className="flex flex-col items-center space-y-4">
-              <InfoIcon className="h-10 w-10 text-gray-800 dark:text-white" />
-              <h2 className="text-2xl font-bold text-gray-800 dark:text-white">
-                No Cloud Providers Configured
+    <div className="flex min-h-screen items-center justify-center bg-gray-100 dark:bg-gray-900">
+      <div className="mx-auto w-full max-w-2xl px-4">
+        <Card className="mx-auto w-full max-w-xl rounded-md border border-gray-200 bg-white shadow-md dark:border-gray-700 dark:bg-gray-800">
+          <CardBody className="flex flex-col items-center space-y-6 p-8 text-center">
+            <div className="flex flex-col items-center space-y-2">
+              <InfoIcon className="h-8 w-8 text-blue-600 dark:text-blue-400" />
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
+                Cloud Provider Setup Required
               </h2>
             </div>
-            <div className="flex flex-col items-center space-y-3">
-              <p className="text-md leading-relaxed text-gray-600 dark:text-gray-300">
-                No cloud providers have been configured. Start by setting up a
-                cloud provider.
-              </p>
-            </div>
-
+            <p className="text-base text-gray-700 dark:text-gray-300">
+              To begin, please connect your first cloud provider.<br />
+              No providers are currently linked to your account.
+            </p>
             <CustomButton
               asLink="/providers/connect-account"
               ariaLabel="Go to Add Cloud Provider page"
-              className="w-full max-w-xs justify-center"
+              className="w-full max-w-xs justify-center rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-md transition-all duration-200 hover:from-indigo-700 hover:to-purple-700"
               variant="solid"
               color="action"
               size="lg"
             >
-              Get Started
+              Set Up Cloud Provider
             </CustomButton>
           </CardBody>
         </Card>

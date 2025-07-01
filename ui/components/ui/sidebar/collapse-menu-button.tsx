@@ -106,7 +106,7 @@ export const CollapseMenuButton = ({
               asChild
             >
               <Link href={href} target={target} className="flex items-center">
-                <div className="mr-4 h-full border-l border-default-200"></div>
+                <div className="mr-4 h-full border-l border-purple-700"></div>
                 <span className="mr-2">
                   <SubIcon size={16} />
                 </span>

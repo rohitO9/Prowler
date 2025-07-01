@@ -33,38 +33,25 @@ export default function Home({
   const searchParamsKey = JSON.stringify(searchParams || {});
   return (
     <ContentLayout title="Overview" icon="solar:pie-chart-2-outline">
-      <Spacer y={4} />
-      <FilterControls providers />
-      <div className="mx-auto space-y-8 px-0 py-6">
-        <div className="grid grid-cols-12 gap-6">
-          <div className="col-span-12 lg:col-span-4">
-            <Suspense fallback={<SkeletonProvidersOverview />}>
-              <SSRProvidersOverview />
-            </Suspense>
-          </div>
-
-          <div className="col-span-12 lg:col-span-4">
-            <Suspense fallback={<SkeletonFindingsBySeverityChart />}>
-              <SSRFindingsBySeverity searchParams={searchParams} />
-            </Suspense>
-          </div>
-
-          <div className="col-span-12 lg:col-span-4">
-            <Suspense fallback={<SkeletonFindingsByStatusChart />}>
-              <SSRFindingsByStatus searchParams={searchParams} />
-            </Suspense>
-          </div>
-
-          <div className="col-span-12">
-            <Spacer y={16} />
-            <Suspense
-              key={searchParamsKey}
-              fallback={<SkeletonTableNewFindings />}
-            >
-              <SSRDataNewFindingsTable />
-            </Suspense>
-          </div>
+      <Spacer y={10} />
+      
+      {/* Choose Provider Message */}
+      <div className="mb-16">
+        <div className="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
+          <h3 className="text-base font-medium text-gray-900 dark:text-gray-100 mb-1">
+            Provider Selection Required
+          </h3>
+          <p className="text-sm text-gray-600 dark:text-gray-400">
+            Please select a provider from the options below to view detailed security findings and compliance reports.
+          </p>
         </div>
+      </div>
+
+      {/* Providers Overview */}
+      <div className="mt-6">
+        <Suspense fallback={<SkeletonProvidersOverview />}>
+          <SSRProvidersOverview />
+        </Suspense>
       </div>
     </ContentLayout>
   );

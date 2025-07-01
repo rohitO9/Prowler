@@ -186,6 +186,7 @@ export const deleteUser = async (formData: FormData) => {
 
 export const getUserInfo = async () => {
   const headers = await getAuthHeaders({ contentType: false });
+   console.log("API Base URL:", process.env.API_BASE_URL);
   const url = new URL(`${apiBaseUrl}/users/me?include=roles`);
 
   try {
