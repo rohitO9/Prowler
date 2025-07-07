@@ -18,12 +18,12 @@ export default function RoleLayout({ children }: RoleLayoutProps) {
         icon="icon-park-outline:close-small"
         href="/roles"
       />
-      <Spacer y={16} />
-      <div className="grid grid-cols-1 gap-8 lg:grid-cols-12">
-        <div className="order-1 my-auto hidden h-full lg:col-span-4 lg:col-start-2 lg:block">
+      <Spacer y={10} />
+      <div className="flex flex-col items-center gap-0 w-full">
+        <div className="order-1 w-full max-w-xl">
           <WorkflowAddEditRole />
         </div>
-        <div className="order-2 my-auto lg:col-span-5 lg:col-start-6">
+        <div className="order-2 w-full">
           {children}
         </div>
       </div>

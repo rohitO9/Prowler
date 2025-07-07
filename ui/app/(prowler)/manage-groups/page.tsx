@@ -24,28 +24,26 @@ export default function ManageGroupsPage({
   const providerGroupId = searchParams.groupId;
 
   return (
-    <div className="grid min-h-[70vh] grid-cols-1 items-center justify-center gap-4 md:grid-cols-12">
-      <div className="col-span-1 flex justify-end md:col-span-4">
-        <Suspense key={searchParamsKey} fallback={<SkeletonManageGroups />}>
-          {providerGroupId ? (
-            <SSRDataEditGroup searchParams={searchParams} />
-          ) : (
-            <div className="flex flex-col">
-              <h1 className="mb-2 text-xl font-medium" id="getting-started">
-                Create a new provider group
-              </h1>
-              <p className="mb-5 text-small text-default-500">
-                Create a new provider group to manage the providers and roles.
-              </p>
-              <SSRAddGroupForm />
-            </div>
-          )}
-        </Suspense>
+    <div className="flex flex-col gap-8 min-h-[70vh]">
+      {/* Top: Form (Create or Edit) */}
+      <div className="w-full flex justify-center">
+        <div className="w-full max-w-xl 
+         mx-auto p-4  ">
+          <Suspense key={searchParamsKey} fallback={<SkeletonManageGroups />}>
+            {providerGroupId ? (
+              <SSRDataEditGroup searchParams={searchParams} />
+            ) : (
+              <div className="flex flex-col">
+               
+                <SSRAddGroupForm />
+              </div>
+            )}
+          </Suspense>
+        </div>
       </div>
 
-      <Divider orientation="vertical" className="mx-auto h-full" />
-
-      <div className="col-span-1 flex-col justify-start md:col-span-6">
+      {/* Bottom: Table with Filters */}
+      <div>
         <FilterControls />
         <Spacer y={8} />
         <h3 className="mb-4 text-sm font-bold uppercase">Provider Groups</h3>

@@ -5,26 +5,19 @@ import { Chip } from "@nextui-org/react";
 import { TrendingUp } from "lucide-react";
 import Link from "next/link";
 import React, { useMemo } from "react";
-import { Label, Pie, PieChart } from "recharts";
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  LabelList,
+  ResponsiveContainer,
+  Cell,
+} from "recharts";
 
 import { NotificationIcon, SuccessIcon } from "@/components/icons";
-import {
-  ChartConfig,
-  ChartContainer,
-  ChartTooltip,
-  ChartTooltipContent,
-} from "@/components/ui/chart/Chart";
-
-const calculatePercent = (
-  chartData: { findings: string; number: number; fill: string }[],
-) => {
-  const total = chartData.reduce((sum, item) => sum + item.number, 0);
-
-  return chartData.map((item) => ({
-    ...item,
-    percent: total > 0 ? Math.round((item.number / total) * 100) + "%" : "0%",
-  }));
-};
 
 interface FindingsByStatusChartProps {
   findingsByStatus: {
@@ -40,111 +33,86 @@ interface FindingsByStatusChartProps {
   };
 }
 
-const chartConfig = {
-  number: {
-    label: "Findings",
-  },
-  success: {
-    label: "Success",
-    color: "hsl(var(--chart-success))",
-  },
-  fail: {
-    label: "Fail",
-    color: "hsl(var(--chart-fail))",
-  },
-} satisfies ChartConfig;
+export const FindingsByStatusChart: React.FC<FindingsByStatusChartProps> = ({ findingsByStatus }) => {
+  const { fail = 0, pass = 0, pass_new = 0, fail_new = 0 } = findingsByStatus?.data?.attributes || {};
 
-export const FindingsByStatusChart: React.FC<FindingsByStatusChartProps> = ({
-  findingsByStatus,
-}) => {
-  const {
-    fail = 0,
-    pass = 0,
-    pass_new = 0,
-    fail_new = 0,
-  } = findingsByStatus?.data?.attributes || {};
-  const chartData = useMemo(
-    () => [
-      {
-        findings: "Success",
-        number: pass,
-        fill: "var(--color-success)",
-      },
-      {
-        findings: "Fail",
-        number: fail,
-        fill: "var(--color-fail)",
-      },
-    ],
-    [pass, fail],
-  );
-
-  const updatedChartData = calculatePercent(chartData);
-
-  const totalFindings = useMemo(
-    () => chartData.reduce((acc, curr) => acc + curr.number, 0),
-    [chartData],
-  );
-
-  const emptyChartData = [
-    {
-      findings: "Empty",
-      number: 1,
-      fill: "hsl(var(--nextui-default-200))",
-    },
+  const data = [
+    { status: "PASS", count: pass },
+    { status: "FAIL", count: fail },
   ];
+
+  const total = pass + fail;
 
   return (
     <Card className="h-full dark:bg-prowler-blue-400">
       <CardBody>
         <div className="flex flex-col items-center gap-6">
-          <ChartContainer
-            config={chartConfig}
-            className="aspect-square w-[250px] min-w-[250px]"
-          >
-            <PieChart>
-              <ChartTooltip cursor={false} content={<ChartTooltipContent />} />
-              <Pie
-                data={totalFindings > 0 ? chartData : emptyChartData}
-                dataKey="number"
-                nameKey="findings"
-                innerRadius={65}
-                strokeWidth={55}
-              >
-                <Label
-                  content={({ viewBox }) => {
-                    if (viewBox && "cx" in viewBox && "cy" in viewBox) {
+          <div className="w-full flex justify-center">
+            <ResponsiveContainer width={300} height={250}>
+              <BarChart data={data} margin={{ top: 20, right: 30, left: 20, bottom: 20 }}>
+                <defs>
+                  <linearGradient id="pass-gradient" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#4ade80" />
+                    <stop offset="100%" stopColor="#16a34a" />
+                  </linearGradient>
+                  <linearGradient id="fail-gradient" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#f87171" />
+                    <stop offset="100%" stopColor="#b91c1c" />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="status" tick={{ fontWeight: 'bold', fontSize: 16 }} />
+                <YAxis allowDecimals={false} tick={{ fontSize: 14 }} domain={[0, 100]}>
+                  <text
+                    x={0}
+                    y={0}
+                    dx={-30}
+                    dy={100}
+                    textAnchor="middle"
+                    transform="rotate(-90)"
+                    style={{ fontSize: 14, fontWeight: 'bold' }}
+                  >
+                    Number of Findings
+                  </text>
+                </YAxis>
+                <Tooltip
+                  content={({ active, payload, label }) => {
+                    if (active && payload && payload.length) {
                       return (
-                        <text
-                          x={viewBox.cx}
-                          y={viewBox.cy}
-                          textAnchor="middle"
-                          dominantBaseline="middle"
-                        >
-                          <tspan
-                            x={viewBox.cx}
-                            y={viewBox.cy}
-                            className="fill-foreground text-xl font-bold"
-                          >
-                            {totalFindings > 0
-                              ? totalFindings.toLocaleString()
-                              : "0"}
-                          </tspan>
-                          <tspan
-                            x={viewBox.cx}
-                            y={(viewBox.cy || 0) + 20}
-                            className="fill-foreground text-xs"
-                          >
-                            Findings
-                          </tspan>
-                        </text>
+                        <div style={{ background: "#222", color: "#fff", padding: "8px 12px", borderRadius: 6 }}>
+                          <strong>{label}</strong>
+                          <div>{payload[0].value} findings</div>
+                          <div style={{ fontSize: 12, marginTop: 4 }}>total {total}</div>
+                        </div>
                       );
                     }
+                    return null;
                   }}
                 />
-              </Pie>
-            </PieChart>
-          </ChartContainer>
+                <Bar dataKey="count" radius={[8, 8, 0, 0]} isAnimationActive={true}>
+                  <Cell fill="url(#pass-gradient)" />
+                  <Cell fill="url(#fail-gradient)" />
+                  <LabelList
+                    dataKey="count"
+                    position="insideTop"
+                    content={({ x = 0, y = 0, width = 0, value }) => (
+                      <text
+                        x={Number(x) + Number(width) / 2}
+                        y={Number(y) + 20}
+                        fill="#fff"
+                        textAnchor="middle"
+                        fontWeight="bold"
+                        fontSize={16}
+                      >
+                        <tspan x={Number(x) + Number(width) / 2} dy="0">{value}</tspan>
+                        <tspan x={Number(x) + Number(width) / 2} dy="18" fontSize={16}>findings</tspan>
+                      </text>
+                    )}
+                  />
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
 
           <div className="flex flex-col gap-6">
             <div className="flex flex-col gap-2">
@@ -161,9 +129,8 @@ export const FindingsByStatusChart: React.FC<FindingsByStatusChartProps> = ({
                     radius="lg"
                     size="md"
                   >
-                    {chartData[0].number}
+                    {pass}
                   </Chip>
-                  <span>{updatedChartData[0].percent}</span>
                 </Link>
               </div>
               <div className="text-muted-foreground flex items-center gap-1 text-xs font-medium leading-none">
@@ -194,9 +161,8 @@ export const FindingsByStatusChart: React.FC<FindingsByStatusChartProps> = ({
                     radius="lg"
                     size="md"
                   >
-                    {chartData[1].number}
+                    {fail}
                   </Chip>
-                  <span>{updatedChartData[1].percent}</span>
                 </Link>
               </div>
               <div className="text-muted-foreground flex items-center gap-1 text-xs font-medium leading-none">

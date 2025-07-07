@@ -1,7 +1,7 @@
 "use client";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Divider } from "@nextui-org/react";
-import { SaveIcon } from "lucide-react";
+import { SaveIcon, Users } from "lucide-react";
 import { Controller, useForm } from "react-hook-form";
 import * as z from "zod";
 
@@ -93,8 +93,8 @@ export const AddGroupForm = ({
       } else {
         form.reset();
         toast({
-          title: "Success!",
-          description: "The group was created successfully.",
+          title: "Group Created",
+          description: "You can view and edit this group in the table below.",
         });
       }
     } catch (error) {
@@ -107,90 +107,103 @@ export const AddGroupForm = ({
   };
 
   return (
-    <Form {...form}>
-      <form
-        onSubmit={form.handleSubmit(onSubmitClient)}
-        className="flex flex-col space-y-4"
-      >
-        <div className="flex flex-col gap-2">
-          <CustomInput
+    <div className=" border  rounded-xl shadow-lg p-8 max-w-xl mx-auto">
+      <div className="flex flex-col items-center mb-6">
+        <span className="bg-green-100 text-green-700 rounded-full p-3 mb-2">
+          <Users size={32} />
+        </span>
+        <h2 className="text-2xl font-bold mt-1">Create a New Provider Group</h2>
+        <p className="text-gray-500 text-sm">Organize your cloud accounts and assign roles efficiently.</p>
+      </div>
+     
+      
+      <Divider className="my-4" />
+      <h3 className="text-lg font-semibold mb-2">Assign Providers & Roles</h3>
+      <Form {...form}>
+        <form
+          onSubmit={form.handleSubmit(onSubmitClient)}
+          className="flex flex-col space-y-4"
+        >
+          <div className="flex flex-col gap-2">
+            <CustomInput
+              control={form.control}
+              name="name"
+              type="text"
+              label="Provider group name"
+              labelPlacement="inside"
+              placeholder="Enter the provider group name"
+              variant="bordered"
+              isRequired
+              isInvalid={!!form.formState.errors.name}
+            />
+          </div>
+
+          {/*Select Providers */}
+          <Controller
+            name="providers"
             control={form.control}
-            name="name"
-            type="text"
-            label="Provider group name"
-            labelPlacement="inside"
-            placeholder="Enter the provider group name"
-            variant="bordered"
-            isRequired
-            isInvalid={!!form.formState.errors.name}
+            render={({ field }) => (
+              <CustomDropdownSelection
+                label="Select Providers"
+                name="providers"
+                values={providers}
+                selectedKeys={field.value || []}
+                onChange={(name, selectedValues) =>
+                  field.onChange(selectedValues)
+                }
+              />
+            )}
           />
-        </div>
-
-        {/*Select Providers */}
-        <Controller
-          name="providers"
-          control={form.control}
-          render={({ field }) => (
-            <CustomDropdownSelection
-              label="Select Providers"
-              name="providers"
-              values={providers}
-              selectedKeys={field.value || []}
-              onChange={(name, selectedValues) =>
-                field.onChange(selectedValues)
-              }
-            />
+          {form.formState.errors.providers && (
+            <p className="mt-2 text-sm text-red-600">
+              {form.formState.errors.providers.message}
+            </p>
           )}
-        />
-        {form.formState.errors.providers && (
-          <p className="mt-2 text-sm text-red-600">
-            {form.formState.errors.providers.message}
-          </p>
-        )}
-        <Divider orientation="horizontal" className="mb-2" />
+          <Divider orientation="horizontal" className="mb-2" />
 
-        <p className="text-small text-default-500">
-          Roles can also be associated with the group. This step is optional and
-          can be completed later if needed or from the Roles page.
-        </p>
-        {/* Select Roles */}
-        <Controller
-          name="roles"
-          control={form.control}
-          render={({ field }) => (
-            <CustomDropdownSelection
-              label="Select Roles"
-              name="roles"
-              values={roles}
-              selectedKeys={field.value || []}
-              onChange={(name, selectedValues) =>
-                field.onChange(selectedValues)
-              }
-            />
+          <p className="text-small text-default-500">
+            Roles can also be associated with the group. This step is optional and
+            can be completed later if needed or from the Roles page.
+          </p>
+          {/* Select Roles */}
+          <Controller
+            name="roles"
+            control={form.control}
+            render={({ field }) => (
+              <CustomDropdownSelection
+                label="Select Roles"
+                name="roles"
+                values={roles}
+                selectedKeys={field.value || []}
+                onChange={(name, selectedValues) =>
+                  field.onChange(selectedValues)
+                }
+              />
+            )}
+          />
+          {form.formState.errors.roles && (
+            <p className="mt-2 text-sm text-red-600">
+              {form.formState.errors.roles.message}
+            </p>
           )}
-        />
-        {form.formState.errors.roles && (
-          <p className="mt-2 text-sm text-red-600">
-            {form.formState.errors.roles.message}
-          </p>
-        )}
 
-        {/* Submit Button */}
-        <div className="flex w-full justify-end sm:space-x-6">
-          <CustomButton
-            type="submit"
-            ariaLabel="Create Group"
-            className="w-1/2"
-            variant="solid"
-            color="action"
-            size="md"
-            isLoading={isLoading}
-            startContent={!isLoading && <SaveIcon size={24} />}
-          >
-            {isLoading ? <>Loading</> : <span>Create Group</span>}
-          </CustomButton>
-        </div>
-      </form>
-    </Form>
+          {/* Submit Button */}
+          <div className="flex w-full justify-center mt-6">
+            <CustomButton
+              type="submit"
+              ariaLabel="Create Group"
+              variant="solid"
+              color="action"
+              size="md"
+              isLoading={isLoading}
+              startContent={!isLoading && <SaveIcon size={24} />}
+              className="px-8 py-2 text-lg font-semibold rounded-full shadow"
+            >
+              {isLoading ? <>Loading</> : <span>Create Group</span>}
+            </CustomButton>
+          </div>
+        </form>
+      </Form>
+    </div>
   );
 };

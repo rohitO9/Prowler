@@ -5,11 +5,12 @@ import { getRoles } from "@/actions/roles";
 import { getUsers } from "@/actions/users/users";
 import { FilterControls } from "@/components/filters";
 import { filterUsers } from "@/components/filters/data-filters";
-import { ContentLayout } from "@/components/ui";
+import { ContentLayout, ActionCard } from "@/components/ui";
 import { DataTable, DataTableFilterCustom } from "@/components/ui/table";
 import { AddUserButton } from "@/components/users";
 import { ColumnsUser, SkeletonTableUser } from "@/components/users/table";
 import { Role, SearchParamsProps, UserProps } from "@/types";
+import { Users as UsersIcon } from "lucide-react";
 
 export default async function Users({
   searchParams,
@@ -20,11 +21,23 @@ export default async function Users({
 
   return (
     <ContentLayout title="Users" icon="ci:users">
+      <div className="flex w-full justify-center mb-8">
+        <div className="max-w-xl w-full  rounded-xl   bg-background">
+          <div className="flex flex-col items-center mb-6">
+            <span className="bg-green-100 text-green-700 rounded-full p-3 mb-2">
+              <UsersIcon size={40} />
+            </span>
+            <h2 className="text-2xl font-bold mt-1 bg-gradient-to-r from-indigo-500 to-purple-500 bg-clip-text text-transparent">Users</h2>
+            <p className="text-gray-500 text-sm text-center">Manage your organization's users, assign roles, and invite new members to collaborate securely.</p>
+          </div>
+        </div>
+      </div>
       <FilterControls search />
       <Spacer y={8} />
-      <AddUserButton />
-      <Spacer y={4} />
-      <DataTableFilterCustom filters={filterUsers || []} />
+      <div className="flex w-full items-center justify-between gap-4">
+        <DataTableFilterCustom filters={filterUsers || []} />
+        <AddUserButton />
+      </div>
       <Spacer y={8} />
 
       <Suspense key={searchParamsKey} fallback={<SkeletonTableUser />}>

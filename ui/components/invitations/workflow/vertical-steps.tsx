@@ -55,6 +55,10 @@ export interface VerticalStepsProps
    * Callback function when the step index changes.
    */
   onStepChange?: (stepIndex: number) => void;
+  /**
+   * Whether to render steps horizontally (compact style)
+   */
+  horizontal?: boolean;
 }
 
 function CheckIcon(props: ComponentProps<"svg">) {
@@ -97,6 +101,7 @@ export const VerticalSteps = React.forwardRef<
       hideProgressBars = false,
       stepClassName,
       className,
+      horizontal,
       ...props
     },
     ref,
@@ -162,9 +167,18 @@ export const VerticalSteps = React.forwardRef<
       return colorsVars;
     }, [color, className]);
 
+    const isHorizontal = !!horizontal;
     return (
-      <nav aria-label="Progress" className="max-w-fit">
-        <ol className={cn("flex flex-col gap-y-3", colors, className)}>
+      <nav aria-label="Progress" className={cn(isHorizontal ? "w-full" : "max-w-fit")}>
+        <ol
+          className={cn(
+            isHorizontal
+              ? "flex flex-row gap-x-2 items-stretch justify-center w-full"
+              : "flex flex-col gap-y-3",
+            colors,
+            className,
+          )}
+        >
           {steps?.map((step, stepIdx) => {
             const status =
               currentStep === stepIdx
@@ -174,26 +188,30 @@ export const VerticalSteps = React.forwardRef<
                   : "complete";
 
             return (
-              <li key={stepIdx} className="relative">
-                <div className="flex w-full max-w-full items-center">
+              <li key={stepIdx} className={cn("relative", isHorizontal && "flex-1 min-w-0 max-w-full")}>
+                <div className={cn("flex w-full max-w-full items-center", isHorizontal && "h-full justify-center")}>
                   <button
                     key={stepIdx}
                     ref={ref}
                     aria-current={status === "active" ? "step" : undefined}
                     className={cn(
-                      "group flex w-full cursor-pointer items-center justify-center gap-4 rounded-large px-3 py-2.5",
+                      isHorizontal
+                        ? "group flex flex-row items-center justify-center gap-1 rounded-large px-6 py-4 min-w-[240px] min-h-[56px] text-base font-semibold border border-default-200 dark:border-default-50 bg-transparent"
+                        : "group flex w-full cursor-pointer items-center justify-center gap-2 rounded-large px-3 py-2.5",
                       stepClassName,
                     )}
                     onClick={() => setCurrentStep(stepIdx)}
                     {...props}
                   >
-                    <div className="flex h-full items-center">
+                    <div className={cn("flex h-full items-center", isHorizontal && "mr-2")}>
                       <LazyMotion features={domAnimation}>
                         <div className="relative">
                           <m.div
                             animate={status}
                             className={cn(
-                              "relative flex h-[34px] w-[34px] items-center justify-center rounded-full border-medium text-large font-semibold text-default-foreground",
+                              isHorizontal
+                                ? "relative flex h-[28px] w-[28px] items-center justify-center rounded-full border text-base font-semibold text-default-foreground"
+                                : "relative flex h-[34px] w-[34px] items-center justify-center rounded-full border-medium text-large font-semibold text-default-foreground",
                               {
                                 "shadow-lg": status === "complete",
                               },
@@ -230,18 +248,29 @@ export const VerticalSteps = React.forwardRef<
                         </div>
                       </LazyMotion>
                     </div>
-                    <div className="flex-1 text-left">
-                      <div>
+                    <div className={cn("flex-1 text-left", isHorizontal && "text-center flex flex-col items-center justify-center w-full")}>
+                      <div
+                        className={cn(
+                          isHorizontal
+                            ? "text-sm font-semibold transition-[color,opacity] duration-300 group-active:opacity-70"
+                            : "text-medium font-medium text-default-foreground transition-[color,opacity] duration-300 group-active:opacity-70",
+                          {
+                            "bg-gradient-to-r from-indigo-500 to-purple-500 bg-clip-text text-transparent": isHorizontal,
+                          },
+                        )}
+                      >
+                        {step.title}
+                      </div>
+                      {isHorizontal && step.description && (
                         <div
                           className={cn(
-                            "text-medium font-medium text-default-foreground transition-[color,opacity] duration-300 group-active:opacity-70",
-                            {
-                              "text-default-500": status === "inactive",
-                            },
+                            "text-sm text-default-500 mt-1 max-w-[240px] truncate text-center leading-tight",
                           )}
                         >
-                          {step.title}
+                          {step.description}
                         </div>
+                      )}
+                      {!isHorizontal && (
                         <div
                           className={cn(
                             "text-tiny text-default-600 transition-[color,opacity] duration-300 group-active:opacity-70 lg:text-small",
@@ -252,11 +281,11 @@ export const VerticalSteps = React.forwardRef<
                         >
                           {step.description}
                         </div>
-                      </div>
+                      )}
                     </div>
                   </button>
                 </div>
-                {stepIdx < steps.length - 1 && !hideProgressBars && (
+                {stepIdx < steps.length - 1 && !hideProgressBars && !isHorizontal && (
                   <div
                     aria-hidden="true"
                     className={cn(

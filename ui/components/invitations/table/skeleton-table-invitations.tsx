@@ -9,7 +9,7 @@ export const SkeletonTableInvitation = () => {
         <Skeleton className="w-2/12 rounded-lg">
           <div className="h-8 bg-default-200"></div>
         </Skeleton>
-        <Skeleton className="w-2/12 rounded-lg">
+        <Skeleton className=" w-2/12  rounded-lg first-letter:">
           <div className="h-8 bg-default-200"></div>
         </Skeleton>
         <Skeleton className="w-2/12 rounded-lg">

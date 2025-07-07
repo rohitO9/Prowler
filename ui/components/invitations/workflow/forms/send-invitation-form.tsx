@@ -94,60 +94,67 @@ export const SendInvitationForm = ({
         className="flex flex-col space-y-4"
       >
         {/* Email Field */}
-        <CustomInput
-          control={form.control}
-          name="email"
-          type="email"
-          label="Email"
-          labelPlacement="inside"
-          placeholder="Enter the email address"
-          variant="bordered"
-          isRequired
-          isInvalid={!!form.formState.errors.email}
-        />
-
-        <Controller
-          name="roleId"
-          control={form.control}
-          render={({ field }) => (
-            <>
-              <Select
-                {...field}
-                label="Role"
-                placeholder="Select a role"
-                classNames={{
-                  selectorIcon: "right-2",
-                }}
+        <div className="w-full flex justify-center">
+          <div className="flex flex-row gap-4 w-full max-w-2xl">
+            <div className="w-full max-w-xs">
+              <CustomInput
+                control={form.control}
+                name="email"
+                type="email"
+                label="Email"
+                labelPlacement="inside"
+                placeholder="Enter the email address"
                 variant="bordered"
-                isDisabled={isSelectorDisabled}
-                selectedKeys={[field.value]}
-                onSelectionChange={(selected) =>
-                  field.onChange(selected?.currentKey || "")
-                }
-              >
-                {isSelectorDisabled ? (
-                  <SelectItem key={defaultRole}>{defaultRole}</SelectItem>
-                ) : (
-                  roles.map((role) => (
-                    <SelectItem key={role.id}>{role.name}</SelectItem>
-                  ))
+                isRequired
+                isInvalid={!!form.formState.errors.email}
+              />
+            </div>
+            <div className="w-full max-w-xs">
+              <Controller
+                name="roleId"
+                control={form.control}
+                render={({ field }) => (
+                  <>
+                    <Select
+                      {...field}
+                      label="Role"
+                      placeholder="Select a role"
+                      classNames={{
+                        selectorIcon: "right-2",
+                      }}
+                      variant="bordered"
+                      isDisabled={isSelectorDisabled}
+                      selectedKeys={[field.value]}
+                      onSelectionChange={(selected) =>
+                        field.onChange(selected?.currentKey || "")
+                      }
+                    >
+                      {isSelectorDisabled ? (
+                        <SelectItem key={defaultRole}>{defaultRole}</SelectItem>
+                      ) : (
+                        roles.map((role) => (
+                          <SelectItem key={role.id}>{role.name}</SelectItem>
+                        ))
+                      )}
+                    </Select>
+                    {form.formState.errors.roleId && (
+                      <p className="mt-2 text-sm text-red-600">
+                        {form.formState.errors.roleId.message}
+                      </p>
+                    )}
+                  </>
                 )}
-              </Select>
-              {form.formState.errors.roleId && (
-                <p className="mt-2 text-sm text-red-600">
-                  {form.formState.errors.roleId.message}
-                </p>
-              )}
-            </>
-          )}
-        />
+              />
+            </div>
+          </div>
+        </div>
 
         {/* Submit Button */}
-        <div className="flex w-full justify-end sm:space-x-6">
+        <div className="flex w-full justify-center">
           <CustomButton
             type="submit"
             ariaLabel="Send Invitation"
-            className="w-1/2"
+            className="w-40 mx-auto"
             variant="solid"
             color="action"
             size="lg"
