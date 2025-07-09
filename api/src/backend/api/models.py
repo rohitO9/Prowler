@@ -60,7 +60,6 @@ class StatusChoices(models.TextChoices):
     FAIL = "FAIL", _("Fail")
     PASS = "PASS", _("Pass")
     MANUAL = "MANUAL", _("Manual")
-    MUTED = "MUTED", _("Muted")
 
 
 class StateChoices(models.TextChoices):
@@ -473,7 +472,14 @@ class ResourceTag(RowLevelSecurityProtectedModel):
     key = models.TextField(blank=False)
     value = models.TextField(blank=False)
 
-    text_search = SearchVectorField(null=True, editable=False)
+    text_search = models.GeneratedField(
+        expression=SearchVector("key", weight="A", config="simple")
+        + SearchVector("value", weight="B", config="simple"),
+        output_field=SearchVectorField(),
+        db_persist=True,
+        null=True,
+        editable=False,
+    )
 
     class Meta(RowLevelSecurityProtectedModel.Meta):
         db_table = "resource_tags"
@@ -493,14 +499,6 @@ class ResourceTag(RowLevelSecurityProtectedModel):
                 statements=["SELECT", "INSERT", "UPDATE", "DELETE"],
             ),
         ]
-
-    def save(self, *args, **kwargs):
-        super().save(*args, **kwargs)
-        # Update the search vector after saving
-        ResourceTag.objects.filter(id=self.id).update(
-            text_search=SearchVector('key', weight='A', config='simple') +
-                       SearchVector('value', weight='B', config='simple')
-        )
 
 
 class Resource(RowLevelSecurityProtectedModel):
@@ -530,7 +528,16 @@ class Resource(RowLevelSecurityProtectedModel):
     )
     type = models.TextField("Type of the resource, as set by the provider", blank=False)
 
-    text_search = SearchVectorField(null=True, editable=False)
+    text_search = models.GeneratedField(
+        expression=SearchVector("uid", weight="A", config="simple")
+        + SearchVector("name", weight="B", config="simple")
+        + SearchVector("region", weight="C", config="simple")
+        + SearchVector("service", "type", weight="D", config="simple"),
+        output_field=SearchVectorField(),
+        db_persist=True,
+        null=True,
+        editable=False,
+    )
 
     metadata = models.TextField(blank=True, null=True)
     details = models.TextField(blank=True, null=True)
@@ -542,16 +549,6 @@ class Resource(RowLevelSecurityProtectedModel):
         verbose_name="Tags associated with the resource, by provider",
         through="ResourceTagMapping",
     )
-
-    def save(self, *args, **kwargs):
-        super().save(*args, **kwargs)
-        # Update the search vector after saving
-        Resource.objects.filter(id=self.id).update(
-            text_search=SearchVector('uid', weight='A', config='simple') +
-                       SearchVector('name', weight='B', config='simple') +
-                       SearchVector('region', weight='C', config='simple') +
-                       SearchVector('service', 'type', weight='D', config='simple')
-        )
 
     def get_tags(self, tenant_id: str) -> dict:
         return {tag.key: tag.value for tag in self.tags.filter(tenant_id=tenant_id)}
@@ -677,7 +674,7 @@ class Finding(PostgresPartitionedModel, RowLevelSecurityProtectedModel):
         null=True,
     )
 
-    status = StatusEnumField(choices=StatusChoices.choices)
+    status = StatusEnumField(choices=StatusChoices)
     status_extended = models.TextField(blank=True, null=True)
 
     severity = SeverityEnumField(choices=SeverityChoices)
@@ -718,43 +715,16 @@ class Finding(PostgresPartitionedModel, RowLevelSecurityProtectedModel):
         related_name="findings",
     )
 
-    text_search = SearchVectorField(null=True, editable=False)
-
-    def save(self, *args, **kwargs):
-        super().save(*args, **kwargs)
-        # Update the search vector after saving
-        Finding.objects.filter(id=self.id).update(
-            text_search=SearchVector('uid', weight='A', config='simple') +
-                       SearchVector('status_extended', weight='B', config='simple') +
-                       SearchVector('impact_extended', weight='C', config='simple') +
-                       SearchVector('check_id', weight='D', config='simple')
-        )
-
-    def add_resources(self, resources: list[Resource] | None):
-        if not resources:
-            return
-
-        self.resource_regions = self.resource_regions or []
-        self.resource_services = self.resource_services or []
-        self.resource_types = self.resource_types or []
-
-        # Deduplication
-        regions = set(self.resource_regions)
-        services = set(self.resource_services)
-        types = set(self.resource_types)
-
-        for resource in resources:
-            ResourceFindingMapping.objects.update_or_create(
-                resource=resource, finding=self, tenant_id=self.tenant_id
-            )
-            regions.add(resource.region)
-            services.add(resource.service)
-            types.add(resource.type)
-
-        self.resource_regions = list(regions)
-        self.resource_services = list(services)
-        self.resource_types = list(types)
-        self.save()
+    # TODO: Add resource search
+    text_search = models.GeneratedField(
+        expression=SearchVector(
+            "impact_extended", "status_extended", weight="A", config="simple"
+        ),
+        output_field=SearchVectorField(),
+        db_persist=True,
+        null=True,
+        editable=False,
+    )
 
     class Meta(RowLevelSecurityProtectedModel.Meta):
         db_table = "findings"
@@ -800,6 +770,32 @@ class Finding(PostgresPartitionedModel, RowLevelSecurityProtectedModel):
 
     class JSONAPIMeta:
         resource_name = "findings"
+
+    def add_resources(self, resources: list[Resource] | None):
+        if not resources:
+            return
+
+        self.resource_regions = self.resource_regions or []
+        self.resource_services = self.resource_services or []
+        self.resource_types = self.resource_types or []
+
+        # Deduplication
+        regions = set(self.resource_regions)
+        services = set(self.resource_services)
+        types = set(self.resource_types)
+
+        for resource in resources:
+            ResourceFindingMapping.objects.update_or_create(
+                resource=resource, finding=self, tenant_id=self.tenant_id
+            )
+            regions.add(resource.region)
+            services.add(resource.service)
+            types.add(resource.type)
+
+        self.resource_regions = list(regions)
+        self.resource_services = list(services)
+        self.resource_types = list(types)
+        self.save()
 
 
 class ResourceFindingMapping(PostgresPartitionedModel, RowLevelSecurityProtectedModel):
@@ -1161,7 +1157,7 @@ class ComplianceRequirementOverview(RowLevelSecurityProtectedModel):
     region = models.TextField(blank=False)
 
     requirement_id = models.TextField(blank=False)
-    requirement_status = StatusEnumField(choices=StatusChoices.choices)
+    requirement_status = StatusEnumField(choices=StatusChoices)
     passed_checks = models.IntegerField(default=0)
     failed_checks = models.IntegerField(default=0)
     total_checks = models.IntegerField(default=0)

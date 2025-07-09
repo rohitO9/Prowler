@@ -26,7 +26,7 @@ import { ThemeSwitch } from "@/components/ThemeSwitch";
 
 export const Menu = ({ isOpen }: { isOpen: boolean }) => {
   const pathname = usePathname();
-  const menuList = getMenuList(pathname);
+  const menuList = getMenuList(pathname ?? "");
 
   return (
     <>
@@ -115,7 +115,7 @@ export const Menu = ({ isOpen }: { isOpen: boolean }) => {
                               <Button
                                 variant={
                                   (active === undefined &&
-                                    pathname.startsWith(href)) ||
+                                    pathname?.startsWith(href)) ||
                                   active
                                     ? "secondary"
                                     : "ghost"

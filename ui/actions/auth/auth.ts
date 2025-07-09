@@ -4,7 +4,7 @@ import { AuthError } from "next-auth";
 import { z } from "zod";
 
 import { signIn, signOut } from "@/auth.config";
-import { apiBaseUrl } from "@/lib/api-base-url";
+import { apiBaseUrl } from "@/lib";
 import { authFormSchema } from "@/types";
 
 const formSchemaSignIn = authFormSchema("sign-in");
@@ -58,7 +58,7 @@ export async function authenticate(
 export const createNewUser = async (
   formData: z.infer<typeof formSchemaSignUp>,
 ) => {
-  const url = new URL(`${apiBaseUrl}/users`);  // Corrected string interpolation
+  const url = new URL(`${apiBaseUrl}/users`);
 
   if (formData.invitationToken) {
     url.searchParams.append("invitation_token", formData.invitationToken);
@@ -103,7 +103,6 @@ export const createNewUser = async (
     };
   }
 };
-
 
 export const getToken = async (formData: z.infer<typeof formSchemaSignIn>) => {
   const url = new URL(`${apiBaseUrl}/tokens`);

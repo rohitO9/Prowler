@@ -47,7 +47,7 @@ export const CustomDropdownFilter = ({
     selectedValues.length === filterValues.length && filterValues.length > 0;
 
   const activeFilterValue = useMemo(() => {
-    const filterParam = searchParams.get(`filter[${filter?.key}]`);
+    const filterParam = searchParams?.get(`filter[${filter?.key}]`);
     return filterParam ? filterParam.split(",") : [];
   }, [searchParams, filter?.key]);
 

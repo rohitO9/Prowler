@@ -11,7 +11,7 @@ Please include a summary of the change and which issue is fixed. List any depend
 ### Checklist
 
 - Are there new checks included in this PR? Yes / No
-    - If so, do we need to update permissions for the provider? Please review this carefully.
+  - If so, do we need to update permissions for the provider? Please review this carefully.
 - [ ] Review if the code is being covered by tests.
 - [ ] Review if code is being documented following this specification https://github.com/google/styleguide/blob/gh-pages/pyguide.md#38-comments-and-docstrings
 - [ ] Review if backport is needed.
@@ -19,6 +19,7 @@ Please include a summary of the change and which issue is fixed. List any depend
 - [ ] Ensure new entries are added to [CHANGELOG.md](https://github.com/prowler-cloud/prowler/blob/master/prowler/CHANGELOG.md), if applicable.
 
 #### API
+
 - [ ] Verify if API specs need to be regenerated.
 - [ ] Check if version updates are required (e.g., specs, Poetry, etc.).
 - [ ] Ensure new entries are added to [CHANGELOG.md](https://github.com/prowler-cloud/prowler/blob/master/api/CHANGELOG.md), if applicable.

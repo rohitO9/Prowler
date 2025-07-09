@@ -126,7 +126,7 @@ export const ViaServiceAccountForm = ({
         )}
 
         <div className="flex w-full justify-end sm:space-x-6">
-          {searchParamsObj.get("via") === "service-account" && (
+          {searchParamsObj?.get("via") === "service-account" && (
             <CustomButton
               type="button"
               ariaLabel="Back"

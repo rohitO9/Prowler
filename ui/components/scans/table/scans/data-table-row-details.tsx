@@ -19,13 +19,13 @@ export const DataTableRowDetails = ({ entityId }: { entityId: string }) => {
 
   useEffect(() => {
     // Add scanId to URL
-    const params = new URLSearchParams(searchParams.toString());
+    const params = new URLSearchParams(searchParams?.toString());
     params.set("scanId", entityId);
     router.push(`?${params.toString()}`, { scroll: false });
 
     // Cleanup function: remove scanId from URL when component unmounts
     return () => {
-      const newParams = new URLSearchParams(searchParams.toString());
+      const newParams = new URLSearchParams(searchParams?.toString());
       newParams.delete("scanId");
       router.push(`?${newParams.toString()}`, { scroll: false });
     };

@@ -2,8 +2,8 @@ name: Prowler - Automatic Backport
 
 on:
   pull_request_target:
-    branches: ['master']
-    types: ['labeled', 'closed']
+    branches: ["master"]
+    types: ["labeled", "closed"]
 
 env:
   # The prefix of the label that triggers the backport must not contain the branch name

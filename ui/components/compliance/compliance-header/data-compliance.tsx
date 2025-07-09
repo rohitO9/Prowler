@@ -15,20 +15,20 @@ export const DataCompliance = ({ scans }: DataComplianceProps) => {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  const scanIdParam = searchParams.get("scanId");
+  const scanIdParam = searchParams?.get("scanId");
 
   const selectedScanId = scanIdParam || (scans.length > 0 ? scans[0].id : "");
 
   useEffect(() => {
     if (!scanIdParam && scans.length > 0) {
-      const params = new URLSearchParams(searchParams);
+      const params = new URLSearchParams(searchParams ?? "");
       params.set("scanId", scans[0].id);
       router.push(`?${params.toString()}`);
     }
   }, [scans, scanIdParam, searchParams, router]);
 
   const handleScanChange = (selectedKey: string) => {
-    const params = new URLSearchParams(searchParams);
+    const params = new URLSearchParams(searchParams ?? "");
     params.set("scanId", selectedKey);
     router.push(`?${params.toString()}`);
   };

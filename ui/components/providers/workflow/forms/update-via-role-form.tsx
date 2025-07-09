@@ -161,7 +161,7 @@ export const UpdateViaRoleForm = ({
 
         {/* Action Buttons */}
         <div className="flex w-full justify-end sm:space-x-6">
-          {searchParamsObj.get("via") === "role" && (
+          {searchParamsObj?.get("via") === "role" && (
             <CustomButton
               type="button"
               ariaLabel="Back"

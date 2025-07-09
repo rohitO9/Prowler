@@ -42,7 +42,7 @@ export const encodeSort = (sort?: string) => sort?.replace(/^\+/, "") || "";
  */
 export const extractSortAndKey = (searchParams: Record<string, unknown>) => {
   const searchParamsKey = JSON.stringify(searchParams || {});
-  const rawSort = searchParams.sort?.toString();
+  const rawSort = searchParams?.sort?.toString();
   const encodedSort = encodeSort(rawSort);
 
   return { searchParamsKey, rawSort, encodedSort };

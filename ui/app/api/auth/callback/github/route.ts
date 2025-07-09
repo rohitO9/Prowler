@@ -8,7 +8,7 @@ import { apiBaseUrl, baseUrl } from "@/lib/helper";
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
 
-  const code = searchParams.get("code");
+  const code = searchParams?.get("code");
 
   const params = new URLSearchParams();
   params.append("code", code || "");

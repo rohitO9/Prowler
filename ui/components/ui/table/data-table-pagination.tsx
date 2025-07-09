@@ -39,7 +39,7 @@ export function DataTablePagination({
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const router = useRouter();
-  const initialPageSize = searchParams.get("pageSize") ?? "10";
+  const initialPageSize = searchParams?.get("pageSize") ?? "10";
 
   const [selectedPageSize, setSelectedPageSize] = useState(initialPageSize);
 
@@ -49,12 +49,12 @@ export function DataTablePagination({
     getPaginationInfo(metadata);
 
   const createPageUrl = (pageNumber: number | string) => {
-    const params = new URLSearchParams(searchParams);
+    const params = new URLSearchParams(searchParams ?? "");
 
     // Preserve all important parameters
-    const scanId = searchParams.get("scanId");
-    const id = searchParams.get("id");
-    const version = searchParams.get("version");
+    const scanId = searchParams?.get("scanId");
+    const id = searchParams?.get("id");
+    const version = searchParams?.get("version");
 
     if (+pageNumber > totalPages) {
       return `${pathname}?${params.toString()}`;
@@ -90,12 +90,12 @@ export function DataTablePagination({
               onValueChange={(value) => {
                 setSelectedPageSize(value);
 
-                const params = new URLSearchParams(searchParams);
+                const params = new URLSearchParams(searchParams ?? "");
 
                 // Preserve all important parameters
-                const scanId = searchParams.get("scanId");
-                const id = searchParams.get("id");
-                const version = searchParams.get("version");
+                const scanId = searchParams?.get("scanId");
+                const id = searchParams?.get("id");
+                const version = searchParams?.get("version");
 
                 params.set("pageSize", value);
                 params.set("page", "1");
@@ -139,7 +139,7 @@ export function DataTablePagination({
               className={`${baseLinkClass} ${isFirstPage ? disabledLinkClass : ""}`}
               href={
                 isFirstPage
-                  ? pathname + "?" + searchParams.toString()
+                  ? pathname + "?" + searchParams?.toString()
                   : createPageUrl(1)
               }
               scroll={!disableScroll}
@@ -153,7 +153,7 @@ export function DataTablePagination({
               className={`${baseLinkClass} ${isFirstPage ? disabledLinkClass : ""}`}
               href={
                 isFirstPage
-                  ? pathname + "?" + searchParams.toString()
+                  ? pathname + "?" + searchParams?.toString()
                   : createPageUrl(currentPage - 1)
               }
               scroll={!disableScroll}
@@ -167,7 +167,7 @@ export function DataTablePagination({
               className={`${baseLinkClass} ${isLastPage ? disabledLinkClass : ""}`}
               href={
                 isLastPage
-                  ? pathname + "?" + searchParams.toString()
+                  ? pathname + "?" + searchParams?.toString()
                   : createPageUrl(currentPage + 1)
               }
               scroll={!disableScroll}
@@ -181,7 +181,7 @@ export function DataTablePagination({
               className={`${baseLinkClass} ${isLastPage ? disabledLinkClass : ""}`}
               href={
                 isLastPage
-                  ? pathname + "?" + searchParams.toString()
+                  ? pathname + "?" + searchParams?.toString()
                   : createPageUrl(totalPages)
               }
               scroll={!disableScroll}

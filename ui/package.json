@@ -16,6 +16,7 @@
     "@react-aria/visually-hidden": "3.8.12",
     "@tailwindcss/typography": "^0.5.16",
     "@tanstack/react-table": "^8.19.3",
+    "@typeschema/main": "^0.14.1",
     "add": "^2.0.6",
     "alert": "^6.0.2",
     "bcryptjs": "^2.4.3",

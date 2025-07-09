@@ -25,7 +25,7 @@ export const WorkflowAddEditRole = () => {
 
   // Calculate current step based on pathname
   const currentStepIndex = steps.findIndex((step) =>
-    pathname.endsWith(step.href),
+    pathname?.endsWith(step.href),
   );
   const currentStep = currentStepIndex === -1 ? 0 : currentStepIndex;
 

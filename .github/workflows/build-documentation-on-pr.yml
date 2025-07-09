@@ -3,10 +3,10 @@ name: Prowler - Pull Request Documentation Link
 on:
   pull_request:
     branches:
-      - 'master'
-      - 'v3'
+      - "master"
+      - "v3"
     paths:
-      - 'docs/**'
+      - "docs/**"
 
 env:
   PR_NUMBER: ${{ github.event.pull_request.number }}

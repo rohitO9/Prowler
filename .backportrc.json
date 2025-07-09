@@ -1,12 +1,8 @@
 {
   "repoOwner": "prowler-cloud",
   "repoName": "prowler",
-  "targetPRLabels": [
-    "backport"
-  ],
-  "sourcePRLabels": [
-    "was-backported"
-  ],
+  "targetPRLabels": ["backport"],
+  "sourcePRLabels": ["was-backported"],
   "copySourcePRLabels": false,
   "copySourcePRReviewers": true,
   "prTitle": "{{sourcePullRequest.title}}",

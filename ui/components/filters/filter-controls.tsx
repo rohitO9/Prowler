@@ -30,7 +30,7 @@ export const FilterControls: React.FC<FilterControlsProps> = ({
   const [showClearButton, setShowClearButton] = useState(false);
 
   useEffect(() => {
-    const hasFilters = Array.from(searchParams.keys()).some(
+    const hasFilters = Array.from(searchParams?.keys?.() ?? []).some(
       (key) => key.startsWith("filter[") || key === "sort",
     );
     setShowClearButton(hasFilters);

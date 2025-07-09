@@ -31,14 +31,14 @@ export const ClientAccordionContent = ({
   const [findings, setFindings] = useState<FindingsResponse | null>(null);
   const [expandedFindings, setExpandedFindings] = useState<FindingProps[]>([]);
   const searchParams = useSearchParams();
-  const pageNumber = searchParams.get("page") || "1";
-  const complianceId = searchParams.get("complianceId");
+  const pageNumber = searchParams ? searchParams?.get("page") || "1" : "1";
+  const complianceId = searchParams ? searchParams?.get("complianceId") : null;
   const defaultSort = "severity,status,-inserted_at";
-  const sort = searchParams.get("sort") || defaultSort;
+  const sort = searchParams ? searchParams?.get("sort") || defaultSort : defaultSort;
   const loadedPageRef = useRef<string | null>(null);
   const loadedSortRef = useRef<string | null>(null);
   const isExpandedRef = useRef(false);
-  const region = searchParams.get("filter[region__in]") || "";
+  const region = searchParams?.get("filter[region__in]") || "";
 
   useEffect(() => {
     async function loadFindings() {

@@ -231,7 +231,7 @@ export const ViaCredentialsForm = ({
         )}
 
         <div className="flex w-full justify-end sm:space-x-6">
-          {searchParamsObj.get("via") === "credentials" && (
+          {searchParamsObj?.get("via") === "credentials" && (
             <CustomButton
               type="button"
               ariaLabel="Back"

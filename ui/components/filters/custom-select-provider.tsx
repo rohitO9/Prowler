@@ -46,7 +46,7 @@ export const CustomSelectProvider: React.FC = () => {
 
   const applyProviderFilter = useCallback(
     (value: string) => {
-      const params = new URLSearchParams(searchParams.toString());
+      const params = new URLSearchParams(searchParams?.toString());
       if (value) {
         params.set("filter[provider_type]", value);
       } else {
@@ -57,7 +57,7 @@ export const CustomSelectProvider: React.FC = () => {
     [router, searchParams],
   );
 
-  const currentProvider = searchParams.get("filter[provider_type]") || "";
+  const currentProvider = searchParams?.get("filter[provider_type]") || "";
 
   const selectedKeys = useMemo(() => {
     return dataInputsProvider.some(

@@ -52,11 +52,11 @@ const getProviderData = (
 
 const FindingDetailsCell = ({ row }: { row: any }) => {
   const searchParams = useSearchParams();
-  const findingId = searchParams.get("id");
+  const findingId = searchParams?.get("id");
   const isOpen = findingId === row.original.id;
 
   const handleOpenChange = (open: boolean) => {
-    const params = new URLSearchParams(searchParams);
+    const params = new URLSearchParams(searchParams?? "");
 
     if (open) {
       params.set("id", row.original.id);
