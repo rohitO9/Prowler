@@ -19,7 +19,7 @@ services:
       - "prod"
 
   ui:
-    image: prowlercloud/prowler-ui:${PROWLER_UI_VERSION:-stable}
+    image: prowler-ui-prod:latest
     env_file:
       - path: .env
         required: false

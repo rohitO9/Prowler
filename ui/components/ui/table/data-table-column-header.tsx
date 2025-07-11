@@ -28,7 +28,7 @@ export const DataTableColumnHeader = <TData, TValue>({
   const searchParams = useSearchParams();
 
   const getToggleSortingHandler = () => {
-    const currentParams = new URLSearchParams(searchParams.toString());
+    const currentParams = new URLSearchParams(searchParams?.toString());
     const currentSortParam = currentParams.get("sort");
     let newSortParam = "";
 
@@ -59,7 +59,7 @@ export const DataTableColumnHeader = <TData, TValue>({
   };
 
   const renderSortIcon = () => {
-    const currentSortParam = searchParams.get("sort");
+    const currentSortParam = searchParams?.get("sort");
     if (
       !currentSortParam ||
       currentSortParam === "" ||

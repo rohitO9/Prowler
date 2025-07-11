@@ -22,7 +22,7 @@ const getScanData = (row: { original: ScanProps }) => {
 
 const ScanDetailsCell = ({ row }: { row: any }) => {
   const searchParams = useSearchParams();
-  const scanId = searchParams.get("scanId");
+  const scanId = searchParams?.get("scanId");
   const isOpen = scanId === row.original.id;
 
   return (

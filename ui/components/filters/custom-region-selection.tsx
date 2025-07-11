@@ -10,13 +10,13 @@ export const CustomRegionSelection: React.FC = () => {
   const region = "none";
   // Memoize selected keys based on the URL
   const selectedKeys = useMemo(() => {
-    const params = searchParams.get("filter[regions]");
+    const params = searchParams?.get("filter[regions]");
     return params ? params.split(",") : [];
   }, [searchParams]);
 
   const applyRegionFilter = useCallback(
     (values: string[]) => {
-      const params = new URLSearchParams(searchParams.toString());
+      const params = new URLSearchParams(searchParams?.toString());
       if (values.length > 0) {
         params.set("filter[regions]", values.join(","));
       } else {

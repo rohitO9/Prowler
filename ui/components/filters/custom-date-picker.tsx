@@ -18,7 +18,7 @@ export const CustomDatePicker = () => {
   const { updateFilter } = useUrlFilters();
 
   const [value, setValue] = React.useState(() => {
-    const dateParam = searchParams.get("filter[inserted_at]");
+    const dateParam = searchParams?.get("filter[inserted_at]");
     return dateParam ? today(getLocalTimeZone()) : null;
   });
 
@@ -46,7 +46,7 @@ export const CustomDatePicker = () => {
       initialRender.current = false;
       return;
     }
-    const params = new URLSearchParams(searchParams.toString());
+    const params = new URLSearchParams(searchParams?.toString());
     if (params.size === 0) {
       setValue(null);
     }

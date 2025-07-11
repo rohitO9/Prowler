@@ -43,6 +43,7 @@ junit-reports/
 .vscode/
 
 # Cursor files
+.cursorignore
 
 # Terraform
 .terraform*
@@ -64,4 +65,3 @@ node_modules
 
 # Persistent data
 _data/
-

@@ -33,7 +33,7 @@ export const ComplianceCard: React.FC<ComplianceCardProps> = ({
 }) => {
   const searchParams = useSearchParams();
   const router = useRouter();
-  const hasRegionFilter = searchParams.has("filter[region__in]");
+  const hasRegionFilter = searchParams?.has("filter[region__in]") ?? false;
   const [isDownloading, setIsDownloading] = useState<boolean>(false);
 
   const formatTitle = (title: string) => {

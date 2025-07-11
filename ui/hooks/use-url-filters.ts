@@ -14,7 +14,7 @@ export const useUrlFilters = () => {
 
   const updateFilter = useCallback(
     (key: string, value: string | string[] | null) => {
-      const params = new URLSearchParams(searchParams.toString());
+      const params = new URLSearchParams(searchParams?.toString());
 
       // Only reset page to 1 if page parameter already exists
       if (params.has("page")) {
@@ -38,7 +38,7 @@ export const useUrlFilters = () => {
 
   const clearFilter = useCallback(
     (key: string) => {
-      const params = new URLSearchParams(searchParams.toString());
+      const params = new URLSearchParams(searchParams?.toString());
       const filterKey = key.startsWith("filter[") ? key : `filter[${key}]`;
 
       params.delete(filterKey);
@@ -54,7 +54,7 @@ export const useUrlFilters = () => {
   );
 
   const clearAllFilters = useCallback(() => {
-    const params = new URLSearchParams(searchParams.toString());
+    const params = new URLSearchParams(searchParams?.toString());
     Array.from(params.keys()).forEach((key) => {
       if (key.startsWith("filter[") || key === "sort") {
         params.delete(key);

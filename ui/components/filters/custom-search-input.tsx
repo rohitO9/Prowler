@@ -35,7 +35,7 @@ export const CustomSearchInput: React.FC = () => {
   };
 
   useEffect(() => {
-    const searchFromUrl = searchParams.get("filter[search]") || "";
+    const searchFromUrl = searchParams?.get("filter[search]") || "";
     setSearchQuery(searchFromUrl);
   }, [searchParams]);
 
