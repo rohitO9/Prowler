@@ -168,112 +168,118 @@ export const EditRoleForm = ({
     <Form {...form}>
       <form
         onSubmit={form.handleSubmit(onSubmitClient)}
-        className="flex flex-col space-y-6"
+        className="px-6 sm:p-10 flex flex-col gap-8 w-full max-w-4xl mx-auto"
       >
-        <CustomInput
-          control={form.control}
-          name="name"
-          type="text"
-          label="Role Name"
-          labelPlacement="inside"
-          placeholder="Enter role name"
-          variant="bordered"
-          isRequired
-          isInvalid={!!form.formState.errors.name}
-        />
+        <div className="w-full max-w-xl mx-auto">
+          <CustomInput
+            control={form.control}
+            name="name"
+            type="text"
+            label="Role Name"
+            labelPlacement="inside"
+            placeholder="Enter role name"
+            variant="bordered"
+            isRequired
+            isInvalid={!!form.formState.errors.name}
+          />
+        </div>
 
-        <div className="flex flex-col space-y-4">
-          <span className="text-lg font-semibold">Admin Permissions</span>
-
-          {/* Select All Checkbox */}
-          <Checkbox
-            isSelected={permissionFormFields.every((perm) =>
-              form.watch(perm.field as keyof FormValues),
-            )}
-            onChange={(e) => onSelectAllChange(e.target.checked)}
-            classNames={{
-              label: "text-small",
-              wrapper: "checkbox-update",
-            }}
-          >
-            Grant all admin permissions
-          </Checkbox>
-
-          {/* Permissions Grid */}
-          <div className="grid grid-cols-2 gap-4">
-            {permissionFormFields
-              .filter(
-                (permission) =>
-                  permission.field !== "manage_billing" ||
-                  process.env.NEXT_PUBLIC_IS_CLOUD_ENV === "true",
-              )
-              .map(({ field, label, description }) => (
-                <div key={field} className="flex items-center gap-2">
-                  <Checkbox
-                    {...form.register(field as keyof FormValues)}
-                    isSelected={!!form.watch(field as keyof FormValues)}
-                    classNames={{
-                      label: "text-small",
-                      wrapper: "checkbox-update",
-                    }}
-                  >
-                    {label}
-                  </Checkbox>
-                  <Tooltip content={description} placement="right">
-                    <div className="flex w-fit items-center justify-center">
-                      <InfoIcon
-                        className={clsx(
-                          "cursor-pointer text-default-400 group-data-[selected=true]:text-foreground",
-                        )}
-                        aria-hidden={"true"}
-                        width={16}
-                      />
+        {/* Container for permissions and groups */}
+        <div className="bg-default-100 rounded-xl p-6">
+          <div className="flex flex-col sm:flex-row gap-10">
+            {/* Admin Permissions Section */}
+            <div className="flex-1 flex flex-col gap-4">
+              <span className="text-xl font-semibold bg-gradient-to-r from-indigo-500 to-purple-500 bg-clip-text text-transparent">Admin Permissions</span>
+              <Checkbox
+                isSelected={permissionFormFields.every((perm) =>
+                  form.watch(perm.field as keyof FormValues),
+                )}
+                onChange={(e) => onSelectAllChange(e.target.checked)}
+                color="primary"
+                classNames={{
+                  label: "text-small",
+                  wrapper: "checkbox-update",
+                }}
+              >
+                Grant all admin permissions
+              </Checkbox>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {permissionFormFields
+                  .filter(
+                    (permission) =>
+                      permission.field !== "manage_billing" ||
+                      process.env.NEXT_PUBLIC_IS_CLOUD_ENV === "true",
+                  )
+                  .map(({ field, label, description }) => (
+                    <div key={field} className="flex items-center gap-2">
+                      <Checkbox
+                        {...form.register(field as keyof FormValues)}
+                        isSelected={!!form.watch(field as keyof FormValues)}
+                        color="primary"
+                        classNames={{
+                          label: "text-small",
+                          wrapper: "checkbox-update",
+                        }}
+                      >
+                        {label}
+                      </Checkbox>
+                      <Tooltip content={description} placement="right">
+                        <div className="flex w-fit items-center justify-center">
+                          <InfoIcon
+                            className={clsx(
+                              "cursor-pointer text-default-400 group-data-[selected=true]:text-foreground",
+                            )}
+                            aria-hidden={"true"}
+                            width={16}
+                          />
+                        </div>
+                      </Tooltip>
                     </div>
-                  </Tooltip>
-                </div>
-              ))}
+                  ))}
+              </div>
+            </div>
+
+            {/* Groups and Account Visibility Section */}
+            {!unlimitedVisibility && (
+              <div className="flex-1 flex flex-col gap-4">
+                <span className="text-xl font-semibold bg-gradient-to-r from-indigo-500 to-purple-500 bg-clip-text text-transparent">
+                  Groups and Account Visibility
+                </span>
+                <p className="text-small font-medium text-default-700">
+                  Select the groups this role will have access to. If no groups are
+                  selected and unlimited visibility is not enabled, the role will
+                  not have access to any accounts.
+                </p>
+                <Controller
+                  name="groups"
+                  control={form.control}
+                  render={({ field }) => (
+                    <CustomDropdownSelection
+                      label="Select Groups"
+                      name="groups"
+                      values={groups}
+                      selectedKeys={field.value}
+                      onChange={(name, selectedValues) => {
+                        field.onChange(selectedValues);
+                      }}
+                    />
+                  )}
+                />
+                {form.formState.errors.groups && (
+                  <p className="mt-2 text-sm text-red-600">
+                    {form.formState.errors.groups.message}
+                  </p>
+                )}
+              </div>
+            )}
           </div>
         </div>
-        <Divider className="my-4" />
 
-        {!unlimitedVisibility && (
-          <div className="flex flex-col space-y-4">
-            <span className="text-lg font-semibold">Groups visibility</span>
-
-            <p className="text-small font-medium text-default-700">
-              Select the groups this role will have access to. If no groups are
-              selected and unlimited visibility is not enabled, the role will
-              not have access to any accounts.
-            </p>
-
-            <Controller
-              name="groups"
-              control={form.control}
-              render={({ field }) => (
-                <CustomDropdownSelection
-                  label="Select Groups"
-                  name="groups"
-                  values={groups}
-                  selectedKeys={field.value}
-                  onChange={(name, selectedValues) => {
-                    field.onChange(selectedValues);
-                  }}
-                />
-              )}
-            />
-
-            {form.formState.errors.groups && (
-              <p className="mt-2 text-sm text-red-600">
-                {form.formState.errors.groups.message}
-              </p>
-            )}
-          </div>
-        )}
-        <div className="flex w-full justify-end sm:space-x-6">
+        <div className="flex w-full justify-center sm:justify-end gap-4 ">
           <CustomButton
             type="submit"
             ariaLabel="Update Role"
-            className="w-1/2"
+            className="w-full sm:w-1/3"
             variant="solid"
             color="action"
             size="lg"
