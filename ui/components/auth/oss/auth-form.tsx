@@ -137,17 +137,36 @@ export const AuthForm = ({
   };
 
   return (
-    <div className="relative flex h-screen w-screen">
-      {/* Auth Form */}
-      <div className="relative flex w-full items-center justify-center lg:w-full">
-        {/* Background Pattern */}
-        <div className="absolute h-full w-full bg-[radial-gradient(#6af400_1px,transparent_1px)] [background-size:16px_16px] [mask-image:radial-gradient(ellipse_50%_50%_at_50%_50%,#000_10%,transparent_80%)]"></div>
-
-        <div className="relative z-10 flex w-full max-w-sm flex-col gap-4 rounded-large border-1 border-divider bg-white/90 px-8 py-10 shadow-small dark:bg-background/85 md:max-w-md">
-          {/* Prowler Logo */}
-          <div className="absolute -top-[100px] left-1/2 z-10 flex h-fit w-fit -translate-x-1/2">
-            <ProwlerExtended width={300} />
+    <div className="flex h-screen w-screen overflow-hidden transition-colors duration-300 dark:bg-[linear-gradient(to_top,_#000000_60%,_#1a1f3c_100%,_#2d0b3c)]">
+      {/* Left Section */}
+      <div className="hidden w-1/2 flex-col items-center justify-center px-10 text-black dark:text-white lg:flex transition-colors duration-300">
+        {/* Animated SecureStack Logo */}
+        <div className="relative mb-3">
+          <div className="bg-gradient-to-r from-indigo-500 to-purple-600 rounded-xl w-24 h-24 flex items-center justify-center shadow-lg after:content-[''] after:absolute after:inset-0 after:rounded-xl after:-z-10 after:blur-md after:bg-gradient-to-br after:from-purple-400/40 after:to-indigo-500/30">
+            <span className="text-5xl font-black text-white select-none z-10">SS</span>
           </div>
+        </div>
+        <span className="text-sm text-gray-500 dark:text-gray-400 mb-4">Cloud Security Tool</span>
+        <h2 className="mt-4 text-3xl font-bold text-center">
+          Welcome to <span className="bg-gradient-to-r from-indigo-700 via-purple-500 to-indigo-900 bg-clip-text text-transparent dark:from-indigo-400 dark:via-purple-400 dark:to-indigo-600">SecureStack!</span>
+        </h2>
+        <p className="mt-4 max-w-md text-center text-lg">
+          Simplify your infrastructure and compliance workflows with ease.
+        </p>
+      </div>
+
+      {/* Right Section */}
+      <div className="relative flex w-full items-center justify-center px-6 lg:w-1/2 transition-colors duration-300">
+        {/* Background Pattern */}
+       
+
+        <div
+          className={`relative z-10 w-full shadow-md max-w-sm flex-col gap-4 rounded-large border-2 px-8 py-10 text-black dark:text-white md:max-w-md dark:bg-[linear-gradient(to_top,_#000000_60%,_#1a1f3c_100%,_#2d0b3c)] ${
+            type === "sign-up" ? "h-[640px]" : ""
+          }`}
+        >
+          {/* Prowler Logo */}
+          
           <div className="flex items-center justify-between">
             <p className="pb-2 text-xl font-medium">
               {type === "sign-in" ? "Sign In" : "Sign Up"}
@@ -277,7 +296,7 @@ export const AuthForm = ({
                 type="submit"
                 ariaLabel={type === "sign-in" ? "Log In" : "Sign Up"}
                 ariaDisabled={isLoading}
-                className="w-full"
+                className="w-full bg-[#47C6F2] text-white hover:bg-[#1f497a]"
                 variant="solid"
                 color="action"
                 size="md"
