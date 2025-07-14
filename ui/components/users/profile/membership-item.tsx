@@ -8,17 +8,22 @@ import { DateWithTime, InfoField } from "@/components/ui/entities";
 import { MembershipDetailData } from "@/types/users";
 
 import { EditTenantForm } from "../forms";
+import { RolesCard } from "./roles-card";
 
 export const MembershipItem = ({
   membership,
   tenantName,
   tenantId,
   isOwner,
+  roles,
+  roleDetails,
 }: {
   membership: MembershipDetailData;
   tenantName: string;
   tenantId: string;
   isOwner: boolean;
+  roles: any[];
+  roleDetails: Record<string, any>;
 }) => {
   const [isEditOpen, setIsEditOpen] = useState(false);
 
@@ -28,6 +33,7 @@ export const MembershipItem = ({
         isOpen={isEditOpen}
         onOpenChange={setIsEditOpen}
         title=""
+        className="max-w-lg"
       >
         <EditTenantForm
           tenantId={tenantId}

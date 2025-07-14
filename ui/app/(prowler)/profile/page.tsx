@@ -70,14 +70,14 @@ const SSRDataUser = async () => {
     <div className="flex w-full flex-col gap-6">
       <UserBasicInfoCard user={userProfile?.data} tenantId={userTenant?.id} />
       <div className="flex flex-col gap-6 lg:flex-row">
-        <div className="w-full md:w-1/2 lg:w-1/2 xl:w-1/2 2xl:w-1/2">
-          <RolesCard roles={roleDetails || []} roleDetails={roleDetailsMap} />
-        </div>
-        <div className="w-full md:w-1/2 lg:w-1/2 xl:w-1/2 2xl:w-1/2">
+        {/* Removed RolesCard section */}
+        <div className="w-full">
           <MembershipsCard
             memberships={memberships?.data || []}
             tenantsMap={tenantsMap}
             isOwner={isOwner}
+            roles={roleDetails || []}
+            roleDetails={roleDetailsMap}
           />
         </div>
       </div>

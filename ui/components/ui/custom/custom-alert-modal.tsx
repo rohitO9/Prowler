@@ -7,6 +7,7 @@ interface CustomAlertModalProps {
   title?: React.ReactNode;
   description?: React.ReactNode;
   children: ReactNode;
+  className?: string;
 }
 
 export const CustomAlertModal: React.FC<CustomAlertModalProps> = ({
@@ -15,6 +16,7 @@ export const CustomAlertModal: React.FC<CustomAlertModalProps> = ({
   title,
   description,
   children,
+  className,
 }) => {
   return (
     <Modal
@@ -29,7 +31,7 @@ export const CustomAlertModal: React.FC<CustomAlertModalProps> = ({
       placement="center"
     >
       <ModalContent
-        className="mx-6 max-w-[90vw] w-full max-h-[90vh] overflow-hidden rounded-2xl shadow-2xl bg-white dark:bg-prowler-blue-800 pt-2 pb-4"
+        className={`mx-6 ${className ? className : "max-w-[90vw] w-full"} max-h-[90vh] overflow-hidden rounded-2xl shadow-2xl bg-white dark:bg-prowler-blue-800 pt-2 pb-4`}
       >
         {(_onClose) => (
           <>
