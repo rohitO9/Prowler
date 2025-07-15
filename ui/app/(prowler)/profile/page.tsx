@@ -67,9 +67,9 @@ const SSRDataUser = async () => {
   );
 
   return (
-    <div className="flex w-full flex-col gap-6">
+    <div className="flex w-full flex-col gap-4">
       <UserBasicInfoCard user={userProfile?.data} tenantId={userTenant?.id} />
-      <div className="flex flex-col gap-6 lg:flex-row">
+      <div className="flex flex-col gap-4 lg:flex-row">
         {/* Removed RolesCard section */}
         <div className="w-full">
           <MembershipsCard

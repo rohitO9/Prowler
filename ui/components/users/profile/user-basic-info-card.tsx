@@ -1,7 +1,7 @@
 "use client";
 
 import { Card, CardBody, Divider, Button, Chip } from "@nextui-org/react";
-import { Calendar, Building2, Copy, User as UserIcon } from "lucide-react";
+import { Calendar, Building2, Copy, User as UserIcon, Mail } from "lucide-react";
 import { DateWithTime, InfoField, SnippetChip } from "@/components/ui/entities";
 import { UserDataWithRoles } from "@/types/users";
 import { ProwlerShort } from "../../icons";
@@ -10,7 +10,6 @@ const TenantIdCopy = ({ id }: { id: string }) => {
   return (
     <div className="flex items-center gap-2">
       <SnippetChip value={id} />
-      <Copy size={16} className="text-gray-400 cursor-pointer" />
     </div>
   );
 };
@@ -25,38 +24,49 @@ export const UserBasicInfoCard = ({
   const { name, email, company_name, date_joined } = user.attributes;
 
   return (
-    <Card className="shadow-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-prowler-blue-400 max-w-xl mx-auto">
+    <Card className="shadow-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-prowler-blue-400 w-full">
       <CardBody>
-        {/* Banner/cover image placeholder */}
-       
-        <div className="flex flex-col items-center mt-5 mb-4">
-          <div className="relative">
-            <div className="rounded-full border-4 border-white dark:border-prowler-blue-400 shadow-md bg-gray-50 dark:bg-prowler-blue-200 w-20 h-20 flex items-center justify-center">
-              <UserIcon size={48} className="text-indigo-400" />
+        {/* Horizontal layout: left (icon, name, email), right (date joined, org id) */}
+        <div className="flex flex-row items-center justify-between gap-6 mt-4  w-full">
+          {/* Left: Date Joined */}
+          <div className="flex flex-1 justify-start">
+            <div className="flex items-center gap-2">
+              <Calendar size={18} className="text-gray-400" />
+              <InfoField label="Date Joined" variant="simple">
+                <DateWithTime inline dateTime={date_joined} />
+              </InfoField>
             </div>
           </div>
-          <span className="mt-3 text-2xl font-extrabold bg-gradient-to-r from-indigo-500 to-purple-600 bg-clip-text text-transparent">
-            {name}
-          </span>
-         
-          <span className="mt-1 text-sm text-gray-500 dark:text-gray-300">{email}</span>
-        </div>
-        <Divider className="my-4" />
-        <div className="flex flex-col md:flex-row gap-4 justify-center items-center">
-          <div className="flex items-center gap-2">
-            <Calendar size={18} className="text-gray-400" />
-            <InfoField label="Date Joined" variant="simple">
-              <DateWithTime inline dateTime={date_joined} />
-            </InfoField>
-          </div>
-          <div className="flex items-center gap-2">
-            <Building2 size={18} className="text-gray-400" />
-            <InfoField label="Organization ID" variant="transparent">
+
+          {/* Center: Icon, Name, Organization ID */}
+          <div className="flex flex-col items-center justify-center gap-2 min-w-[120px]">
+            <div className="relative">
+              <div className="rounded-full border-4 border-white dark:border-prowler-blue-400 shadow-md bg-gray-50 dark:bg-prowler-blue-200 w-20 h-20 flex items-center justify-center">
+                <UserIcon size={48} className="text-indigo-400" />
+              </div>
+            </div>
+            <span className="text-2xl font-extrabold bg-gradient-to-r from-indigo-500 to-purple-600 bg-clip-text text-transparent">
+              {name}
+            </span>
+            <span className="text-xs font-semibold text-gray-500 dark:text-gray-300 text-center">Organization ID</span>
+            <div className="flex items-center gap-2">
+              <Building2 size={18} className="text-gray-400" />
               <TenantIdCopy id={tenantId} />
-            </InfoField>
+            </div>
+          </div>
+
+          {/* Right: Email */}
+          <div className="flex flex-1 justify-end">
+            <div className="flex items-center gap-2">
+              <InfoField label="Email" variant="transparent">
+                <span className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-100">
+                  <Mail size={18} className="text-gray-400" />
+                  {email}
+                </span>
+              </InfoField>
+            </div>
           </div>
         </div>
-      
       </CardBody>
     </Card>
   );
