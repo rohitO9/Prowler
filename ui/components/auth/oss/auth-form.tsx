@@ -161,7 +161,7 @@ export const AuthForm = ({
        
 
         <div
-          className={`relative z-10 w-full shadow-md max-w-sm flex-col gap-4 rounded-large border-2 px-8 py-10 text-black dark:text-white md:max-w-md dark:bg-[linear-gradient(to_top,_#000000_60%,_#1a1f3c_100%,_#2d0b3c)] ${
+          className={`relative z-10 w-full shadow-md max-w-sm flex-col gap-4 rounded-large border-2 px-8 ${type === "sign-up" ? "pt-4 pb-10" : "py-10"} text-black dark:text-white md:max-w-md dark:bg-[linear-gradient(to_top,_#000000_60%,_#1a1f3c_100%,_#2d0b3c)] ${
             type === "sign-up" ? "h-[640px]" : ""
           }`}
         >
@@ -211,26 +211,40 @@ export const AuthForm = ({
                 showFormMessage={type !== "sign-in"}
               />
 
-              <CustomInput
-                control={form.control}
-                name="password"
-                password
-                isInvalid={
-                  !!form.formState.errors.password ||
-                  !!form.formState.errors.email
-                }
-              />
+              {type === "sign-in" ? (
+                <div className="">
+                  <CustomInput
+                    control={form.control}
+                    name="password"
+                    password
+                    isInvalid={
+                      !!form.formState.errors.password ||
+                      !!form.formState.errors.email
+                    }
+                  />
+                </div>
+              ) : (
+                <CustomInput
+                  control={form.control}
+                  name="password"
+                  password
+                  isInvalid={
+                    !!form.formState.errors.password ||
+                    !!form.formState.errors.email
+                  }
+                />
+              )}
 
-              {/* {type === "sign-in" && (
+               {type === "sign-in" && (
                 <div className="flex items-center justify-between px-1 py-2">
                   <Checkbox name="remember" size="sm">
                     Remember me
                   </Checkbox>
-                  <Link className="text-default-500" href="#">
+                  <Link className="text-default-500 hover:text-indigo-500" href="#">
                     Forgot password?
                   </Link>
                 </div>
-              )} */}
+              )} 
               {type === "sign-up" && (
                 <>
                   <CustomInput
@@ -315,7 +329,7 @@ export const AuthForm = ({
 
           {!invitationToken && (
             <>
-              <div className="flex items-center gap-4 py-2">
+              <div className="flex items-center gap-4 mt-2 mb-2 py-2">
                 <Divider className="flex-1" />
                 <p className="shrink-0 text-tiny text-default-500">OR</p>
                 <Divider className="flex-1" />
@@ -395,12 +409,12 @@ export const AuthForm = ({
             </>
           )}
           {type === "sign-in" ? (
-            <p className="text-center text-small">
+            <p className="text-center mt-4 text-small">
               Need to create an account?&nbsp;
               <Link href="/sign-up">Sign Up</Link>
             </p>
           ) : (
-            <p className="text-center text-small">
+            <p className="text-center mt-2 text-small">
               Already have an account?&nbsp;
               <Link href="/sign-in">Log In</Link>
             </p>
