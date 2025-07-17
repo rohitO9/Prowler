@@ -40,10 +40,10 @@ export const ViaRoleForm = ({
   const providerType = searchParams.type;
   const providerId = searchParams.id;
 
-  const formSchema = addCredentialsRoleFormSchema(providerType);
-  type FormSchemaType = z.infer<typeof formSchema> & {
+  type FormSchemaType = z.infer<ReturnType<typeof addCredentialsRoleFormSchema>> & {
     credentials_type: "aws-sdk-default" | "access-secret-key";
   };
+  const formSchema = addCredentialsRoleFormSchema(providerType);
 
   const form = useForm<FormSchemaType>({
     resolver: zodResolver(formSchema),
@@ -84,14 +84,14 @@ export const ViaRoleForm = ({
         ].includes(key)
       ) {
         if (value !== undefined && value !== "") {
-          formData.append(key, String(value));
+          formData.append(key as string, String(value));
         }
         return;
       }
 
       // Add any other valid field
       if (value !== undefined && value !== "") {
-        formData.append(key, String(value));
+        formData.append(key as string, String(value));
       }
     });
 
@@ -143,7 +143,7 @@ export const ViaRoleForm = ({
     <Form {...form}>
       <form
         onSubmit={form.handleSubmit(onSubmitClient)}
-        className="flex flex-col space-y-4"
+        className="flex flex-col space-y-4 pb-10"
       >
         <input type="hidden" name="providerId" value={providerId} />
         <input type="hidden" name="providerType" value={providerType} />
@@ -158,12 +158,12 @@ export const ViaRoleForm = ({
           />
         )}
 
-        <div className="flex w-full justify-end sm:space-x-6">
+        <div className="flex w-full justify-center sm:space-x-6 ">
           {searchParamsObj?.get("via") === "role" && (
             <CustomButton
               type="button"
               ariaLabel="Back"
-              className="w-1/2 bg-transparent"
+              className="w-72 bg-transparent"
               variant="faded"
               size="lg"
               radius="lg"
@@ -177,7 +177,7 @@ export const ViaRoleForm = ({
           <CustomButton
             type="submit"
             ariaLabel={"Save"}
-            className="w-1/2"
+            className="w-72"
             variant="solid"
             color="action"
             size="lg"

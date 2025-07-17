@@ -37,7 +37,7 @@ export const CredentialsRoleHelper = () => {
           Use one of the following templates to create the IAM role:
         </p>
 
-        <div className="flex w-fit flex-col gap-2">
+        <div className="flex w-fit flex-row gap-2">
           <CustomButton
             ariaLabel="CloudFormation Template"
             color="transparent"
