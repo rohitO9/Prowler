@@ -230,12 +230,12 @@ export const ViaCredentialsForm = ({
           />
         )}
 
-        <div className="flex w-full justify-end sm:space-x-6">
+        <div className="flex w-full justify-end sm:space-x-6 pb-8">
           {searchParamsObj?.get("via") === "credentials" && (
             <CustomButton
               type="button"
               ariaLabel="Back"
-              className="w-1/2 bg-transparent"
+              className="w-1/2  bg-transparent"
               variant="faded"
               size="lg"
               radius="lg"
@@ -249,7 +249,7 @@ export const ViaCredentialsForm = ({
           <CustomButton
             type="submit"
             ariaLabel={"Save"}
-            className="w-1/2"
+            className="w-1/2 "
             variant="solid"
             color="action"
             size="lg"

@@ -11,7 +11,7 @@ export const GCPServiceAccountKeyForm = ({
   return (
     <>
       <div className="flex flex-col">
-        <div className="text-md font-bold leading-9 text-default-foreground">
+        <div className="text-md font-bold leading-9 text-default-foreground bg-gradient-to-r from-indigo-500 to-purple-500 bg-clip-text text-transparent">
           Connect via Service Account Key
         </div>
         <div className="text-sm text-default-500">

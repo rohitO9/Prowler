@@ -110,7 +110,7 @@ export const ViaServiceAccountForm = ({
     <Form {...form}>
       <form
         onSubmit={form.handleSubmit(onSubmitClient)}
-        className="flex flex-col space-y-4"
+        className="flex flex-col space-y-4 min-h-[500px]"
       >
         <input type="hidden" name="providerId" value={providerId} />
         <input type="hidden" name="providerType" value={providerType} />
@@ -125,7 +125,7 @@ export const ViaServiceAccountForm = ({
           />
         )}
 
-        <div className="flex w-full justify-end sm:space-x-6">
+        <div className="flex w-full justify-end sm:space-x-6 pb-8">
           {searchParamsObj?.get("via") === "service-account" && (
             <CustomButton
               type="button"

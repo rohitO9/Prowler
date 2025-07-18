@@ -52,10 +52,10 @@ export const ProvidersOverview = ({
 
   const providers = [
     { id: "aws", name: "AWS" },
-    { id: "azure", name: "Azure" },
-    { id: "m365", name: "M365" },
     { id: "gcp", name: "GCP" },
     { id: "kubernetes", name: "Kubernetes" },
+    { id: "azure", name: "Azure" },
+    { id: "m365", name: "M365" },
   ];
 
   // If no data, show empty cards
@@ -116,11 +116,14 @@ export const ProvidersOverview = ({
             (p) => p.id === providerTemplate.id,
           );
 
+          // Determine if this provider should be unclickable and show 'Coming Soon'
+          const isComingSoon = providerTemplate.id === "azure" || providerTemplate.id === "m365";
+
           return (
             <div 
               key={providerTemplate.id}
-              onClick={() => handleProviderClick(providerTemplate.id)}
-              className="cursor-pointer"
+              onClick={isComingSoon ? undefined : () => handleProviderClick(providerTemplate.id)}
+              className={isComingSoon ? "opacity-50 cursor-not-allowed select-none" : "cursor-pointer"}
             >
               <Card 
                 className="h-full dark:bg-prowler-blue-400 flex flex-col items-center justify-center p-4 transition-all duration-300 ease-in-out hover:scale-105 hover:shadow-lg dark:hover:shadow-xl hover:shadow-indigo-100 dark:hover:shadow-gray-800 border border-transparent hover:border-transparent dark:hover:border-gray-600 relative overflow-hidden group"
@@ -130,21 +133,29 @@ export const ProvidersOverview = ({
                   {renderProviderBadge(providerTemplate.id)}
                   <div className="mt-2 text-lg font-semibold">{providerTemplate.name}</div>
                   <div className="mt-2 text-center">
-                    <div className="text-sm">
-                      Pass: {providerData
-                        ? calculatePassingPercentage(
-                            providerData.attributes.findings.pass,
-                            providerData.attributes.findings.total,
-                          )
-                        : "0.00"}
-                      %
-                    </div>
-                    <div className="text-sm">
-                      Failing: {providerData ? providerData.attributes.findings.fail : "-"}
-                    </div>
-                    <div className="text-sm">
-                      Resources: {providerData ? providerData.attributes.resources.total : "-"}
-                    </div>
+                    {isComingSoon ? (
+                      <div className="w-full px-2 py-1 rounded bg-gray-300 dark:bg-gray-700 text-center">
+                        <span className="text-xs font-medium text-gray-900 dark:text-gray-100">Coming Soon: This provider will be available shortly</span>
+                      </div>
+                    ) : (
+                      <>
+                        <div className="text-sm">
+                          Pass: {providerData
+                            ? calculatePassingPercentage(
+                                providerData.attributes.findings.pass,
+                                providerData.attributes.findings.total,
+                              )
+                            : "0.00"}
+                          %
+                        </div>
+                        <div className="text-sm">
+                          Failing: {providerData ? providerData.attributes.findings.fail : "-"}
+                        </div>
+                        <div className="text-sm">
+                          Resources: {providerData ? providerData.attributes.resources.total : "-"}
+                        </div>
+                      </>
+                    )}
                   </div>
                 </CardBody>
               </Card>

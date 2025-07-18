@@ -163,7 +163,7 @@ export const ViaRoleForm = ({
             <CustomButton
               type="button"
               ariaLabel="Back"
-              className="w-72 bg-transparent"
+              className="w-1/2 bg-transparent"
               variant="faded"
               size="lg"
               radius="lg"
@@ -177,7 +177,7 @@ export const ViaRoleForm = ({
           <CustomButton
             type="submit"
             ariaLabel={"Save"}
-            className="w-72"
+            className="w-1/2"
             variant="solid"
             color="action"
             size="lg"

@@ -6,6 +6,8 @@ import { Control, Controller } from "react-hook-form";
 
 import { CustomRadio } from "@/components/ui/custom";
 import { FormMessage } from "@/components/ui/form";
+import { Key, ShieldCheck } from "lucide-react";
+import { SiGooglecloud } from "react-icons/si";
 
 type RadioGroupAWSViaCredentialsFormProps = {
   control: Control<any>;
@@ -26,47 +28,54 @@ export const RadioGroupGCPViaCredentialsTypeForm = ({
       control={control}
       render={({ field }) => (
         <>
-          <RadioGroup
-            className="flex flex-wrap"
-            isInvalid={isInvalid}
-            {...field}
-            value={field.value || ""}
-            onValueChange={(value) => {
-              field.onChange(value);
-              if (onChange) {
-                onChange(value);
-              }
-            }}
-          >
-            <div className="flex flex-col gap-4">
-              <span className="text-sm text-default-500">
-                Using Service Account
-              </span>
-              <CustomRadio
-                description="Connect using Service Account"
-                value="service-account"
-              >
-                <div className="flex items-center">
-                  <span className="ml-2">Connect via Service Account Key</span>
+          <div className="flex flex-col md:flex-row gap-6 w-full">
+            {/* Service Account Key Option */}
+            <div
+              className={`group flex-1 cursor-pointer border rounded-xl p-5 transition-all duration-200 shadow-sm hover:shadow-lg ${field.value === "service-account" ? "border-blue-500" : "border-gray-200"} bg-white dark:bg-prowler-blue-800`}
+              tabIndex={0}
+              role="button"
+              aria-pressed={field.value === "service-account"}
+              onClick={() => {
+                field.onChange("service-account");
+                if (onChange) onChange("service-account");
+              }}
+              onKeyDown={e => { if (e.key === "Enter" || e.key === " ") { field.onChange("service-account"); if (onChange) onChange("service-account"); } }}
+            >
+              <div className="flex items-center gap-3">
+                <SiGooglecloud className="text-indigo-500" size={28} />
+                <div>
+                  <div className="font-semibold text-lg transition-colors duration-200 group-hover:text-indigo-500">
+                    Connect using Service Account Key
+                  </div>
+                  <div className="text-xs text-gray-500 dark:text-gray-300 mt-1">Recommended for production and team use. Uses a GCP Service Account Key JSON for secure, auditable access.</div>
                 </div>
-              </CustomRadio>
-              <span className="text-sm text-default-500">
-                Using Application Default Credentials
-              </span>
-              <CustomRadio
-                description="Connect via Credentials"
-                value="credentials"
-              >
-                <div className="flex items-center">
-                  <span className="ml-2">
-                    Connect via Application Default Credentials
-                  </span>
-                </div>
-              </CustomRadio>
+              </div>
             </div>
-          </RadioGroup>
+            {/* Application Default Credentials Option */}
+            <div
+              className={`group flex-1 cursor-pointer border rounded-xl p-5 transition-all duration-200 shadow-sm hover:shadow-lg ${field.value === "credentials" ? "border-blue-500" : "border-gray-200"} bg-white dark:bg-prowler-blue-800`}
+              tabIndex={0}
+              role="button"
+              aria-pressed={field.value === "credentials"}
+              onClick={() => {
+                field.onChange("credentials");
+                if (onChange) onChange("credentials");
+              }}
+              onKeyDown={e => { if (e.key === "Enter" || e.key === " ") { field.onChange("credentials"); if (onChange) onChange("credentials"); } }}
+            >
+              <div className="flex items-center gap-3">
+                <Key className="text-indigo-500" size={28} />
+                <div>
+                  <div className="font-semibold text-lg transition-colors duration-200 group-hover:text-indigo-500">
+                    Connect via Application Default Credentials
+                  </div>
+                  <div className="text-xs text-gray-500 dark:text-gray-300 mt-1">Quick setup for testing or personal use. Uses GCP Application Default Credentials from your environment.</div>
+                </div>
+              </div>
+            </div>
+          </div>
           {errorMessage && (
-            <FormMessage className="text-system-error dark:text-system-error">
+            <FormMessage className="text-system-error dark:text-system-error mt-2">
               {errorMessage}
             </FormMessage>
           )}

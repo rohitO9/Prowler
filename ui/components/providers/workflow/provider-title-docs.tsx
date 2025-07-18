@@ -13,7 +13,7 @@ export const ProviderTitleDocs = ({
   providerType: ProviderType;
 }) => {
   return (
-    <div className="flex flex-col gap-y-2">
+    <div className="flex flex-col items-center text-center">
       <div className="flex space-x-4">
         <span className="mr-2">
           {providerType === "aws" && <FaAws size={28} color="#FF9900" />}

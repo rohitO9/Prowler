@@ -225,16 +225,31 @@ export const TestConnectionForm = ({
         className="flex flex-col space-y-4"
       >
         <div className="text-left">
-          <div className="mb-2 text-xl font-medium">
+          <div className="mb-2 text-2xl font-extrabold bg-gradient-to-r from-indigo-500 to-purple-500 bg-clip-text text-transparent text-center">
             {!isUpdated
               ? "Check connection and launch scan"
               : "Check connection"}
           </div>
-          <p className="py-2 text-small text-default-500">
+          <p className="py-2 text-small text-default-500 text-center">
             {!isUpdated
               ? "After a successful connection, a scan will automatically run every 24 hours. To run a single scan instead, select the checkbox below."
               : "A successful connection will redirect you to the providers page."}
           </p>
+          {/* Centered single run checkbox */}
+          {!isUpdated && !connectionStatus?.error && (
+            <div className="flex justify-center w-full">
+              <Checkbox
+                {...form.register("runOnce")}
+                isSelected={!!form.watch("runOnce")}
+                classNames={{
+                  label: "text-small text-default-500",
+                  wrapper: "checkbox-update",
+                }}
+              >
+                Run a single scan (no recurring schedule).
+              </Checkbox>
+            </div>
+          )}
         </div>
 
         {apiErrorMessage && (
@@ -272,19 +287,6 @@ export const TestConnectionForm = ({
           providerUID={providerData.data.attributes.uid}
         />
 
-        {!isUpdated && !connectionStatus?.error && (
-          <Checkbox
-            {...form.register("runOnce")}
-            isSelected={!!form.watch("runOnce")}
-            classNames={{
-              label: "text-small text-default-500",
-              wrapper: "checkbox-update",
-            }}
-          >
-            Run a single scan (no recurring schedule).
-          </Checkbox>
-        )}
-
         {isUpdated && !connectionStatus?.error && (
           <p className="py-2 text-small text-default-500">
             Check the new credentials and test the connection.
@@ -293,7 +295,7 @@ export const TestConnectionForm = ({
 
         <input type="hidden" name="providerId" value={providerId} />
 
-        <div className="flex w-full justify-end sm:space-x-6">
+        <div className="flex w-full justify-center sm:space-x-6">
           {apiErrorMessage ? (
             <Link
               href="/providers"
@@ -332,7 +334,7 @@ export const TestConnectionForm = ({
                 isUpdated && connectionStatus?.connected ? "button" : "submit"
               }
               ariaLabel={"Save"}
-              className="w-1/3"
+              className="w-1/3 mt-5"
               variant="solid"
               color="action"
               size="md"

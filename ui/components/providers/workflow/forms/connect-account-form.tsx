@@ -158,7 +158,7 @@ export const ConnectAccountForm = () => {
     <Form {...form}>
       <form
         onSubmit={form.handleSubmit(onSubmitClient)}
-        className="flex flex-col space-y-4"
+        className="flex flex-col space-y-4 min-h-[350px]"
       >
         {/* Step 1: Provider selection */}
         {prevStep === 1 && (
@@ -171,24 +171,28 @@ export const ConnectAccountForm = () => {
         {/* Step 2: UID, alias, and credentials (if AWS) */}
         {prevStep === 2 && (
           <>
-            <ProviderTitleDocs providerType={providerType} />
+            <div className="flex flex-col items-center text-center mb-4">
+              <ProviderTitleDocs providerType={providerType} />
+            </div>
+            <label className="text-sm font-medium text-default-700 mb-1" htmlFor="providerUid">{providerFieldDetails.label} *</label>
             <CustomInput
               control={form.control}
               name="providerUid"
               type="text"
-              label={providerFieldDetails.label}
-              labelPlacement="inside"
+              label=""
+              labelPlacement="outside"
               placeholder={providerFieldDetails.placeholder}
               variant="bordered"
               isRequired
               isInvalid={!!form.formState.errors.providerUid}
             />
+            <label className="text-sm font-medium text-default-700 mb-1" htmlFor="providerAlias">Provider alias (optional)</label>
             <CustomInput
               control={form.control}
               name="providerAlias"
               type="text"
-              label="Provider alias (optional)"
-              labelPlacement="inside"
+              label=""
+              labelPlacement="outside"
               placeholder="Enter the provider alias"
               variant="bordered"
               isRequired={false}
@@ -197,7 +201,7 @@ export const ConnectAccountForm = () => {
           </>
         )}
         {/* Navigation buttons */}
-        <div className="flex w-full justify-end sm:space-x-6">
+        <div className="flex w-full justify-end sm:space-x-6 pb-8">
           {/* Show "Back" button only in Step 2 */}
           {prevStep === 2 && (
             <CustomButton
