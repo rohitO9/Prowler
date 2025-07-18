@@ -161,7 +161,7 @@ AUTH_PASSWORD_VALIDATORS = [
 SIMPLE_JWT = {
     # Token lifetime settings
     "ACCESS_TOKEN_LIFETIME": timedelta(
-        minutes=env.int("DJANGO_ACCESS_TOKEN_LIFETIME", 30)
+        minutes=env.int("DJANGO_ACCESS_TOKEN_LIFETIME", 60)
     ),
     "REFRESH_TOKEN_LIFETIME": timedelta(
         minutes=env.int("DJANGO_REFRESH_TOKEN_LIFETIME", 60 * 24)
