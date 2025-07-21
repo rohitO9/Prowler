@@ -4,8 +4,7 @@ import clsx from "clsx";
 import Link from "next/link";
 import React, { useEffect, useState } from "react";
 
-import { ProwlerShort } from "@/components/icons";
-import { ProwlerExtended } from "@/components/icons";
+
 import { useSidebar } from "@/hooks/use-sidebar";
 import { useStore } from "@/hooks/use-store";
 import { cn } from "@/lib/utils";
@@ -33,19 +32,19 @@ export function Sidebar() {
         className="no-scrollbar relative flex h-full flex-col overflow-y-auto overflow-x-hidden px-3 py-4 shadow-md dark:shadow-primary"
       >
         <div className="flex flex-col items-center justify-center my-4">
-          <Link href="/" className="group flex flex-col items-center">
+          <Link href="/" className="group flex flex-row items-center gap-3">
             <div className="bg-gradient-to-r from-indigo-500 to-purple-600 rounded-xl w-14 h-14 flex items-center justify-center shadow-lg transition-transform duration-1500 group-hover:scale-125 group-hover:rotate-360">
               <span className="text-3xl font-black text-white select-none">SS</span>
             </div>
             {getOpenState() && (
-              <>
-                <span className="mt-1 text-3xl font-extrabold tracking-tight text-black dark:text-white font-serif bg-gradient-to-r from-indigo-500 to-purple-600 bg-clip-text text-transparent">
+              <div className="flex flex-col justify-center">
+                <span className="text-3xl font-extrabold tracking-tight text-black dark:text-white font-serif bg-gradient-to-r from-indigo-500 to-purple-600 bg-clip-text text-transparent">
                   SecureStack
                 </span>
-                <span className="block text-xs text-gray-400 mt-1 tracking-wide">
+                <span className="block text-xs text-gray-400 tracking-wide text-center w-full">
                   Cloud Security Platform
                 </span>
-              </>
+              </div>
             )}
           </Link>
         </div>

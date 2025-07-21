@@ -29,6 +29,7 @@ import { cn } from "@/lib/utils";
 import { CollapseMenuButtonProps } from "@/types";
 
 import { Button } from "../button/button";
+import { ChevronRight } from "lucide-react";
 
 export const CollapseMenuButton = ({
   icon: Icon,
@@ -106,7 +107,9 @@ export const CollapseMenuButton = ({
               asChild
             >
               <Link href={href} target={target} className="flex items-center">
-                <div className="mr-4 h-full border-l border-purple-700"></div>
+                <div className="mr-2 flex items-center">
+                  <ChevronRight size={16} className="text-gray-400" />
+                </div>
                 <span className="mr-2">
                   <SubIcon size={16} />
                 </span>

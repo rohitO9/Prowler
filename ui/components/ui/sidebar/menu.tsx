@@ -31,44 +31,7 @@ export const Menu = ({ isOpen }: { isOpen: boolean }) => {
   return (
     <>
       <div className=" space-y-2 px-2">
-        <div className="relative w-full">
-          <Search
-            className="text-muted-foreground absolute left-3 top-1/2 -translate-y-1/2"
-            size={16}
-          />
-          <input
-            type="text"
-            placeholder="Search menu..."
-            className={cn(
-              "border-input placeholder:text-muted-foreground w-full rounded-xl border bg-background py-2 pl-10 pr-4 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500",
-              isOpen ? "" : "hidden",
-            )}
-            onChange={(e) => {
-              // add filtering logic if needed
-            }}
-          />
-        </div>
-
-        <Button
-          asChild
-          className={cn(
-            "w-full rounded-xl  bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-md transition-all duration-200 hover:from-indigo-700 hover:to-purple-700",
-            isOpen
-              ? "justify-between px-4 py-3 text-base"
-              : "justify-center p-2",
-          )}
-        >
-          <Link href="/scans">
-            {isOpen ? (
-              <>
-                <span className="font-semibold">Generate Report</span>
-                <FileBarChart size={20} />
-              </>
-            ) : (
-              <FileBarChart size={20} />
-            )}
-          </Link>
-        </Button>
+        {/* Removed search bar and Generate Report button */}
       </div>
       <ScrollArea className="[&>div>div[style]]:!block">
         <nav className="mt-4 h-full w-full">
@@ -170,8 +133,7 @@ export const Menu = ({ isOpen }: { isOpen: boolean }) => {
         </nav>
       </ScrollArea>
       <div className="flex w-full grow items-end">
-        <div className="flex w-full items-center justify-between px-2 pb-4">
-          <ThemeSwitch />
+        <div className="flex w-full items-center justify-center px-2 pb-4">
           <TooltipProvider disableHoverableContent>
             <Tooltip delayDuration={100}>
               <TooltipTrigger asChild>
@@ -179,10 +141,10 @@ export const Menu = ({ isOpen }: { isOpen: boolean }) => {
                   onClick={() => logOut()}
                   variant="ghost"
                   className={cn(
-                    "rounded-xl bg-gradient-to-r from-rose-600 to-red-500 text-white shadow-md transition-all duration-200 hover:from-rose-700 hover:to-red-600",
+                    "w-full text-default-700 bg-transparent shadow-none border-none hover:bg-transparent hover:text-indigo-600 transition-all duration-200",
                     isOpen
-                      ? "px-4 py-3 text-base"
-                      : "p-2",
+                      ? "px-4 py-3 text-base justify-center"
+                      : "p-2 justify-center",
                   )}
                 >
                   {isOpen ? (
