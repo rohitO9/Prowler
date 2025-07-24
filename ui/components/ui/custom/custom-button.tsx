@@ -9,9 +9,9 @@ import { NextUIColors, NextUIVariants } from "@/types";
 export const buttonClasses = {
   base: "px-4 inline-flex items-center justify-center relative z-0 text-center whitespace-nowrap",
   primary:
-    "bg-default-100 hover:bg-default-200 text-default-800 dark:bg-prowler-blue-800",
+    "bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white",
   secondary: "bg-prowler-grey-light dark:bg-prowler-grey-medium text-white",
-  action: "bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600 text-white font-bold",
+  action: "bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white",
   dashed:
     "border border-default border-dashed bg-transparent  justify-center whitespace-nowrap font-medium shadow-sm hover:border-solid hover:bg-default-100 active:bg-default-200 active:border-solid",
   transparent: "border-0 border-transparent bg-transparent",

@@ -43,7 +43,7 @@ export const UserNav = ({ user }: { user?: UserProfileProps }) => {
                 variant="outline"
                 className="relative h-8 w-8 rounded-full"
               >
-                <Avatar className="h-8 w-8">
+                <Avatar className="h-8 w-8 border border-gray-800 dark:border-white">
                   <AvatarImage src="#" alt="Avatar" />
                   <AvatarFallback className="bg-transparent text-xs font-bold">
                     {name.includes(" ")

@@ -41,15 +41,15 @@ export const getMenuList = (pathname: string): GroupProps[] => {
       groupLabel: "",
       menus: [
         {
-          href: "",
+          href: "", // Parent menu does not navigate
           label: "Dashboard",
           icon: Layout,
           submenus: [
             {
-              href: "/",
+              href: "/overview",
               label: "Overview",
               icon: BarChart2,
-              active: pathname === "/",
+              active: pathname === "/overview",
             },
             {
               href: "/compliance",
@@ -82,7 +82,6 @@ export const getMenuList = (pathname: string): GroupProps[] => {
               icon: Shield,
             },
           ],
-          defaultOpen: false,
         },
         {
           href: "",
@@ -115,7 +114,6 @@ export const getMenuList = (pathname: string): GroupProps[] => {
               icon: Cloud,
             },
           ],
-          defaultOpen: false,
         },
         {
           href: "/findings",
@@ -138,7 +136,6 @@ export const getMenuList = (pathname: string): GroupProps[] => {
             { href: "/scans", label: "Scan Jobs", icon: TimerReset },
             { href: "/roles", label: "Roles", icon: Settings },
           ],
-          defaultOpen: true,
         },
       ],
     },
@@ -154,7 +151,6 @@ export const getMenuList = (pathname: string): GroupProps[] => {
             { href: "/users", label: "Users", icon: User2 },
             { href: "/invitations", label: "Invitations", icon: MailOpen },
           ],
-          defaultOpen: false,
         },
       ],
     },
@@ -189,7 +185,6 @@ export const getMenuList = (pathname: string): GroupProps[] => {
               icon: HelpCircle,
             },
           ],
-          defaultOpen: false,
         },
       ],
     },

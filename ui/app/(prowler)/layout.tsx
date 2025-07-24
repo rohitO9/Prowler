@@ -4,6 +4,8 @@ import { Metadata, Viewport } from "next";
 import React from "react";
 
 import MainLayout from "@/components/ui/main-layout/main-layout";
+import { getUserInfo } from "@/actions/users/users";
+import { UserProfileProps } from "@/types";
 import { Toaster } from "@/components/ui/toast";
 import { fontSans } from "@/config/fonts";
 import { siteConfig } from "@/config/site";
@@ -29,11 +31,12 @@ export const viewport: Viewport = {
   ],
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const user = await getUserInfo();
   return (
     <html suppressHydrationWarning lang="en">
       <head />
@@ -45,7 +48,7 @@ export default function RootLayout({
         )}
       >
         <Providers themeProps={{ attribute: "class", defaultTheme: "dark" }}>
-          <MainLayout>{children}</MainLayout>
+          <MainLayout user={user}>{children}</MainLayout>
           <Toaster />
         </Providers>
       </body>
