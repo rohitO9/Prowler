@@ -25,7 +25,7 @@ export const NoProvidersAdded = () => {
             <CustomButton
               asLink="/providers/connect-account"
               ariaLabel="Go to Add Cloud Provider page"
-              className="w-full max-w-xs justify-center rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-md transition-all duration-200 hover:from-indigo-700 hover:to-purple-700"
+              className="w-full max-w-xs justify-center rounded-xl"
               variant="solid"
               color="action"
               size="lg"

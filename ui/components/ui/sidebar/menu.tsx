@@ -9,7 +9,7 @@ import { usePathname } from "next/navigation";
 import { logOut } from "@/actions/auth";
 import { AddIcon, InfoIcon } from "@/components/icons";
 import { FileBarChart } from "lucide-react";
-import { CollapseMenuButton } from "@/components/ui/sidebar/collapse-menu-button";
+import { FlyoutMenuButton } from "./flyout-menu-button";
 import {
   Tooltip,
   TooltipContent,
@@ -119,7 +119,7 @@ export const Menu = ({ isOpen, user }: { isOpen: boolean; user: UserProfileProps
                       </div>
                     ) : (
                       <div className="w-full" key={index}>
-                        <CollapseMenuButton
+                        <FlyoutMenuButton
                           icon={Icon}
                           label={label}
                           submenus={submenus}

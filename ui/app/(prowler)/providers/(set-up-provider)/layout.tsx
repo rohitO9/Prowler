@@ -4,7 +4,7 @@ import { Spacer } from "@nextui-org/react";
 import React from "react";
 
 import { WorkflowAddProvider } from "@/components/providers/workflow";
-import { NavigationHeader } from "@/components/ui";
+import { ContentLayout } from "@/components/ui";
 import { FileBarChart } from "lucide-react";
 
 interface ProviderLayoutProps {
@@ -13,9 +13,7 @@ interface ProviderLayoutProps {
 
 export default function ProviderLayout({ children }: ProviderLayoutProps) {
   return (
-    <>
-      <div className="w-full border-b-2 border-gray-400 dark:border-gray-500 my-10" />
-      <Spacer y={0} />
+    <ContentLayout title="Connect Your Cloud Service" icon="fluent:cloud-sync-24-regular">
       <div className="flex flex-col items-center w-full">
         <div className="w-full max-w-4xl">
           <WorkflowAddProvider />
@@ -24,6 +22,6 @@ export default function ProviderLayout({ children }: ProviderLayoutProps) {
           {children}
         </div>
       </div>
-    </>
+    </ContentLayout>
   );
 }

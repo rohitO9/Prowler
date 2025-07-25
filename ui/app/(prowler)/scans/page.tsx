@@ -84,7 +84,7 @@ export default async function Scans({
   });
 
   return (
-    <>
+    <ContentLayout title="Scans" icon="lucide:scan-search">
       {thereIsNoProviders && (
         <>
           <Spacer y={4} />
@@ -123,7 +123,7 @@ export default async function Scans({
           </div>
         </>
       )}
-    </>
+    </ContentLayout>
   );
 }
 

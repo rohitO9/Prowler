@@ -1,6 +1,6 @@
 "use client";
 
-import { Progress, Spacer } from "@nextui-org/react";
+import { Spacer } from "@nextui-org/react";
 import { usePathname } from "next/navigation";
 import React from "react";
 
@@ -32,33 +32,19 @@ export const WorkflowAddProvider = () => {
 
   return (
     <section className="w-full max-w-4xl mt-8">
-      <h1 className="mb-2 text-2xl font-extrabold bg-gradient-to-r from-indigo-500 to-purple-500 bg-clip-text text-transparent text-center" id="getting-started">
+      <h1 className="mb-2 text-2xl font-extrabold bg-gradient-to-r from-indigo-500 to-blue-500 bg-clip-text text-transparent text-center" id="getting-started">
         Connect Your Cloud Service
       </h1>
-      <p className="mb-5 text-small text-center text-default-500">
+      <p className="mb-10 text-small text-center text-default-500">
         Follow the guided process below to set up your cloud environment and begin scanning.
       </p>
-      <Progress
-        classNames={{
-          base: "px-0.5 mb-5",
-          label: "text-small",
-          value: "text-small text-default-400",
-        }}
-        label="Steps"
-        maxValue={steps.length - 1}
-        minValue={0}
-        showValueLabel={true}
-        size="md"
-        value={currentStep}
-        valueLabel={`${currentStep + 1} of ${steps.length}`}
-      />
       <VerticalSteps
         hideProgressBars
         currentStep={currentStep}
-        stepClassName="border border-default-200 dark:border-default-50 aria-[current]:bg-default-100 dark:aria-[current]:bg-prowler-blue-800 cursor-default"
+        stepClassName="border mt-6 border-default-200 dark:border-default-50 aria-[current]:bg-default-100 dark:aria-[current]:bg-prowler-blue-800 cursor-default"
         steps={steps}
       />
-      <Spacer y={4} />
+      <Spacer y={10} />
     </section>
   );
 };

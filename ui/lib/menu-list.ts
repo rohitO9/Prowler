@@ -58,7 +58,7 @@ export const getMenuList = (pathname: string): GroupProps[] => {
               active: pathname === "/compliance",
             },
           ],
-          defaultOpen: true,
+          
         },
       ],
     },

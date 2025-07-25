@@ -139,20 +139,30 @@ export const AuthForm = ({
   return (
     <div className="flex h-screen w-screen overflow-hidden transition-colors duration-300 dark:bg-[linear-gradient(to_top,_#000000_60%,_#1a1f3c_100%,_#2d0b3c)]">
       {/* Left Section */}
-      <div className="hidden w-1/2 flex-col items-center justify-center px-10 text-black dark:text-white lg:flex transition-colors duration-300">
-        {/* Animated SecureStack Logo */}
-        <div className="relative mb-3">
-          <div className="bg-gradient-to-r from-indigo-500 to-purple-600 rounded-xl w-24 h-24 flex items-center justify-center shadow-lg after:content-[''] after:absolute after:inset-0 after:rounded-xl after:-z-10 after:blur-md after:bg-gradient-to-br after:from-purple-400/40 after:to-indigo-500/30">
-            <span className="text-5xl font-black text-white select-none z-10">SS</span>
+      <div className="hidden w-1/2 flex-col items-center justify-center pl-20 text-black dark:text-white lg:flex transition-colors duration-300">
+        {/* Top Left: SS Logo and Cloud Security Tool text */}
+        <div className="absolute top-4 left-4 flex flex-col items-center">
+          <div className="relative mb-2">
+            <div className="bg-gradient-to-r from-indigo-600 to-blue-600 rounded-xl w-16 h-16 flex items-center justify-center shadow-lg after:content-[''] after:absolute after:inset-0 after:rounded-xl after:-z-10 after:blur-md after:bg-gradient-to-br after:from-purple-400/40 after:to-indigo-500/30">
+              <span className="text-3xl font-black text-white select-none z-10">SS</span>
+            </div>
           </div>
+          <span className="text-xs text-gray-500 dark:text-gray-400 text-center w-full">Cloud Security Tool</span>
         </div>
-        <span className="text-sm text-gray-500 dark:text-gray-400 mb-4">Cloud Security Tool</span>
-        <h2 className="mt-4 text-3xl font-bold text-center">
-          Welcome to <span className="bg-gradient-to-r from-indigo-700 via-purple-500 to-indigo-900 bg-clip-text text-transparent dark:from-indigo-400 dark:via-purple-400 dark:to-indigo-600">SecureStack!</span>
-        </h2>
-        <p className="mt-4 max-w-md text-center text-lg">
-          Simplify your infrastructure and compliance workflows with ease.
-        </p>
+        {/* Login Logo Image and Welcome Message */}
+        <div className="mt-8 mb-6  flex flex-col items-center">
+          <img
+            src="/loginlogo.png"
+            alt="Login Logo"
+            className="w-[400px] h-[400px] object-contain"
+          />
+          <h2 className="mt-2 text-3xl font-bold text-center">
+            Welcome to <span className="bg-gradient-to-r from-indigo-600 via-blue-600 to-indigo-900 bg-clip-text text-transparent dark:from-indigo-400 dark:via-blue-400 dark:to-indigo-600">SecureStack!</span>
+          </h2>
+          <p className="mt-4 max-w-md text-center text-lg">
+            Simplify your infrastructure and compliance workflows with ease.
+          </p>
+        </div>
       </div>
 
       {/* Right Section */}

@@ -2,6 +2,7 @@ import { ContentLayout } from "@/components/ui";
 import Image from "next/image";
 import { Button } from "@/components/ui/button/button";
 import React from "react";
+import Link from "next/link";
 
 export default function Welcome() {
   return (
@@ -29,9 +30,11 @@ export default function Welcome() {
             <p className="text-sm text-gray-500 dark:text-gray-400">
               Get started by generating your first security report or explore the platform using the sidebar.
             </p>
-            <Button size="lg" className="bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white text-lg font-semibold">
-              Generate Report
-            </Button>
+            <Link href="/scans" passHref legacyBehavior>
+              <Button size="lg" className="bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white text-lg font-semibold">
+                Generate Report
+              </Button>
+            </Link>
           </div>
 
           {/* Right Image Section */}
