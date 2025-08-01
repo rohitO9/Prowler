@@ -12,14 +12,8 @@ interface InvitationLayoutProps {
 
 export default function InvitationLayout({ children }: InvitationLayoutProps) {
   return (
-    <>
-      <NavigationHeader
-        title="Send Invitation"
-        icon="icon-park-outline:close-small"
-        href="/invitations"
-      />
-      <Spacer y={16} />
-      <div className="flex flex-col items-center w-full gap-8">
+    <NavigationHeader title="Send Invitation" icon="ci:users">
+      <div className="flex flex-col items-center w-full gap-8 pt-8">
         <div className="w-full max-w-2xl">
           <WorkflowSendInvite />
         </div>
@@ -27,6 +21,6 @@ export default function InvitationLayout({ children }: InvitationLayoutProps) {
           {children}
         </div>
       </div>
-    </>
+    </NavigationHeader>
   );
 }

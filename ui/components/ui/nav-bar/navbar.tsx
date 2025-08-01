@@ -43,10 +43,10 @@ export function Navbar({ title, icon, user }: NavbarProps) {
           <Link href="/findings" className="text-sm font-medium text-default-700 hover:text-indigo-600 transition-colors">
             Findings
           </Link>
-          <a href="https://docs.prowler.com/" target="_blank" rel="noopener noreferrer" className="text-sm font-medium text-default-700 hover:text-indigo-600 transition-colors">
+          <a href="#" target="_blank" rel="noopener noreferrer" className="text-sm font-medium text-default-700 hover:text-indigo-600 transition-colors">
             Documentation
           </a>
-          <a href="https://github.com/prowler-cloud/prowler/issues" target="_blank" rel="noopener noreferrer" className="text-sm font-medium text-default-700 hover:text-indigo-600 transition-colors">
+          <a href="#" target="_blank" rel="noopener noreferrer" className="text-sm font-medium text-default-700 hover:text-indigo-600 transition-colors">
             Support
           </a>
         </div>

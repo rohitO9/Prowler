@@ -8,6 +8,7 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 
 import { authenticate, createNewUser } from "@/actions/auth";
+import { configureAzureAD } from "@/actions/auth/azure-config";
 import { NotificationIcon, ProwlerExtended } from "@/components/icons";
 import { ThemeSwitch } from "@/components/ThemeSwitch";
 import { useToast } from "@/components/ui";
@@ -51,6 +52,12 @@ export const AuthForm = ({
         confirmPassword: "",
         ...(invitationToken && { invitationToken }),
       }),
+      ...(type === "azure-config" && {
+        tenant_name: "",
+        client_id: "",
+        tenant_id: "",
+        client_secret: "",
+      }),
     },
   });
 
@@ -60,8 +67,8 @@ export const AuthForm = ({
   const onSubmit = async (data: z.infer<typeof formSchema>) => {
     if (type === "sign-in") {
       const result = await authenticate(null, {
-        email: data.email.toLowerCase(),
-        password: data.password,
+        email: data.email?.toLowerCase() || "",
+        password: data.password || "",
       });
       if (result?.message === "Success") {
         router.push("/");
@@ -134,6 +141,49 @@ export const AuthForm = ({
         });
       }
     }
+
+    if (type === "azure-config") {
+      const result = await configureAzureAD(data);
+      
+      if (result?.message === "Azure AD configured successfully") {
+        toast({
+          title: "Success!",
+          description: "Azure AD has been configured successfully.",
+        });
+        form.reset();
+        router.push("/sign-in");
+      } else if (result?.errors) {
+        result.errors.forEach((error: ApiError) => {
+          const errorMessage = error.detail;
+          switch (error.source.pointer) {
+            case "/data/attributes/tenant_name":
+              form.setError("tenant_name", { type: "server", message: errorMessage });
+              break;
+            case "/data/attributes/client_id":
+              form.setError("client_id", { type: "server", message: errorMessage });
+              break;
+            case "/data/attributes/tenant_id":
+              form.setError("tenant_id", { type: "server", message: errorMessage });
+              break;
+            case "/data/attributes/client_secret":
+              form.setError("client_secret", { type: "server", message: errorMessage });
+              break;
+            default:
+              toast({
+                variant: "destructive",
+                title: "Configuration Failed",
+                description: errorMessage,
+              });
+          }
+        });
+      } else {
+        toast({
+          variant: "destructive",
+          title: "Configuration Failed",
+          description: "An unexpected error occurred while configuring Azure AD.",
+        });
+      }
+    }
   };
 
   return (
@@ -179,7 +229,7 @@ export const AuthForm = ({
           
           <div className="flex items-center justify-between">
             <p className="pb-2 text-xl font-medium">
-              {type === "sign-in" ? "Sign In" : "Sign Up"}
+              {type === "sign-in" ? "Sign In" : type === "sign-up" ? "Sign Up" : "Configure Azure AD"}
             </p>
             <ThemeSwitch aria-label="Toggle theme" />
           </div>
@@ -211,38 +261,79 @@ export const AuthForm = ({
                 </>
               )}
 
-              <CustomInput
-                control={form.control}
-                name="email"
-                type="email"
-                label="Email"
-                placeholder="Enter your email"
-                isInvalid={!!form.formState.errors.email}
-                showFormMessage={type !== "sign-in"}
-              />
-
-              {type === "sign-in" ? (
-                <div className="">
+              {type === "azure-config" && (
+                <>
                   <CustomInput
                     control={form.control}
-                    name="password"
-                    password
-                    isInvalid={
-                      !!form.formState.errors.password ||
-                      !!form.formState.errors.email
-                    }
+                    name="tenant_name"
+                    type="text"
+                    label="Tenant Name"
+                    placeholder="Enter your Tenant Name"
+                    isInvalid={!!form.formState.errors.tenant_name}
                   />
-                </div>
-              ) : (
-                <CustomInput
-                  control={form.control}
-                  name="password"
-                  password
-                  isInvalid={
-                    !!form.formState.errors.password ||
-                    !!form.formState.errors.email
-                  }
-                />
+                  <CustomInput
+                    control={form.control}
+                    name="client_id"
+                    password
+                    label="Client ID"
+                    placeholder="Enter your Client ID"
+                    isInvalid={!!form.formState.errors.client_id}
+                  />
+                  <CustomInput
+                    control={form.control}
+                    name="tenant_id"
+                    password
+                    label="Tenant ID"
+                    placeholder="Enter your Tenant ID"
+                    isInvalid={!!form.formState.errors.tenant_id}
+                  />
+                  <CustomInput
+                    control={form.control}
+                    name="client_secret"
+                    password
+                    label="Client Secret"
+                    placeholder="Enter your Client Secret"
+                    isInvalid={!!form.formState.errors.client_secret}
+                  />
+                </>
+              )}
+
+              {(type === "sign-in" || type === "sign-up") && (
+                <>
+                  <CustomInput
+                    control={form.control}
+                    name="email"
+                    type="email"
+                    label="Email"
+                    placeholder="Enter your email"
+                    isInvalid={!!form.formState.errors.email}
+                    showFormMessage={type !== "sign-in"}
+                  />
+
+                  {type === "sign-in" ? (
+                    <div className="">
+                      <CustomInput
+                        control={form.control}
+                        name="password"
+                        password
+                        isInvalid={
+                          !!form.formState.errors.password ||
+                          !!form.formState.errors.email
+                        }
+                      />
+                    </div>
+                  ) : (
+                    <CustomInput
+                      control={form.control}
+                      name="password"
+                      password
+                      isInvalid={
+                        !!form.formState.errors.password ||
+                        !!form.formState.errors.email
+                      }
+                    />
+                  )}
+                </>
               )}
 
                {type === "sign-in" && (
@@ -318,7 +409,7 @@ export const AuthForm = ({
 
               <CustomButton
                 type="submit"
-                ariaLabel={type === "sign-in" ? "Log In" : "Sign Up"}
+                ariaLabel={type === "sign-in" ? "Log In" : type === "sign-up" ? "Sign Up" : "Configure Azure AD"}
                 ariaDisabled={isLoading}
                 className="w-full bg-[#47C6F2] text-white hover:bg-[#1f497a]"
                 variant="solid"
@@ -331,13 +422,27 @@ export const AuthForm = ({
                 {isLoading ? (
                   <span>Loading</span>
                 ) : (
-                  <span>{type === "sign-in" ? "Log In" : "Sign Up"}</span>
+                  <span>{type === "sign-in" ? "Log In" : type === "sign-up" ? "Sign Up" : "Configure Azure AD"}</span>
                 )}
               </CustomButton>
+              
+              {type === "azure-config" && (
+                <p className="text-center mt-2 text-sm text-default-500">
+                  Need help configuring Azure AD ?&nbsp;&nbsp;&nbsp;
+                  <Link 
+                    href="" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="text-primary  hover:underline"
+                  >
+                    View setup guide
+                  </Link>
+                </p>
+              )}
             </form>
           </Form>
 
-          {!invitationToken && (
+          {!invitationToken && type !== "azure-config" && (
             <>
               <div className="flex items-center gap-4 mt-2 mb-2 py-2">
                 <Divider className="flex-1" />
@@ -345,6 +450,19 @@ export const AuthForm = ({
                 <Divider className="flex-1" />
               </div>
               <div className="flex flex-col gap-2">
+                {type === "sign-in" && (
+                  <Link
+                    href="/azure"
+                    className="w-full flex items-center justify-center gap-2 px-3 py-2 border-2 border-default-200 rounded-lg hover:bg-default-100 transition-colors"
+                  >
+                    <Icon
+                      className="text-default-500"
+                      icon="logos:microsoft-azure"
+                      width={24}
+                    />
+                    Configure Azure AD
+                  </Link>
+                )}
                 <Tooltip
                   content={
                     <div className="flex-inline text-small">
@@ -423,10 +541,15 @@ export const AuthForm = ({
               Need to create an account?&nbsp;
               <Link href="/sign-up">Sign Up</Link>
             </p>
-          ) : (
+          ) : type === "sign-up" ? (
             <p className="text-center mt-2 text-small">
               Already have an account?&nbsp;
               <Link href="/sign-in">Log In</Link>
+            </p>
+          ) : (
+            <p className="text-center mt-2 text-small">
+              Back to&nbsp;&nbsp;&nbsp;
+              <Link href="/sign-in">Sign In</Link>
             </p>
           )}
         </div>

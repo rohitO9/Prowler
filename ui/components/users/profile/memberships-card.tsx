@@ -27,7 +27,7 @@ export const MembershipsCard = ({
     <Card className="shadow-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-prowler-blue-400  ">
       <CardHeader className=" w-full">
         <div className="flex flex-col  w-full">
-          <h4 className="w-full  text-2xl font-extrabold bg-gradient-to-r from-indigo-500 to-purple-700 bg-clip-text text-transparent">Organizations & Roles</h4>
+          <h4 className="w-full  text-2xl font-extrabold bg-gradient-to-r from-indigo-500 to-blue-600 bg-clip-text text-transparent">Organizations & Roles</h4>
           <p className="w-full  text-sm text-gray-500 dark:text-gray-300">
            Organizations and Active Roles assigned to this user account .
           </p>
@@ -41,7 +41,7 @@ export const MembershipsCard = ({
           <CustomButton
             type="button"
             ariaLabel="Show Active Roles"
-            className="bg-gradient-to-r from-indigo-500 to-purple-600 text-white font-semibold px-4 py-2 rounded-md shadow hover:from-indigo-600 hover:to-purple-700 transition-colors duration-200 mt-2"
+            className="bg-gradient-to-r from-indigo-500 to-blue-600 text-white font-semibold px-4 py-2 rounded-md shadow hover:from-indigo-600 hover:to-blue-700 transition-colors duration-200 mt-2"
             variant="solid"
             color="primary"
             size="sm"

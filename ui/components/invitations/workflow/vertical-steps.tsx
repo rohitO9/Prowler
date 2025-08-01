@@ -255,7 +255,7 @@ export const VerticalSteps = React.forwardRef<
                             ? "text-sm font-semibold transition-[color,opacity] duration-300 group-active:opacity-70"
                             : "text-medium font-medium text-default-foreground transition-[color,opacity] duration-300 group-active:opacity-70",
                           {
-                            "bg-gradient-to-r from-indigo-500 to-purple-500 bg-clip-text text-transparent": isHorizontal,
+                            "bg-gradient-to-r from-indigo-500 to-blue-500 bg-clip-text text-transparent": isHorizontal,
                           },
                         )}
                       >

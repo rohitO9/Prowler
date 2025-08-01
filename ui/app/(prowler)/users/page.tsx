@@ -27,7 +27,7 @@ export default async function Users({
             <span className="bg-green-100 text-green-700 rounded-full p-3 mb-2">
               <UsersIcon size={40} />
             </span>
-            <h2 className="text-2xl font-bold mt-1 bg-gradient-to-r from-indigo-500 to-purple-500 bg-clip-text text-transparent">Users</h2>
+            <h2 className="text-2xl font-bold mt-1 bg-gradient-to-r from-indigo-500 to-blue-500 bg-clip-text text-transparent">Users</h2>
             <p className="text-gray-500 text-sm text-center">Manage your organization's users, assign roles, and invite new members to collaborate securely.</p>
           </div>
         </div>

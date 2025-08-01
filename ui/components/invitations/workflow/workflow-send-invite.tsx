@@ -32,27 +32,11 @@ export const WorkflowSendInvite = () => {
 
   return (
     <section className="w-full max-w-3xl mx-auto flex flex-col items-center">
-      <h1 className="text-2xl md:text-3xl font-bold text-center mb-2 mt-2 bg-gradient-to-r from-indigo-500 to-purple-500 bg-clip-text text-transparent">Invite a User</h1>
+      <h1 className="text-2xl md:text-3xl font-bold text-center mb-2 mt-2 bg-gradient-to-r from-indigo-500 to-blue-500 bg-clip-text text-transparent">Invite a User</h1>
       <p className="text-default-500 text-base text-center mb-6 max-w-2xl">
       Complete the steps below to invite a new user to your organization.
       </p>
       <div className="w-full">
-        <Progress
-          className="transition-all duration-1500 px-0.5 mb-5"
-          classNames={{
-            base: "px-0.5 mb-5",
-            label: "text-small",
-            value: "text-small text-default-400",
-            indicator: "bg-gradient-to-r from-indigo-500 to-purple-500", // This is the filled bar
-          }}
-          label="Steps"
-          maxValue={steps.length}
-          minValue={0}
-          showValueLabel={true}
-          size="md"
-          value={currentStep + 1}
-          valueLabel={`${currentStep + 1} of ${steps.length}`}
-        />
         <VerticalSteps
           horizontal
           hideProgressBars

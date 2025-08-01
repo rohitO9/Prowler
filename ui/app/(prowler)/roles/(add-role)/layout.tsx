@@ -12,14 +12,8 @@ interface RoleLayoutProps {
 
 export default function RoleLayout({ children }: RoleLayoutProps) {
   return (
-    <>
-      <NavigationHeader
-        title="Role Management"
-        icon="icon-park-outline:close-small"
-        href="/roles"
-      />
-      <Spacer y={10} />
-      <div className="flex flex-col items-center gap-0 w-full">
+    <NavigationHeader title="Role Management" icon="ci:shield">
+      <div className="flex flex-col items-center gap-0 w-full pt-8">
         <div className="order-1 w-full max-w-xl">
           <WorkflowAddEditRole />
         </div>
@@ -27,6 +21,6 @@ export default function RoleLayout({ children }: RoleLayoutProps) {
           {children}
         </div>
       </div>
-    </>
+    </NavigationHeader>
   );
 }

@@ -159,7 +159,6 @@ export const SendInvitationForm = ({
             color="action"
             size="lg"
             isLoading={isLoading}
-            startContent={!isLoading && <SaveIcon size={24} />}
           >
             {isLoading ? <>Loading</> : <span>Send Invitation</span>}
           </CustomButton>

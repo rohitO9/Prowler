@@ -141,9 +141,10 @@ export const authConfig = {
       const isLoggedIn = !!auth?.user;
       const isOnDashboard = nextUrl.pathname?.startsWith("/");
       const isSignUpPage = nextUrl.pathname === "/sign-up";
+      const isAzureConfigPage = nextUrl.pathname === "/azure";
 
-      // Allow access to sign-up page
-      if (isSignUpPage) return true;
+      // Allow access to sign-up page and azure config page
+      if (isSignUpPage || isAzureConfigPage) return true;
 
       if (isOnDashboard) {
         if (isLoggedIn) return true;

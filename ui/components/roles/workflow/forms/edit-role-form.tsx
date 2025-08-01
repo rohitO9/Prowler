@@ -185,11 +185,11 @@ export const EditRoleForm = ({
         </div>
 
         {/* Container for permissions and groups */}
-        <div className="bg-default-100 rounded-xl p-6">
+        <div className="bg-default-200 dark:bg-prowler-blue-800  rounded-xl p-6">
           <div className="flex flex-col sm:flex-row gap-10">
             {/* Admin Permissions Section */}
             <div className="flex-1 flex flex-col gap-4">
-              <span className="text-xl font-semibold bg-gradient-to-r from-indigo-500 to-purple-500 bg-clip-text text-transparent">Admin Permissions</span>
+              <span className="text-xl font-semibold bg-gradient-to-r from-indigo-500 to-blue-500 bg-clip-text text-transparent">Admin Permissions</span>
               <Checkbox
                 isSelected={permissionFormFields.every((perm) =>
                   form.watch(perm.field as keyof FormValues),
@@ -242,7 +242,7 @@ export const EditRoleForm = ({
             {/* Groups and Account Visibility Section */}
             {!unlimitedVisibility && (
               <div className="flex-1 flex flex-col gap-4">
-                <span className="text-xl font-semibold bg-gradient-to-r from-indigo-500 to-purple-500 bg-clip-text text-transparent">
+                <span className="text-xl font-semibold bg-gradient-to-r from-indigo-500 to-blue-500 bg-clip-text text-transparent">
                   Groups and Account Visibility
                 </span>
                 <p className="text-small font-medium text-default-700">

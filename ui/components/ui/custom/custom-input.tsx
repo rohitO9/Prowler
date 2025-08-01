@@ -57,7 +57,7 @@ export const CustomInput = <T extends FieldValues>({
   const inputPlaceholder = confirmPassword
     ? "Confirm Password"
     : password
-      ? "Password"
+      ? (placeholder || "Password")
       : placeholder;
 
   const inputType =
