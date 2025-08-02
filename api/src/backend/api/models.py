@@ -117,6 +117,11 @@ class User(AbstractBaseUser):
     is_active = models.BooleanField(default=True)
     date_joined = models.DateTimeField(auto_now_add=True, editable=False)
 
+    # Free trial fields
+    trial_start = models.DateTimeField(null=True, blank=True)
+    trial_end = models.DateTimeField(null=True, blank=True)
+    is_trial_active = models.BooleanField(default=False)
+
     USERNAME_FIELD = "email"
     REQUIRED_FIELDS = ["name"]
 
@@ -129,6 +134,22 @@ class User(AbstractBaseUser):
         if self.email:
             self.email = self.email.strip().lower()
         super().save(*args, **kwargs)
+
+    def start_trial(self, days=7):
+        from django.utils import timezone
+        from datetime import timedelta
+        self.trial_start = timezone.now()
+        self.trial_end = self.trial_start + timedelta(days=days)
+        self.is_trial_active = True
+        self.save(update_fields=["trial_start", "trial_end", "is_trial_active"])
+
+    def check_trial_status(self):
+        from django.utils import timezone
+        if self.trial_end and timezone.now() > self.trial_end:
+            if self.is_trial_active:
+                self.is_trial_active = False
+                self.save(update_fields=["is_trial_active"])
+        return self.is_trial_active
 
     class Meta:
         db_table = "users"

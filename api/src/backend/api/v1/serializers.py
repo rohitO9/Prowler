@@ -255,6 +255,9 @@ class UserSerializer(BaseSerializerV1):
             "date_joined",
             "memberships",
             "roles",
+            "trial_start",
+            "trial_end",
+            "is_trial_active"
         ]
         extra_kwargs = {
             "roles": {"read_only": True},

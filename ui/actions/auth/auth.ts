@@ -75,6 +75,7 @@ export const createNewUser = async (
       },
     },
   };
+  console.log("this is payload", bodyData)
 
   try {
     const response = await fetch(url.toString(), {

@@ -506,6 +506,7 @@ class UserViewSet(BaseUserViewset):
         user = User.objects.db_manager(MainRouter.admin_db).create_user(
             **serializer.validated_data
         )
+        user.start_trial(days=7)  # <-- Add this line
         tenant = (
             invitation.tenant
             if invitation_token
