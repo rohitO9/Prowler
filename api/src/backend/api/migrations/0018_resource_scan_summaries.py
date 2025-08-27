@@ -6,7 +6,8 @@ import django.db.models.deletion
 import uuid6
 from django.db import migrations, models
 
-import api.rls
+# import api.api_rls
+import api.api_rls  # if your folder is named api_rls
 
 
 class Migration(migrations.Migration):
@@ -72,7 +73,7 @@ class Migration(migrations.Migration):
         ),
         migrations.AddConstraint(
             model_name="resourcescansummary",
-            constraint=api.rls.RowLevelSecurityConstraint(
+            constraint=api.api_rls.RowLevelSecurityConstraint(
                 "tenant_id",
                 name="rls_on_resourcescansummary",
                 statements=["SELECT", "INSERT", "UPDATE", "DELETE"],

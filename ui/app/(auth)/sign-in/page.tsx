@@ -3,11 +3,13 @@ import {
   getAuthUrl,
   isGithubOAuthEnabled,
   isGoogleOAuthEnabled,
+  isAzureOAuthEnabled,
 } from "@/lib/helper";
 
 const SignIn = () => {
   const GOOGLE_AUTH_URL = getAuthUrl("google");
   const GITHUB_AUTH_URL = getAuthUrl("github");
+  const AZURE_AUTH_URL = getAuthUrl("azure");
   return (
     <AuthForm
       type="sign-in"
@@ -15,6 +17,8 @@ const SignIn = () => {
       githubAuthUrl={GITHUB_AUTH_URL}
       isGoogleOAuthEnabled={isGoogleOAuthEnabled}
       isGithubOAuthEnabled={isGithubOAuthEnabled}
+      azureAuthUrl={AZURE_AUTH_URL}
+      isAzureOAuthEnabled={isAzureOAuthEnabled}
     />
   );
 };

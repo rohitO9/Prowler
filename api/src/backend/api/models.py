@@ -1,7 +1,12 @@
 import json
 import re
+import base64
+import uuid
+from django.db import models
+from django.utils.translation import gettext_lazy as _
 from uuid import UUID, uuid4
-
+import os
+from dotenv import load_dotenv
 from cryptography.fernet import Fernet
 from django.conf import settings
 from django.contrib.auth.models import AbstractBaseUser
@@ -34,20 +39,100 @@ from api.db_utils import (
     enum_to_choices,
     generate_random_token,
     one_week_from_now,
+    DB_USER,
+    POSTGRES_TENANT_VAR,
 )
 from api.exceptions import ModelValidationError
-from api.rls import (
-    BaseSecurityConstraint,
-    RowLevelSecurityConstraint,
-    RowLevelSecurityProtectedModel,
-    Tenant,
-)
-from prowler.lib.check.models import Severity
+# from api.api_rls import (
+#     BaseSecurityConstraint,
+#     RowLevelSecurityConstraint,
+#     RowLevelSecurityProtectedModel,
+# )
+# from api.models import Tenant
 
-fernet = Fernet(settings.SECRETS_ENCRYPTION_KEY.encode())
+
+from prowler.lib.check.models import Severity
+from cryptography.fernet import Fernet
+
+# Encryption setup
+key = settings.SECRETS_ENCRYPTION_KEY
+try:
+    decoded_key = base64.urlsafe_b64decode(key)
+    print(f"Decoded key length: {len(decoded_key)}")  # Should be 32 bytes
+except Exception as e:
+    print(f"Error decoding key: {e}")
+
+load_dotenv()
+print("Loaded key from settings:", os.getenv("SECRETS_ENCRYPTION_KEY"))
+
+# Initialize Fernet with the key
+fernet = Fernet(os.getenv("SECRETS_ENCRYPTION_KEY"))
 
 # Convert Prowler Severity enum to Django TextChoices
 SeverityChoices = enum_to_choices(Severity)
+
+# remove top-level import
+
+# Inside your model class or function that needs the base class:
+# def get_row_level_security_protected_model():
+#     from api.api_rls.row_level_security_protected_model import RowLevelSecurityProtectedModel
+#     return RowLevelSecurityProtectedModel
+
+def get_row_level_security_constraint():
+    from api.api_rls import RowLevelSecurityConstraint
+    return RowLevelSecurityConstraint
+
+RowLevelSecurityConstraint = get_row_level_security_constraint()
+
+
+
+
+def get_row_level_security_protected_model():
+    from api.api_rls.row_level_security_protected_model import RowLevelSecurityProtectedModel
+    return RowLevelSecurityProtectedModel
+
+RowLevelSecurityProtectedModel = get_row_level_security_protected_model()
+
+
+class Provider(get_row_level_security_protected_model()):
+    """
+    Represents a cloud or service provider.
+
+    Fields:
+    - id: Primary key UUID.
+    - alias: Human-readable alias for the provider.
+    - secret: Encrypted secret field, optional.
+    - connection_status: Status of the connection.
+    - is_deleted: Soft-delete flag.
+    - created_at, updated_at: Timestamps for audit.
+    """
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    alias = models.CharField(max_length=255, unique=True)
+    secret = models.TextField(blank=True, null=True)
+    connection_status = models.CharField(max_length=50, default='disconnected')
+    is_deleted = models.BooleanField(default=False)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = _("Provider")
+        verbose_name_plural = _("Providers")
+        indexes = [
+            models.Index(fields=["alias"]),
+            models.Index(fields=["connection_status"]),
+        ]
+
+    def active_provider_filter(cls):
+        """
+        Class method to filter only active (not deleted) providers.
+        """
+        return cls.objects.filter(is_deleted=False)
+
+    def __str__(self):
+        return self.alias
+
 
 
 class StatusChoices(models.TextChoices):
@@ -102,6 +187,40 @@ class ActiveProviderManager(models.Manager):
 class ActiveProviderPartitionedManager(PostgresManager, ActiveProviderManager):
     def get_queryset(self):
         return super().get_queryset().filter(self.active_provider_filter())
+def get_base_security_constraint():
+    from api.api_rls import BaseSecurityConstraint
+    return BaseSecurityConstraint    
+
+
+
+class Tenant(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
+    inserted_at = models.DateTimeField(auto_now_add=True, editable=False)
+    updated_at = models.DateTimeField(auto_now=True, editable=False)
+    name = models.CharField(max_length=100)
+
+    class Meta:
+        db_table = "tenants"
+        constraints = []  # Initialize empty to avoid import errors
+
+    class JSONAPIMeta:
+        resource_name = "tenants"
+
+
+def apply_constraints_to_model(model_class):
+    BaseSecurityConstraint = get_base_security_constraint()
+    model_class._meta.constraints = [
+        BaseSecurityConstraint(
+            name="statements_on_constraints",
+            statements=["SELECT", "INSERT", "UPDATE", "DELETE"],
+        )
+    ]
+
+
+# Call after the Tenant class is defined
+apply_constraints_to_model(Tenant)
+
+
 
 
 class User(AbstractBaseUser):
@@ -154,12 +273,7 @@ class User(AbstractBaseUser):
     class Meta:
         db_table = "users"
 
-        constraints = [
-            BaseSecurityConstraint(
-                name="statements_on_%(class)s",
-                statements=["SELECT", "INSERT", "UPDATE", "DELETE"],
-            )
-        ]
+        constraints = []
 
     class JSONAPIMeta:
         resource_name = "users"
@@ -194,14 +308,22 @@ class Membership(models.Model):
                 fields=("user", "tenant"),
                 name="unique_resources_by_membership",
             ),
-            BaseSecurityConstraint(
-                name="statements_on_%(class)s",
-                statements=["SELECT", "INSERT", "UPDATE", "DELETE"],
-            ),
         ]
 
     class JSONAPIMeta:
         resource_name = "memberships"
+
+
+def apply_membership_constraints():
+    BaseSecurityConstraint = get_base_security_constraint()
+    Membership._meta.constraints.append(
+        BaseSecurityConstraint(
+            name="statements_on_tanent_contraints",
+            statements=["SELECT", "INSERT", "UPDATE", "DELETE"],
+        )
+    )
+
+apply_membership_constraints()
 
 
 class Provider(RowLevelSecurityProtectedModel):
@@ -303,9 +425,10 @@ class Provider(RowLevelSecurityProtectedModel):
         self.full_clean()
         super().save(*args, **kwargs)
 
-    class Meta(RowLevelSecurityProtectedModel.Meta):
+    class Meta:
         db_table = "providers"
-
+        # Don't inherit from base class Meta to avoid constraint issues
+        
         constraints = [
             models.UniqueConstraint(
                 fields=("tenant_id", "provider", "uid", "is_deleted"),
@@ -313,13 +436,19 @@ class Provider(RowLevelSecurityProtectedModel):
             ),
             RowLevelSecurityConstraint(
                 field="tenant_id",
-                name="rls_on_%(class)s",
+                name="rls_provider_tenant",  # Unique name for this model
                 statements=["SELECT", "INSERT", "UPDATE", "DELETE"],
             ),
         ]
 
     class JSONAPIMeta:
         resource_name = "providers"
+
+    def __str__(self):
+        return f"{self.provider} - {self.uid}" + (f" ({self.alias})" if self.alias else "")
+
+    def __repr__(self):
+        return f"<Provider {self.id}: {self.provider} - {self.uid}>"
 
 
 class ProviderGroup(RowLevelSecurityProtectedModel):
@@ -340,7 +469,7 @@ class ProviderGroup(RowLevelSecurityProtectedModel):
             ),
             RowLevelSecurityConstraint(
                 field="tenant_id",
-                name="rls_on_%(class)s",
+                name="rls_on_ProviderGroup",
                 statements=["SELECT", "INSERT", "UPDATE", "DELETE"],
             ),
         ]
@@ -364,7 +493,7 @@ class ProviderGroupMembership(RowLevelSecurityProtectedModel):
             ),
             RowLevelSecurityConstraint(
                 field="tenant_id",
-                name="rls_on_%(class)s",
+                name="rls_on_ProviderGroupMembership",
                 statements=["SELECT", "INSERT", "UPDATE", "DELETE"],
             ),
         ]
@@ -391,7 +520,7 @@ class Task(RowLevelSecurityProtectedModel):
         constraints = [
             RowLevelSecurityConstraint(
                 field="tenant_id",
-                name="rls_on_%(class)s",
+                name="rls_on_Task",
                 statements=["SELECT", "INSERT", "UPDATE", "DELETE"],
             ),
         ]
@@ -460,7 +589,7 @@ class Scan(RowLevelSecurityProtectedModel):
         constraints = [
             RowLevelSecurityConstraint(
                 field="tenant_id",
-                name="rls_on_%(class)s",
+                name="rls_on_Scan",
                 statements=["SELECT", "INSERT", "UPDATE", "DELETE"],
             ),
         ]
@@ -516,7 +645,7 @@ class ResourceTag(RowLevelSecurityProtectedModel):
             ),
             RowLevelSecurityConstraint(
                 field="tenant_id",
-                name="rls_on_%(class)s",
+                name="rls_on_ResourceTag",
                 statements=["SELECT", "INSERT", "UPDATE", "DELETE"],
             ),
         ]
@@ -619,7 +748,7 @@ class Resource(RowLevelSecurityProtectedModel):
             ),
             RowLevelSecurityConstraint(
                 field="tenant_id",
-                name="rls_on_%(class)s",
+                name="rls_on_Resource",
                 statements=["SELECT", "INSERT", "UPDATE", "DELETE"],
             ),
         ]
@@ -651,7 +780,7 @@ class ResourceTagMapping(RowLevelSecurityProtectedModel):
             ),
             RowLevelSecurityConstraint(
                 field="tenant_id",
-                name="rls_on_%(class)s",
+                name="rls_on_ResourceTagMapping",
                 statements=["SELECT", "INSERT", "UPDATE", "DELETE"],
             ),
         ]
@@ -753,12 +882,12 @@ class Finding(PostgresPartitionedModel, RowLevelSecurityProtectedModel):
         constraints = [
             RowLevelSecurityConstraint(
                 field="tenant_id",
-                name="rls_on_%(class)s",
+                name="rls_on_Finding",
                 statements=["SELECT", "UPDATE", "INSERT", "DELETE"],
             ),
             RowLevelSecurityConstraint(
                 field="tenant_id",
-                name="rls_on_%(class)s_default",
+                name="rls_on_modelname_default",
                 partition_name="default",
                 statements=["SELECT", "UPDATE", "INSERT", "DELETE"],
             ),
@@ -856,7 +985,7 @@ class ResourceFindingMapping(PostgresPartitionedModel, RowLevelSecurityProtected
             ),
             RowLevelSecurityConstraint(
                 field="tenant_id",
-                name="rls_on_%(class)s",
+                name="rls_on_ResourceFindingMapping",
                 statements=["SELECT", "INSERT", "UPDATE", "DELETE"],
             ),
             RowLevelSecurityConstraint(
@@ -898,7 +1027,7 @@ class ProviderSecret(RowLevelSecurityProtectedModel):
         constraints = [
             RowLevelSecurityConstraint(
                 field="tenant_id",
-                name="rls_on_%(class)s",
+                name="rls_on_ProviderSecret",
                 statements=["SELECT", "INSERT", "UPDATE", "DELETE"],
             ),
         ]
@@ -963,7 +1092,7 @@ class Invitation(RowLevelSecurityProtectedModel):
             ),
             RowLevelSecurityConstraint(
                 field="tenant_id",
-                name="rls_on_%(class)s",
+                name="rls_on_ProviderSecret_new",
                 statements=["SELECT", "INSERT", "UPDATE", "DELETE"],
             ),
         ]
@@ -1035,7 +1164,7 @@ class Role(RowLevelSecurityProtectedModel):
             ),
             RowLevelSecurityConstraint(
                 field="tenant_id",
-                name="rls_on_%(class)s",
+                name="rls_on_Provider_Secret",
                 statements=["SELECT", "INSERT", "UPDATE", "DELETE"],
             ),
         ]
@@ -1059,7 +1188,7 @@ class RoleProviderGroupRelationship(RowLevelSecurityProtectedModel):
             ),
             RowLevelSecurityConstraint(
                 field="tenant_id",
-                name="rls_on_%(class)s",
+                name="rls_on_Role_Provider",
                 statements=["SELECT", "INSERT", "UPDATE", "DELETE"],
             ),
         ]
@@ -1083,7 +1212,7 @@ class UserRoleRelationship(RowLevelSecurityProtectedModel):
             ),
             RowLevelSecurityConstraint(
                 field="tenant_id",
-                name="rls_on_%(class)s",
+                name="rls_on_Role_Provider_Group",
                 statements=["SELECT", "INSERT", "UPDATE", "DELETE"],
             ),
         ]
@@ -1107,7 +1236,7 @@ class InvitationRoleRelationship(RowLevelSecurityProtectedModel):
             ),
             RowLevelSecurityConstraint(
                 field="tenant_id",
-                name="rls_on_%(class)s",
+                name="rls_on_Role_RElationship",
                 statements=["SELECT", "INSERT", "UPDATE", "DELETE"],
             ),
         ]
@@ -1151,7 +1280,7 @@ class ComplianceOverview(RowLevelSecurityProtectedModel):
             ),
             RowLevelSecurityConstraint(
                 field="tenant_id",
-                name="rls_on_%(class)s",
+                name="rls_on_complianceoverview",
                 statements=["SELECT", "INSERT", "DELETE"],
             ),
         ]
@@ -1206,7 +1335,7 @@ class ComplianceRequirementOverview(RowLevelSecurityProtectedModel):
             ),
             RowLevelSecurityConstraint(
                 field="tenant_id",
-                name="rls_on_%(class)s",
+                name="rls_on_compliance",
                 statements=["SELECT", "INSERT", "DELETE"],
             ),
         ]
@@ -1282,7 +1411,7 @@ class ScanSummary(RowLevelSecurityProtectedModel):
             ),
             RowLevelSecurityConstraint(
                 field="tenant_id",
-                name="rls_on_%(class)s",
+                name="rls_on_scan",
                 statements=["SELECT", "INSERT", "UPDATE", "DELETE"],
             ),
         ]
@@ -1336,7 +1465,7 @@ class Integration(RowLevelSecurityProtectedModel):
         constraints = [
             RowLevelSecurityConstraint(
                 field="tenant_id",
-                name="rls_on_%(class)s",
+                name="rls_on_integrations",
                 statements=["SELECT", "INSERT", "UPDATE", "DELETE"],
             ),
         ]
@@ -1376,7 +1505,7 @@ class IntegrationProviderRelationship(RowLevelSecurityProtectedModel):
             ),
             RowLevelSecurityConstraint(
                 field="tenant_id",
-                name="rls_on_%(class)s",
+                name="rls_on_tanent",
                 statements=["SELECT", "INSERT", "UPDATE", "DELETE"],
             ),
         ]
@@ -1425,7 +1554,7 @@ class ResourceScanSummary(RowLevelSecurityProtectedModel):
         constraints = [
             RowLevelSecurityConstraint(
                 field="tenant_id",
-                name="rls_on_%(class)s",
+                name="rls_Row_level",
                 statements=["SELECT", "INSERT", "UPDATE", "DELETE"],
             ),
         ]

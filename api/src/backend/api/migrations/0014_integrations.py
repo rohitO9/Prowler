@@ -6,8 +6,8 @@ import django.db.models.deletion
 from django.db import migrations, models
 
 import api.db_utils
-import api.rls
-from api.rls import RowLevelSecurityConstraint
+import api.api_rls  # if your folder is named api_rls
+# from api.api_rls import RowLevelSecurityConstraint
 
 
 class Migration(migrations.Migration):
@@ -61,7 +61,7 @@ class Migration(migrations.Migration):
         ),
         migrations.AddConstraint(
             model_name="integration",
-            constraint=RowLevelSecurityConstraint(
+            constraint=api.api_rls.RowLevelSecurityConstraint(
                 "tenant_id",
                 name="rls_on_integration",
                 statements=["SELECT", "INSERT", "UPDATE", "DELETE"],
@@ -112,7 +112,7 @@ class Migration(migrations.Migration):
         ),
         migrations.AddConstraint(
             model_name="IntegrationProviderRelationship",
-            constraint=RowLevelSecurityConstraint(
+            constraint=api.api_rls.RowLevelSecurityConstraint(
                 "tenant_id",
                 name="rls_on_integrationproviderrelationship",
                 statements=["SELECT", "INSERT", "UPDATE", "DELETE"],

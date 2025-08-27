@@ -43,7 +43,17 @@ export const getAuthUrl = (provider: AuthSocialProvider) => {
         scope: "user:email",
       },
     },
-  };
+    azure: {
+      baseUrl: `https://login.microsoftonline.com/${process.env.AZURE_AD_TENANT_ID}/oauth2/v2.0/authorize`,
+      params: {
+        client_id: process.env.AZURE_AD_CLIENT_ID,
+        redirect_uri: process.env.AZURE_AD_REDIRECT_URI,
+        response_type: "code",
+        scope: "openid profile email offline_access User.Read GroupMember.Read.All",
+        prompt: "login",
+      },
+    },
+  } as const;
 
   const { baseUrl, params } = config[provider];
   const url = new URL(baseUrl);
@@ -170,6 +180,11 @@ export const isGoogleOAuthEnabled =
 export const isGithubOAuthEnabled =
   !!process.env.SOCIAL_GITHUB_OAUTH_CLIENT_ID &&
   !!process.env.SOCIAL_GITHUB_OAUTH_CLIENT_SECRET;
+
+export const isAzureOAuthEnabled =
+  !!process.env.AZURE_AD_CLIENT_ID &&
+  !!process.env.AZURE_AD_TENANT_ID &&
+  !!process.env.AZURE_AD_REDIRECT_URI;
 
 export const checkTaskStatus = async (
   taskId: string,

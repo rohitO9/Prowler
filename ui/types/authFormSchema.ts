@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-export type AuthSocialProvider = "google" | "github";
+export type AuthSocialProvider = "google" | "github" | "azure";
 
 export const authFormSchema = (type: string) =>
   z

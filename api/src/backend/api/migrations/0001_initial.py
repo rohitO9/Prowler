@@ -20,7 +20,7 @@ from psqlextra.models.partitioned import PostgresPartitionedModel
 from psqlextra.types import PostgresPartitioningMethod
 from uuid6 import uuid7
 
-import api.rls
+import api.api_rls  # if your folder is named api_rls
 from api.db_utils import (
     DB_PROWLER_PASSWORD,
     DB_PROWLER_USER,
@@ -185,7 +185,7 @@ class Migration(migrations.Migration):
         ),
         migrations.AddConstraint(
             model_name="user",
-            constraint=api.rls.BaseSecurityConstraint(
+            constraint=api.api_rls.BaseSecurityConstraint(
                 name="statements_on_user",
                 statements=["SELECT", "INSERT", "UPDATE", "DELETE"],
             ),
@@ -276,7 +276,7 @@ class Migration(migrations.Migration):
         ),
         migrations.AddConstraint(
             model_name="membership",
-            constraint=api.rls.BaseSecurityConstraint(
+            constraint=api.api_rls.BaseSecurityConstraint(
                 name="statements_on_membership",
                 statements=["SELECT", "INSERT", "UPDATE", "DELETE"],
             ),
@@ -438,7 +438,7 @@ class Migration(migrations.Migration):
         ),
         migrations.AddConstraint(
             model_name="provider",
-            constraint=api.rls.RowLevelSecurityConstraint(
+            constraint=api.api_rls.RowLevelSecurityConstraint(
                 "tenant_id",
                 name="rls_on_provider",
                 statements=["SELECT", "INSERT", "UPDATE", "DELETE"],
@@ -529,7 +529,7 @@ class Migration(migrations.Migration):
         ),
         migrations.AddConstraint(
             model_name="providergroup",
-            constraint=api.rls.RowLevelSecurityConstraint(
+            constraint=api.api_rls.RowLevelSecurityConstraint(
                 "tenant_id",
                 name="rls_on_providergroup",
                 statements=["SELECT", "INSERT", "UPDATE", "DELETE"],
@@ -543,7 +543,7 @@ class Migration(migrations.Migration):
         ),
         migrations.AddConstraint(
             model_name="providergroupmembership",
-            constraint=api.rls.RowLevelSecurityConstraint(
+            constraint=api.api_rls.RowLevelSecurityConstraint(
                 "tenant_id",
                 name="rls_on_providergroupmembership",
                 statements=["SELECT", "INSERT", "UPDATE", "DELETE"],
@@ -594,7 +594,7 @@ class Migration(migrations.Migration):
         ),
         migrations.AddConstraint(
             model_name="task",
-            constraint=api.rls.RowLevelSecurityConstraint(
+            constraint=api.api_rls.RowLevelSecurityConstraint(
                 "tenant_id",
                 name="rls_on_task",
                 statements=["SELECT", "INSERT", "UPDATE", "DELETE"],
@@ -714,7 +714,7 @@ class Migration(migrations.Migration):
         ),
         migrations.AddConstraint(
             model_name="scan",
-            constraint=api.rls.RowLevelSecurityConstraint(
+            constraint=api.api_rls.RowLevelSecurityConstraint(
                 "tenant_id",
                 name="rls_on_scan",
                 statements=["SELECT", "INSERT", "UPDATE", "DELETE"],
@@ -957,7 +957,7 @@ class Migration(migrations.Migration):
         ),
         migrations.AddConstraint(
             model_name="resourcetag",
-            constraint=api.rls.RowLevelSecurityConstraint(
+            constraint=api.api_rls.RowLevelSecurityConstraint(
                 "tenant_id",
                 name="rls_on_resourcetag",
                 statements=["SELECT", "INSERT", "UPDATE", "DELETE"],
@@ -972,7 +972,7 @@ class Migration(migrations.Migration):
         ),
         migrations.AddConstraint(
             model_name="resourcetagmapping",
-            constraint=api.rls.RowLevelSecurityConstraint(
+            constraint=api.api_rls.RowLevelSecurityConstraint(
                 "tenant_id",
                 name="rls_on_resourcetagmapping",
                 statements=["SELECT", "INSERT", "UPDATE", "DELETE"],
@@ -987,7 +987,7 @@ class Migration(migrations.Migration):
         ),
         migrations.AddConstraint(
             model_name="resource",
-            constraint=api.rls.RowLevelSecurityConstraint(
+            constraint=api.api_rls.RowLevelSecurityConstraint(
                 "tenant_id",
                 name="rls_on_resource",
                 statements=["SELECT", "INSERT", "UPDATE", "DELETE"],
@@ -1158,7 +1158,7 @@ class Migration(migrations.Migration):
         # NOTE: the RLS policy needs to be explicitly set on the partitions
         migrations.AddConstraint(
             model_name="finding",
-            constraint=api.rls.RowLevelSecurityConstraint(
+            constraint=api.api_rls.RowLevelSecurityConstraint(
                 "tenant_id",
                 name="rls_on_finding",
                 statements=["SELECT", "INSERT", "UPDATE", "DELETE"],
@@ -1166,7 +1166,7 @@ class Migration(migrations.Migration):
         ),
         migrations.AddConstraint(
             model_name="finding",
-            constraint=api.rls.RowLevelSecurityConstraint(
+            constraint=api.api_rls.RowLevelSecurityConstraint(
                 "tenant_id",
                 name="rls_on_finding_default",
                 partition_name="default",
@@ -1237,7 +1237,7 @@ class Migration(migrations.Migration):
         ),
         migrations.AddConstraint(
             model_name="resourcefindingmapping",
-            constraint=api.rls.RowLevelSecurityConstraint(
+            constraint=api.api_rls.RowLevelSecurityConstraint(
                 "tenant_id",
                 name="rls_on_resourcefindingmapping",
                 statements=["SELECT", "INSERT", "UPDATE", "DELETE"],
@@ -1249,7 +1249,7 @@ class Migration(migrations.Migration):
         ),
         migrations.AddConstraint(
             model_name="resourcefindingmapping",
-            constraint=api.rls.RowLevelSecurityConstraint(
+            constraint=api.api_rls.RowLevelSecurityConstraint(
                 "tenant_id",
                 name="rls_on_resource_finding_mappings_default",
                 partition_name="default",
@@ -1318,7 +1318,7 @@ class Migration(migrations.Migration):
         ),
         migrations.AddConstraint(
             model_name="providersecret",
-            constraint=api.rls.RowLevelSecurityConstraint(
+            constraint=api.api_rls.RowLevelSecurityConstraint(
                 "tenant_id",
                 name="rls_on_providersecret",
                 statements=["SELECT", "INSERT", "UPDATE", "DELETE"],
@@ -1401,7 +1401,7 @@ class Migration(migrations.Migration):
         ),
         migrations.AddConstraint(
             model_name="invitation",
-            constraint=api.rls.RowLevelSecurityConstraint(
+            constraint=api.api_rls.RowLevelSecurityConstraint(
                 "tenant_id",
                 name="rls_on_invitation",
                 statements=["SELECT", "INSERT", "UPDATE", "DELETE"],
@@ -1463,7 +1463,7 @@ class Migration(migrations.Migration):
         ),
         migrations.AddConstraint(
             model_name="complianceoverview",
-            constraint=api.rls.RowLevelSecurityConstraint(
+            constraint=api.api_rls.RowLevelSecurityConstraint(
                 "tenant_id",
                 name="rls_on_complianceoverview",
                 statements=["SELECT", "INSERT", "DELETE"],
@@ -1550,7 +1550,7 @@ class Migration(migrations.Migration):
         ),
         migrations.AddConstraint(
             model_name="scansummary",
-            constraint=api.rls.RowLevelSecurityConstraint(
+            constraint=api.api_rls.RowLevelSecurityConstraint(
                 "tenant_id",
                 name="rls_on_scansummary",
                 statements=["SELECT", "INSERT", "UPDATE", "DELETE"],

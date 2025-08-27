@@ -18,6 +18,11 @@ ACCOUNT_USER_MODEL_USERNAME_FIELD = None
 REST_AUTH = {
     "TOKEN_MODEL": None,
     "REST_USE_JWT": True,
+    # Ensure we don't depend on django.contrib.sites domain handling
+    "PASSWORD_RESET_USE_SITES_DOMAIN": False,
+    # Explicitly set serializers (using dj_rest_auth defaults)
+    "PASSWORD_RESET_SERIALIZER": "dj_rest_auth.serializers.PasswordResetSerializer",
+    "PASSWORD_RESET_CONFIRM_SERIALIZER": "dj_rest_auth.serializers.PasswordResetConfirmSerializer",
 }
 # django-allauth (social)
 # Authenticate if local account with this email address already exists

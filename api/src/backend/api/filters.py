@@ -41,8 +41,8 @@ from api.models import (
     StatusChoices,
     Task,
     User,
+    Tenant,
 )
-from api.rls import Tenant
 from api.uuid_utils import (
     datetime_to_uuid7,
     transform_into_uuid7,

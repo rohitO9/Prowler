@@ -5,12 +5,13 @@ from contextlib import contextmanager
 from datetime import datetime, timedelta, timezone
 
 from django.conf import settings
-from django.contrib.auth.models import BaseUserManager
+# Remove these problematic imports:
+# from django.contrib.auth.models import BaseUserManager
+# from django_celery_beat.models import PeriodicTask
 from django.db import connection, models, transaction
-from django_celery_beat.models import PeriodicTask
 from psycopg2 import connect as psycopg2_connect
 from psycopg2.extensions import AsIs, new_type, register_adapter, register_type
-from rest_framework_json_api.serializers import ValidationError
+# REMOVED: from rest_framework_json_api.serializers import ValidationError
 
 DB_USER = settings.DATABASES["default"]["USER"] if not settings.TESTING else "test"
 DB_PASSWORD = (
@@ -58,6 +59,9 @@ def rls_transaction(value: str, parameter: str = POSTGRES_TENANT_VAR):
         value (str): Database configuration parameter value.
         parameter (str): Database configuration parameter name, by default is 'api.tenant_id'.
     """
+    # Move the import inside the function where it's used
+    from rest_framework_json_api.serializers import ValidationError
+    
     with transaction.atomic():
         with connection.cursor() as cursor:
             try:
@@ -69,18 +73,66 @@ def rls_transaction(value: str, parameter: str = POSTGRES_TENANT_VAR):
             yield cursor
 
 
-class CustomUserManager(BaseUserManager):
-    def create_user(self, email, password=None, **extra_fields):
-        if not email:
-            raise ValueError("The email field must be set")
-        email = self.normalize_email(email)
-        user = self.model(email=email, **extra_fields)
-        user.set_password(password)
-        user.save(using=self._db)
-        return user
+# Rest of your file remains exactly the same...
+# Move CustomUserManager to a separate file or lazy load BaseUserManager
+class CustomUserManager:
+    """
+    Custom user manager that lazily imports BaseUserManager to avoid circular imports.
+    """
+    
+    def __init__(self):
+        self._base_manager = None
+    
+    @property
+    def base_manager(self):
+        if self._base_manager is None:
+            from django.contrib.auth.models import BaseUserManager
+            
+            class _CustomUserManager(BaseUserManager):
+                def create_user(self, email, password=None, **extra_fields):
+                    if not email:
+                        raise ValueError("The email field must be set")
+                    email = self.normalize_email(email)
+                    user = self.model(email=email, **extra_fields)
+                    user.set_password(password)
+                    user.save(using=self._db)
+                    return user
 
+                def get_by_natural_key(self, email):
+                    return self.get(email__iexact=email)
+            
+            self._base_manager = _CustomUserManager
+        return self._base_manager
+    
+    def create_user(self, email, password=None, **extra_fields):
+        return self.base_manager().create_user(email, password, **extra_fields)
+    
     def get_by_natural_key(self, email):
-        return self.get(email__iexact=email)
+        return self.base_manager().get_by_natural_key(email)
+
+
+# Alternative approach - create a function that returns the manager class
+def get_custom_user_manager():
+    """
+    Returns a CustomUserManager class that inherits from BaseUserManager.
+    This function should be called after Django apps are loaded.
+    """
+    from django.contrib.auth.models import BaseUserManager
+    
+    class CustomUserManager(BaseUserManager):
+        def create_user(self, email, password=None, **extra_fields):
+            if not email:
+                raise ValueError("The email field must be set")
+            email = self.normalize_email(email)
+            user = self.model(email=email, **extra_fields)
+            user.set_password(password)
+            user.save(using=self._db)
+            return user
+
+        def get_by_natural_key(self, email):
+            return self.get(email__iexact=email)
+    
+    return CustomUserManager
 
 
 def enum_to_choices(enum_class):
@@ -149,6 +201,8 @@ def delete_related_daily_task(provider_id: str):
         provider_id (str): The unique identifier for the provider
                            whose related periodic task should be deleted.
     """
+    from django_celery_beat.models import PeriodicTask
+    
     task_name = f"scan-perform-scheduled-{provider_id}"
     PeriodicTask.objects.filter(name=task_name).delete()
 

@@ -29,6 +29,8 @@ export const AuthForm = ({
   githubAuthUrl,
   isGoogleOAuthEnabled,
   isGithubOAuthEnabled,
+  azureAuthUrl,
+  isAzureOAuthEnabled,
 }: {
   type: string;
   invitationToken?: string | null;
@@ -37,6 +39,8 @@ export const AuthForm = ({
   githubAuthUrl?: string;
   isGoogleOAuthEnabled?: boolean;
   isGithubOAuthEnabled?: boolean;
+  azureAuthUrl?: string;
+  isAzureOAuthEnabled?: boolean;
 }) => {
   const formSchema = authFormSchema(type);
   const router = useRouter();
@@ -530,6 +534,43 @@ export const AuthForm = ({
                       isDisabled={!isGithubOAuthEnabled}
                     >
                       Continue with Github
+                    </Button>
+                  </span>
+                </Tooltip>
+                <Tooltip
+                  content={
+                    <div className="flex-inline text-small">
+                      Azure AD Login is not configured.{" "}
+                      <Link
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-xs font-medium text-primary"
+                      >
+                        Read the docs
+                      </Link>
+                    </div>
+                  }
+                  placement="right-start"
+                  shadow="sm"
+                  isDisabled={isAzureOAuthEnabled}
+                  className="w-96"
+                >
+                  <span>
+                    <Button
+                      startContent={
+                        <Icon
+                          className="text-default-500"
+                          icon="logos:microsoft-azure"
+                          width={24}
+                        />
+                      }
+                      variant="bordered"
+                      className="w-full"
+                      as="a"
+                      href={azureAuthUrl}
+                      isDisabled={!isAzureOAuthEnabled}
+                    >
+                      Continue with Azure AD
                     </Button>
                   </span>
                 </Tooltip>

@@ -14,7 +14,7 @@ from psqlextra.partitioning.config import PostgresPartitioningConfig
 from uuid6 import UUID
 
 from api.models import Finding, ResourceFindingMapping
-from api.rls import RowLevelSecurityConstraint
+from api.api_rls import RowLevelSecurityConstraint
 from api.uuid_utils import datetime_to_uuid7
 
 

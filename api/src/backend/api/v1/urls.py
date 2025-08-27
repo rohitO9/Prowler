@@ -23,7 +23,7 @@ from api.v1.views import (
     RoleProviderGroupRelationshipView,
     RoleViewSet,
     ScanViewSet,
-    ScheduleViewSet,
+    ScheduleView,
     SchemaView,
     TaskViewSet,
     TenantMembersViewSet,
@@ -31,6 +31,8 @@ from api.v1.views import (
     UserRoleRelationshipView,
     UserViewSet,
 )
+from api.v1.views.azure_ad import AzureADSocialLoginView, azure_ad_config, AzureLoginView, AzureCallbackView, azure_ad_test, trial_status
+from dj_rest_auth.views import PasswordResetConfirmView, PasswordResetView
 
 router = routers.DefaultRouter(trailing_slash=False)
 
@@ -47,7 +49,7 @@ router.register(
     r"compliance-overviews", ComplianceOverviewViewSet, basename="complianceoverview"
 )
 router.register(r"overviews", OverviewViewSet, basename="overview")
-router.register(r"schedules", ScheduleViewSet, basename="schedule")
+router.register(r"schedules", ScheduleView, basename="schedule")
 router.register(r"integrations", IntegrationViewSet, basename="integration")
 
 tenants_router = routers.NestedSimpleRouter(router, r"tenants", lookup="tenant")
@@ -62,6 +64,18 @@ urlpatterns = [
     path("tokens", CustomTokenObtainView.as_view(), name="token-obtain"),
     path("tokens/refresh", CustomTokenRefreshView.as_view(), name="token-refresh"),
     path("tokens/switch", CustomTokenSwitchTenantView.as_view(), name="token-switch"),
+
+    path(
+        "auth/password/reset",
+        PasswordResetView.as_view(),
+        name="auth-password-reset",
+    ),
+    path(
+        "auth/password/reset/confirm",
+        PasswordResetConfirmView.as_view(),
+        name="auth-password-reset-confirm",
+    ),
+
     path(
         "providers/secrets",
         ProviderSecretViewSet.as_view({"get": "list", "post": "create"}),
@@ -74,6 +88,7 @@ urlpatterns = [
         ),
         name="providersecret-detail",
     ),
+
     path(
         "tenants/invitations",
         InvitationViewSet.as_view({"get": "list", "post": "create"}),
@@ -86,37 +101,43 @@ urlpatterns = [
         ),
         name="invitation-detail",
     ),
+
     path(
         "invitations/accept",
         InvitationAcceptViewSet.as_view({"post": "accept"}),
         name="invitation-accept",
     ),
+
+    # Fixed calls for APIViews (removed method dicts)
     path(
         "roles/<uuid:pk>/relationships/provider_groups",
-        RoleProviderGroupRelationshipView.as_view(
-            {"post": "create", "patch": "partial_update", "delete": "destroy"}
-        ),
+        RoleProviderGroupRelationshipView.as_view(),  # no args
         name="role-provider-groups-relationship",
     ),
     path(
         "users/<uuid:pk>/relationships/roles",
-        UserRoleRelationshipView.as_view(
-            {"post": "create", "patch": "partial_update", "delete": "destroy"}
-        ),
+        UserRoleRelationshipView.as_view(),  # no args
         name="user-roles-relationship",
     ),
     path(
         "provider-groups/<uuid:pk>/relationships/providers",
-        ProviderGroupProvidersRelationshipView.as_view(
-            {"post": "create", "patch": "partial_update", "delete": "destroy"}
-        ),
+        ProviderGroupProvidersRelationshipView.as_view(),  # no args
         name="provider_group-providers-relationship",
     ),
+
     path("tokens/google", GoogleSocialLoginView.as_view(), name="token-google"),
     path("tokens/github", GithubSocialLoginView.as_view(), name="token-github"),
+    path("tokens/azure", AzureADSocialLoginView.as_view(), name="token-azure"),
+    path("tokens/azure/config", azure_ad_config, name="azure-config"),
+    path("tokens/azure/test", azure_ad_test, name="azure-test"),
+    path("tokens/azure/trial-status", trial_status, name="trial-status"),
+    path("auth/azure/login", AzureLoginView.as_view(), name="azure-login"),
+    path("auth/azure/callback", AzureCallbackView.as_view(), name="azure-callback"),
+
     path("", include(router.urls)),
     path("", include(tenants_router.urls)),
     path("", include(users_router.urls)),
+
     path("schema", SchemaView.as_view(), name="schema"),
     path("docs", SpectacularRedocView.as_view(url_name="schema"), name="docs"),
 ]

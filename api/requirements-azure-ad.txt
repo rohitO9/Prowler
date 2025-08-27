@@ -1,0 +1,23 @@
+# Azure AD Integration Dependencies
+# Additional requirements for Azure AD functionality
+
+# Core Azure AD dependencies
+PyJWT>=2.8.0
+cryptography>=41.0.0
+
+# HTTP requests for Azure AD API calls
+requests>=2.31.0
+
+# Azure AD specific libraries
+msal>=1.24.0
+azure-identity>=1.15.0
+
+# JWT token handling
+PyJWT[crypto]>=2.8.0
+
+# Optional: For advanced Azure AD features
+azure-mgmt-authorization>=3.0.0
+
+# Development and testing
+pytest-mock>=3.11.1
+pytest-cov>=4.1.0 

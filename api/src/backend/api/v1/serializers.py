@@ -35,7 +35,7 @@ from api.models import (
     User,
     UserRoleRelationship,
 )
-from api.rls import Tenant
+from api.models import Tenant
 from api.v1.serializer_utils.integrations import (
     AWSCredentialSerializer,
     IntegrationConfigField,

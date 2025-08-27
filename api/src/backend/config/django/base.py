@@ -6,10 +6,11 @@ from config.settings.celery import *  # noqa
 from config.settings.partitions import *  # noqa
 from config.settings.sentry import *  # noqa
 from config.settings.social_login import *  # noqa
+from api.settings.azure_ad import *  # noqa
 
 SECRET_KEY = env("SECRET_KEY", default="secret")
 DEBUG = env.bool("DJANGO_DEBUG", default=False)
-ALLOWED_HOSTS = ["localhost", "127.0.0.1"]
+ALLOWED_HOSTS = ["localhost", "127.0.0.1", "0.0.0.0", "DESKTOP-QEBDPJQ"]
 
 # Application definition
 
@@ -23,6 +24,8 @@ INSTALLED_APPS = [
     "django.contrib.postgres",
     "psqlextra",
     "api",
+    # "api_rls",        # Add this
+    "api.v1",
     "rest_framework",
     "corsheaders",
     "drf_spectacular",
@@ -37,10 +40,35 @@ INSTALLED_APPS = [
     "allauth.socialaccount",
     "allauth.socialaccount.providers.google",
     "allauth.socialaccount.providers.github",
+    "dj_rest_auth",  # Added for password reset endpoints
     "dj_rest_auth.registration",
     "rest_framework.authtoken",
 ]
 
+DATABASES = {
+    'default': {
+        'ENGINE': 'psqlextra.backend',
+        'NAME': env.str('DJANGO_DB_NAME', 'prowler_db'),
+        'USER': env.str('DJANGO_DB_USER', 'prowler_user'),
+        'PASSWORD': env.str('DJANGO_DB_PASSWORD', 'postgres'),
+        'HOST': env.str('DJANGO_DB_HOST', 'localhost'),
+        'PORT': env.str('DJANGO_DB_PORT', '5432'),
+        'OPTIONS': {
+            'connect_timeout': 60,
+        },
+    },
+    'prowler_user': {
+        'ENGINE': 'psqlextra.backend',
+        'NAME': env.str('DJANGO_DB_NAME', 'prowler_db'),  # Same database
+        'USER': env.str('DJANGO_DB_USER', 'prowler_user'),
+        'PASSWORD': env.str('DJANGO_DB_PASSWORD', 'postgres'),
+        'HOST': env.str('DJANGO_DB_HOST', 'localhost'),
+        'PORT': env.str('DJANGO_DB_PORT', '5432'),
+        'OPTIONS': {
+            'connect_timeout': 60,
+        },
+    }
+}
 MIDDLEWARE = [
     "django_guid.middleware.guid_middleware",
     "django.middleware.security.SecurityMiddleware",
@@ -57,7 +85,7 @@ MIDDLEWARE = [
 
 SITE_ID = 1
 
-CORS_ALLOWED_ORIGINS = ["http://localhost", "http://127.0.0.1"]
+CORS_ALLOWED_ORIGINS = ["http://localhost", "http://127.0.0.1", "http://localhost:3000", "http://localhost:8080"]
 
 ROOT_URLCONF = "config.urls"
 
@@ -134,7 +162,7 @@ POSTGRES_EXTRA_DB_BACKEND_BASE = "database_backend"
 # Password validation
 # https://docs.djangoproject.com/en/5.0/ref/settings/#auth-password-validators
 
-AUTH_USER_MODEL = "api.User"
+AUTH_USER_MODEL = 'api.User'
 
 AUTH_PASSWORD_VALIDATORS = [
     {
@@ -210,6 +238,13 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/5.0/howto/static-files/
 
 STATIC_URL = "static/"
+
+# Email
+EMAIL_BACKEND = env.str(
+    "DJANGO_EMAIL_BACKEND",
+    default="django.core.mail.backends.console.EmailBackend",
+)
+DEFAULT_FROM_EMAIL = env.str("DJANGO_DEFAULT_FROM_EMAIL", "no-reply@localhost")
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.0/ref/settings/#default-auto-field

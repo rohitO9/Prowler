@@ -6,7 +6,8 @@ import django.db.models.deletion
 from django.conf import settings
 from django.db import migrations, models
 
-import api.rls
+# import api.api_rls
+import api.api_rls  # if your folder is named api_rls
 
 
 class Migration(migrations.Migration):
@@ -151,7 +152,7 @@ class Migration(migrations.Migration):
         ),
         migrations.AddConstraint(
             model_name="roleprovidergrouprelationship",
-            constraint=api.rls.RowLevelSecurityConstraint(
+            constraint=api.api_rls.RowLevelSecurityConstraint(
                 "tenant_id",
                 name="rls_on_roleprovidergrouprelationship",
                 statements=["SELECT", "INSERT", "UPDATE", "DELETE"],
@@ -165,7 +166,7 @@ class Migration(migrations.Migration):
         ),
         migrations.AddConstraint(
             model_name="userrolerelationship",
-            constraint=api.rls.RowLevelSecurityConstraint(
+            constraint=api.api_rls.RowLevelSecurityConstraint(
                 "tenant_id",
                 name="rls_on_userrolerelationship",
                 statements=["SELECT", "INSERT", "UPDATE", "DELETE"],
@@ -179,7 +180,7 @@ class Migration(migrations.Migration):
         ),
         migrations.AddConstraint(
             model_name="role",
-            constraint=api.rls.RowLevelSecurityConstraint(
+            constraint=api.api_rls.RowLevelSecurityConstraint(
                 "tenant_id",
                 name="rls_on_role",
                 statements=["SELECT", "INSERT", "UPDATE", "DELETE"],
@@ -230,7 +231,7 @@ class Migration(migrations.Migration):
         ),
         migrations.AddConstraint(
             model_name="invitationrolerelationship",
-            constraint=api.rls.RowLevelSecurityConstraint(
+            constraint=api.api_rls.RowLevelSecurityConstraint(
                 "tenant_id",
                 name="rls_on_invitationrolerelationship",
                 statements=["SELECT", "INSERT", "UPDATE", "DELETE"],
