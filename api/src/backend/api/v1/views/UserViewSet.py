@@ -1,7 +1,9 @@
+from rest_framework.decorators import action
+from rest_framework.response import Response
+from rest_framework.permissions import IsAuthenticated
 from api.base_views import BaseUserViewset
 from api.models import User
 from api.v1.serializers import UserSerializer, UserCreateSerializer, UserUpdateSerializer
-
 
 class UserViewSet(BaseUserViewset):
     queryset = User.objects.all()
@@ -23,3 +25,7 @@ class UserViewSet(BaseUserViewset):
             return UserUpdateSerializer
         return UserSerializer
 
+    @action(detail=False, methods=["get"], permission_classes=[IsAuthenticated])
+    def me(self, request):
+        serializer = self.get_serializer(request.user)
+        return Response(serializer.data)

@@ -9,6 +9,8 @@ import { z } from "zod";
 
 import { authenticate, createNewUser } from "@/actions/auth";
 import { configureAzureAD } from "@/actions/auth/azure-config";
+import { AzureADLogin } from "@/components/auth/azure-ad-login";
+import { useAzureAD } from "@/hooks/use-azure-ad";
 import { NotificationIcon, ProwlerExtended } from "@/components/icons";
 import { ThemeSwitch } from "@/components/ThemeSwitch";
 import { useToast } from "@/components/ui";
@@ -30,7 +32,6 @@ export const AuthForm = ({
   isGoogleOAuthEnabled,
   isGithubOAuthEnabled,
   azureAuthUrl,
-  isAzureOAuthEnabled,
 }: {
   type: string;
   invitationToken?: string | null;
@@ -40,10 +41,10 @@ export const AuthForm = ({
   isGoogleOAuthEnabled?: boolean;
   isGithubOAuthEnabled?: boolean;
   azureAuthUrl?: string;
-  isAzureOAuthEnabled?: boolean;
 }) => {
   const formSchema = authFormSchema(type);
   const router = useRouter();
+  const { isConfigured: isAzureOAuthEnabled } = useAzureAD();
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -454,19 +455,19 @@ export const AuthForm = ({
                 <Divider className="flex-1" />
               </div>
               <div className="flex flex-col gap-2">
-                {type === "sign-in" && (
-                  <Link
-                    href="/azure"
-                    className="w-full flex items-center justify-center gap-2 px-3 py-2 border-2 border-default-200 rounded-lg hover:bg-default-100 transition-colors"
-                  >
-                    <Icon
-                      className="text-default-500"
-                      icon="logos:microsoft-azure"
-                      width={24}
-                    />
-                    Configure Azure AD
-                  </Link>
-                )}
+                                 {type === "sign-in" && (
+                   <Link
+                     href="/azure"
+                     className="w-full flex items-center justify-center gap-2 px-3 py-2 border-2 border-default-200 rounded-lg hover:bg-default-100 transition-colors"
+                   >
+                     <Icon
+                       className="text-default-500"
+                       icon="logos:microsoft-azure"
+                       width={24}
+                     />
+                     Azure AD Status
+                   </Link>
+                 )}
                 <Tooltip
                   content={
                     <div className="flex-inline text-small">
@@ -556,22 +557,11 @@ export const AuthForm = ({
                   className="w-96"
                 >
                   <span>
-                    <Button
-                      startContent={
-                        <Icon
-                          className="text-default-500"
-                          icon="logos:microsoft-azure"
-                          width={24}
-                        />
-                      }
-                      variant="bordered"
+                    <AzureADLogin
                       className="w-full"
-                      as="a"
-                      href={azureAuthUrl}
-                      isDisabled={!isAzureOAuthEnabled}
-                    >
-                      Continue with Azure AD
-                    </Button>
+                      variant="bordered"
+                      disabled={!isAzureOAuthEnabled}
+                    />
                   </span>
                 </Tooltip>
               </div>

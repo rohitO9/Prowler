@@ -67,7 +67,18 @@ DATABASES = {
         'OPTIONS': {
             'connect_timeout': 60,
         },
-    }
+    },
+    'admin': {
+        'ENGINE': 'psqlextra.backend',
+        'NAME': env.str('POSTGRES_ADMIN_USER', 'prowler_admin'),  # define separately in env
+        'USER': env.str('POSTGRES_ADMIN_USER', 'admin_user'),
+        'PASSWORD': env.str('POSTGRES_ADMIN_PASSWORD', 'admin_password'),
+        'HOST': env.str('POSTGRES_HOST', 'localhost'),
+        'PORT': env.str('POSTGRES_PORT', '5432'),
+        'OPTIONS': {
+            'connect_timeout': 60,
+        },
+    },
 }
 MIDDLEWARE = [
     "django_guid.middleware.guid_middleware",

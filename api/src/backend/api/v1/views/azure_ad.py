@@ -366,9 +366,14 @@ class AzureCallbackView(View):
         refresh = RefreshToken.for_user(user)
         access_token = refresh.access_token
         serialized_user = UserSerializer(user).data
-        return JsonResponse(
-            {"access": str(access_token), "refresh": str(refresh), "user": serialized_user}
-        )
+        
+        # Return JSON response with auth data
+        return JsonResponse({
+            "access": str(access_token),
+            "refresh": str(refresh),
+            "user": serialized_user,
+            "redirect_url": "http://localhost:8080"  # Frontend URL for redirect
+        })
 
 
 class AzureLogoutView(View):
@@ -386,13 +391,27 @@ def azure_ad_config(request):
     """
     Return Azure AD configuration for frontend
     """
-    return Response({
-        'client_id': settings.AZURE_AD_CLIENT_ID,
-        'tenant_id': settings.AZURE_AD_TENANT_ID,
-        'redirect_uri': settings.AZURE_AD_REDIRECT_URI,
-        'authority': f"https://login.microsoftonline.com/{settings.AZURE_AD_TENANT_ID}",
-        'scopes': list(getattr(settings, 'AZURE_AD_SCOPES', ['openid', 'profile', 'email']))
-    })
+    # Debug logging
+    logger.info(f"Azure AD config request - Method: {request.method}")
+    logger.info(f"Azure AD config request - Headers: {dict(request.headers)}")
+    logger.info(f"Azure AD config request - Accept: {request.headers.get('Accept', 'Not set')}")
+    
+    try:
+        config = {
+            'client_id': settings.AZURE_AD_CLIENT_ID,
+            'tenant_id': settings.AZURE_AD_TENANT_ID,
+            'redirect_uri': settings.AZURE_AD_REDIRECT_URI,
+            'authority': f"https://login.microsoftonline.com/{settings.AZURE_AD_TENANT_ID}",
+            'scopes': list(getattr(settings, 'AZURE_AD_SCOPES', ['openid', 'profile', 'email']))
+        }
+        logger.info(f"Azure AD config response: {config}")
+        return Response(config)
+    except Exception as e:
+        logger.error(f"Azure AD config error: {str(e)}")
+        return Response(
+            {'error': f'Configuration error: {str(e)}'}, 
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
 
 
 @api_view(['GET'])

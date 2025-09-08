@@ -34,9 +34,33 @@ export async function GET(req: Request) {
     }
 
     const data = await response.json();
-    const { access, refresh } = data.data.attributes;
+    console.log("data", data);
+    
+    // Fix: The tokens are in data.data, not data.data.attributes
+    const { access, refresh } = data?.data;
+
+    // Add validation to ensure tokens exist
+    if (!access || !refresh) {
+      throw new Error("Access token or refresh token is missing from response");
+    }
+
+    // Validate token format (JWT tokens should have 3 parts separated by dots)
+    if (!access.includes('.') || access.split('.').length !== 3) {
+      throw new Error("Invalid access token format");
+    }
+
+    if (!refresh.includes('.') || refresh.split('.').length !== 3) {
+      throw new Error("Invalid refresh token format");
+    }
+
+    console.log("Tokens appear to have valid JWT format, proceeding with authentication...");
 
     try {
+      console.log("Attempting to sign in with tokens:", { 
+        accessTokenLength: access?.length, 
+        refreshTokenLength: refresh?.length 
+      });
+
       const result = await signIn("social-oauth", {
         accessToken: access,
         refreshToken: refresh,
@@ -44,16 +68,23 @@ export async function GET(req: Request) {
         callbackUrl: `${baseUrl}/`,
       });
 
+      console.log("SignIn result:", result);
+
       if (result?.error) {
+        console.error("SignIn result error:", result.error);
         throw new Error(result.error);
       }
 
       return NextResponse.redirect(new URL("/", baseUrl));
     } catch (error) {
       // eslint-disable-next-line no-console
-      console.error("SignIn error:", error);
+      console.error("SignIn error details:", {
+        message: (error as Error).message,
+        stack: (error as Error).stack,
+        error
+      });
       return NextResponse.redirect(
-        new URL("/sign-in?error=AuthenticationFailed", baseUrl),
+        new URL(`/sign-in?error=AuthenticationFailed&details=${encodeURIComponent((error as Error).message)}`, baseUrl),
       );
     }
   } catch (error) {
@@ -64,4 +95,4 @@ export async function GET(req: Request) {
       { status: 500 },
     );
   }
-} 
+}

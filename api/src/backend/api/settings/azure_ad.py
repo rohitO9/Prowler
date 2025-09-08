@@ -9,7 +9,7 @@ from typing import List
 AZURE_AD_CLIENT_ID = os.getenv('AZURE_AD_CLIENT_ID', '')
 AZURE_AD_CLIENT_SECRET = os.getenv('AZURE_AD_CLIENT_SECRET', '')
 AZURE_AD_TENANT_ID = os.getenv('AZURE_AD_TENANT_ID', '')
-AZURE_AD_REDIRECT_URI = os.getenv('AZURE_AD_REDIRECT_URI', 'http://localhost:3000/auth/callback/azure')
+AZURE_AD_REDIRECT_URI = os.getenv('AZURE_AD_REDIRECT_URI', 'http://localhost:3000/api/auth/callback/azure')
 
 # Azure AD Graph API Settings
 AZURE_AD_GRAPH_API_VERSION = 'v1.0'

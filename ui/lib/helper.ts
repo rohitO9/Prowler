@@ -5,7 +5,7 @@ import { useToast } from "@/components/ui";
 import { AuthSocialProvider, MetaDataProps, PermissionInfo } from "@/types";
 
 export const baseUrl = process.env.AUTH_URL || "http://localhost:3000";
-export const apiBaseUrl = process.env.API_BASE_URL;
+export const apiBaseUrl = process.env.API_BASE_URL || "http://127.0.0.1:8080";
 
 export const getAuthHeaders = async (options?: { contentType?: boolean }) => {
   const session = await auth();
@@ -181,10 +181,9 @@ export const isGithubOAuthEnabled =
   !!process.env.SOCIAL_GITHUB_OAUTH_CLIENT_ID &&
   !!process.env.SOCIAL_GITHUB_OAUTH_CLIENT_SECRET;
 
-export const isAzureOAuthEnabled =
-  !!process.env.AZURE_AD_CLIENT_ID &&
-  !!process.env.AZURE_AD_TENANT_ID &&
-  !!process.env.AZURE_AD_REDIRECT_URI;
+// Azure AD configuration is managed by backend, so we'll check if the backend is accessible
+// This will be updated by the useAzureAD hook to check actual backend configuration
+export const isAzureOAuthEnabled = false; // Will be overridden by useAzureAD hook
 
 export const checkTaskStatus = async (
   taskId: string,
@@ -193,6 +192,7 @@ export const checkTaskStatus = async (
 ): Promise<{ completed: boolean; error?: string }> => {
   for (let attempt = 0; attempt < maxRetries; attempt++) {
     const task = await getTask(taskId);
+    console.log("task", task);
 
     if (task.error) {
       // eslint-disable-next-line no-console
@@ -200,13 +200,13 @@ export const checkTaskStatus = async (
       return { completed: false, error: task.error };
     }
 
-    const state = task.data.attributes.state;
+    const state = task?.data?.attributes?.state;
 
     switch (state) {
       case "completed":
         return { completed: true };
       case "failed":
-        return { completed: false, error: task.data.attributes.result.error };
+        return { completed: false, error: task?.data?.attributes?.result?.error };
       case "available":
       case "scheduled":
       case "executing":
