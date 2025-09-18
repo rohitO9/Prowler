@@ -26,12 +26,27 @@ import {
 } from "@/components/ui/tooltip/tooltip";
 import { UserProfileProps } from "@/types";
 
-import { Button } from "../button/button";
+// Removed Button wrapper to avoid extra containers
 
 export const UserNav = ({ user }: { user?: UserProfileProps }) => {
   if (!user || !user.data) return null;
 
   const { name, email, company_name } = user.data.attributes;
+  const firstName = name.split(" ")[0];
+  const attrs = user.data.attributes as unknown as {
+    avatar_url?: string;
+    image_url?: string;
+    profile_image?: string;
+    profile_image_url?: string;
+    picture?: string;
+  };
+  const avatarUrl =
+    attrs?.avatar_url ||
+    attrs?.profile_image_url ||
+    attrs?.profile_image ||
+    attrs?.image_url ||
+    attrs?.picture ||
+    undefined;
 
   return (
     <DropdownMenu>
@@ -39,22 +54,17 @@ export const UserNav = ({ user }: { user?: UserProfileProps }) => {
         <Tooltip delayDuration={100}>
           <TooltipTrigger asChild>
             <DropdownMenuTrigger asChild>
-              <Button
-                variant="outline"
-                className="relative h-8 w-8 rounded-full"
-              >
+              <div className="relative flex flex-col items-center justify-center  cursor-pointer select-none">
                 <Avatar className="h-8 w-8 border border-gray-800 dark:border-white">
-                  <AvatarImage src="#" alt="Avatar" />
-                  <AvatarFallback className="bg-transparent text-xs font-bold">
-                    {name.includes(" ")
-                      ? name
-                          .split(" ")
-                          .map((word) => word.charAt(0))
-                          .join("")
-                      : name.charAt(0)}
+                  <AvatarImage src={avatarUrl} alt={name ?? "Avatar"} />
+                  <AvatarFallback className="bg-transparent flex items-center justify-center">
+                    <User className="text-muted-foreground" size={20} />
                   </AvatarFallback>
                 </Avatar>
-              </Button>
+                <span className="text-md mt-2 font-medium leading-none max-w-[120px] truncate text-center">
+                  {firstName}
+                </span>
+              </div>
             </DropdownMenuTrigger>
           </TooltipTrigger>
           <TooltipContent side="bottom">Profile</TooltipContent>

@@ -24,7 +24,7 @@ export const MembershipsCard = ({
 }) => {
   const [isRolesOpen, setIsRolesOpen] = useState(false);
   return (
-    <Card className="shadow-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-prowler-blue-400  ">
+    <Card className="shadow-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-vulneraiq-blue-400  ">
       <CardHeader className=" w-full">
         <div className="flex flex-col  w-full">
           <h4 className="w-full  text-2xl font-extrabold bg-gradient-to-r from-indigo-500 to-blue-600 bg-clip-text text-transparent">Organizations & Roles</h4>

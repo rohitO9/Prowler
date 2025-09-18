@@ -50,7 +50,7 @@ export const InfoField = ({
 
   return (
     <div className={clsx("flex flex-col gap-1", className)}>
-      <span className="text-xs font-bold text-gray-500 dark:text-prowler-theme-pale/70">
+      <span className="text-xs font-bold text-gray-500 dark:text-vulneraiq-theme-pale/70">
         <span className="flex items-center gap-1">
           {label}
           {tooltipContent && (
@@ -64,13 +64,13 @@ export const InfoField = ({
       </span>
 
       {variant === "simple" ? (
-        <div className="text-small text-gray-900 dark:text-prowler-theme-pale">
+        <div className="text-small text-gray-900 dark:text-vulneraiq-theme-pale">
           {children}
         </div>
       ) : variant === "transparent" ? (
         <div className="text-sm">{children}</div>
       ) : (
-        <div className="rounded-lg bg-gray-50 px-3 py-2 text-sm text-gray-900 dark:bg-slate-800 dark:text-prowler-theme-pale">
+        <div className="rounded-lg bg-gray-50 px-3 py-2 text-sm text-gray-900 dark:bg-slate-800 dark:text-vulneraiq-theme-pale">
           {children}
         </div>
       )}

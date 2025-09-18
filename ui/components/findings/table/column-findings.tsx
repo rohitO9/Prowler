@@ -9,7 +9,7 @@ import { InfoIcon } from "@/components/icons";
 import {
   DateWithTime,
   EntityInfoShort,
-  SnippetChip,
+  SnippetId,
 } from "@/components/ui/entities";
 import { TriggerSheet } from "@/components/ui/sheet";
 import {
@@ -21,7 +21,7 @@ import { FindingProps, ProviderType } from "@/types";
 
 import { Muted } from "../muted";
 import { DeltaIndicator } from "./delta-indicator";
-
+import { SnippetChip } from "@/components/ui/entities/snippet-chip";
 const getFindingsData = (row: { original: FindingProps }) => {
   return row.original;
 };

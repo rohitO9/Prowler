@@ -11,7 +11,7 @@ import { InfoIcon } from "@/components/icons";
 import {
   DateWithTime,
   EntityInfoShort,
-  SnippetChip,
+  SnippetId,
 } from "@/components/ui/entities";
 import { TriggerSheet } from "@/components/ui/sheet";
 import { SeverityBadge, StatusFindingBadge } from "@/components/ui/table";
@@ -108,9 +108,10 @@ export const ColumnNewFindingsToDate: ColumnDef<FindingProps>[] = [
       const resourceName = getResourceData(row, "name");
 
       return (
-        <SnippetChip
-          value={resourceName as string}
-          formatter={(value) => `...${value.slice(-10)}`}
+        <SnippetId
+          entityId={row.original.id} // Added missing entityId prop
+          value={resourceName ?? ''} // Ensure value is a string, providing an empty string fallback for null/undefined
+          formatter={(value: string) => `...${value.slice(-10)}`}
           icon={<Database size={16} />}
         />
       );

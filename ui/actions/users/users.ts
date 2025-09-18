@@ -36,10 +36,22 @@ export const getUsers = async ({
   });
 
   try {
+    console.log("Fetching users from:", url.toString());
+    console.log("Headers:", headers);
+    
     const users = await fetch(url.toString(), {
       headers,
     });
+    
+    console.log("Response status:", users.status, users.statusText);
+    
     const data = await users.json();
+    console.log("Users response data:", {
+      totalUsers: data?.data?.length || 0,
+      firstUser: data?.data?.[0] || null,
+      meta: data?.meta || null
+    });
+    
     const parsedData = parseStringify(data);
     revalidatePath("/users");
     return parsedData;
@@ -207,6 +219,109 @@ export const getUserInfo = async () => {
     // eslint-disable-next-line no-console
     console.error("Error fetching profile:", error);
     return undefined;
+  }
+};
+
+export const getTrialInfo = async () => {
+  const headers = await getAuthHeaders({ contentType: false });
+  const url = new URL(`${apiBaseUrl}/trial/info`);
+
+  try {
+    console.log("Fetching trial info from:", url.toString());
+    
+    const response = await fetch(url.toString(), {
+      method: "GET",
+      headers,
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch trial data: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    console.log("Raw trial API response:", data);
+    
+    return data;
+  } catch (error) {
+    console.error("Error fetching trial info:", error);
+    return {
+      trial_start: null,
+      trial_end: null,
+      is_trial_active: false,
+      days_remaining: null,
+      trial_status: 'error'
+    };
+  }
+};
+
+export const startTrial = async (days: number = 7) => {
+  const headers = await getAuthHeaders({ contentType: true });
+  const url = new URL(`${apiBaseUrl}/trial/start`);
+
+  try {
+    const response = await fetch(url.toString(), {
+      method: "POST",
+      headers,
+      body: JSON.stringify({ days }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to start trial: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    revalidatePath("/");
+    return data;
+  } catch (error) {
+    console.error("Error starting trial:", error);
+    return { error: getErrorMessage(error) };
+  }
+};
+
+export const extendTrial = async (days: number = 7) => {
+  const headers = await getAuthHeaders({ contentType: true });
+  const url = new URL(`${apiBaseUrl}/trial/extend`);
+
+  try {
+    const response = await fetch(url.toString(), {
+      method: "POST",
+      headers,
+      body: JSON.stringify({ days }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to extend trial: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    revalidatePath("/");
+    return data;
+  } catch (error) {
+    console.error("Error extending trial:", error);
+    return { error: getErrorMessage(error) };
+  }
+};
+
+export const endTrial = async () => {
+  const headers = await getAuthHeaders({ contentType: false });
+  const url = new URL(`${apiBaseUrl}/trial/end`);
+
+  try {
+    const response = await fetch(url.toString(), {
+      method: "POST",
+      headers,
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to end trial: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    revalidatePath("/");
+    return data;
+  } catch (error) {
+    console.error("Error ending trial:", error);
+    return { error: getErrorMessage(error) };
   }
 };
 

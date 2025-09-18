@@ -5,7 +5,7 @@ import { useToast } from "@/components/ui";
 import { AuthSocialProvider, MetaDataProps, PermissionInfo } from "@/types";
 
 export const baseUrl = process.env.AUTH_URL || "http://localhost:3000";
-export const apiBaseUrl = process.env.API_BASE_URL || "http://127.0.0.1:8080";
+export const apiBaseUrl = process.env.API_BASE_URL || "http://127.0.0.1:8080/api/v1";
 
 export const getAuthHeaders = async (options?: { contentType?: boolean }) => {
   const session = await auth();

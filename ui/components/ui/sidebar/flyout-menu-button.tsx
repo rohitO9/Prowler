@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
 import Link from "next/link";
+import { FaArrowRightFromBracket } from "react-icons/fa6";
 import { cn } from "@/lib/utils";
 import { createPortal } from "react-dom";
 
@@ -11,7 +12,7 @@ interface SubmenuItem {
 }
 
 interface FlyoutMenuButtonProps {
-  icon: React.ElementType;
+  icon?: React.ElementType;
   label: string;
   submenus: SubmenuItem[];
   isOpen: boolean;
@@ -82,9 +83,11 @@ export const FlyoutMenuButton: React.FC<FlyoutMenuButtonProps> = ({
         aria-haspopup="true"
         aria-expanded={open}
       >
-        <Icon size={18} className="mr-3" />
+        {Icon && <Icon size={18} className="mr-3" />}
         {isOpen && <span className="truncate">{label}</span>}
-        <span className="ml-auto">&gt;</span>
+        <span className="ml-auto text-gray-500 dark:text-gray-400">
+        <FaArrowRightFromBracket  size={16} />
+        </span>
       </button>
       {isClient && open && createPortal(
         <div

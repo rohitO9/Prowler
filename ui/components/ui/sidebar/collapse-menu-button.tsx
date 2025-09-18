@@ -63,9 +63,11 @@ export const CollapseMenuButton = ({
         >
           <div className="flex w-full items-center justify-between">
             <div className="flex items-center">
-              <span className="mr-4">
-                <Icon size={18} />
-              </span>
+              {Icon && (
+                <span className="mr-4">
+                  <Icon size={18} />
+                </span>
+              )}
               <p
                 className={cn(
                   "max-w-[150px] truncate",
@@ -141,9 +143,11 @@ export const CollapseMenuButton = ({
               >
                 <div className="flex w-full items-center justify-between">
                   <div className="flex items-center">
-                    <span className={cn(isOpen === false ? "" : "mr-4")}>
-                      <Icon size={18} />
-                    </span>
+                    {Icon && (
+                      <span className={cn(isOpen === false ? "" : "mr-4")}>
+                        <Icon size={18} />
+                      </span>
+                    )}
                     <p
                       className={cn(
                         "max-w-[200px] truncate",

@@ -24,7 +24,7 @@ export const UserBasicInfoCard = ({
   const { name, email, company_name, date_joined } = user.attributes;
 
   return (
-    <Card className="shadow-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-prowler-blue-400 w-full">
+    <Card className="shadow-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-vulneraiq-blue-400 w-full">
       <CardBody>
         {/* Horizontal layout: left (icon, name, email), right (date joined, org id) */}
         <div className="flex flex-row items-center justify-between gap-6 mt-4  w-full">
@@ -41,7 +41,7 @@ export const UserBasicInfoCard = ({
           {/* Center: Icon, Name, Organization ID */}
           <div className="flex flex-col items-center justify-center gap-2 min-w-[120px]">
             <div className="relative">
-              <div className="rounded-full border-4 border-white dark:border-prowler-blue-400 shadow-md bg-gray-50 dark:bg-prowler-blue-200 w-20 h-20 flex items-center justify-center">
+              <div className="rounded-full border-4 border-white dark:border-vulneraiq-blue-400 shadow-md bg-gray-50 dark:bg-vulneraiq-blue-200 w-20 h-20 flex items-center justify-center">
                 <UserIcon size={48} className="text-indigo-400" />
               </div>
             </div>

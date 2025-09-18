@@ -22,7 +22,7 @@ export default function Welcome() {
           {/* Left Text Section */}
           <div className="md:w-1/2 w-full px-6 py-6 space-y-6">
             <h1 className="text-4xl font-bold text-gray-900 dark:text-white">
-              Welcome to <span className="text-blue-600 dark:text-blue-400">SecureStack</span>
+              Welcome to <span className="text-blue-600 dark:text-blue-400">VulneralQ</span>
             </h1>
             <p className="text-lg text-gray-700 dark:text-gray-300">
               Your unified cloud security and compliance platform.

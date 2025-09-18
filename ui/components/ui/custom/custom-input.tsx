@@ -57,7 +57,7 @@ export const CustomInput = <T extends FieldValues>({
   const inputPlaceholder = confirmPassword
     ? "Confirm Password"
     : password
-      ? (placeholder || "Password")
+      ? "Password"
       : placeholder;
 
   const inputType =
@@ -102,7 +102,8 @@ export const CustomInput = <T extends FieldValues>({
               classNames={{
                 label:
                   "tracking-tight font-light !text-default-500 text-xs !z-0",
-                input: "text-default-500 text-small",
+                  input: "text- text-small",
+                  
               }}
               isRequired={inputIsRequired}
               label={inputLabel}
@@ -116,11 +117,16 @@ export const CustomInput = <T extends FieldValues>({
               endContent={endContent}
               isDisabled={isDisabled}
               isReadOnly={isReadOnly}
-              {...field}
+              // Forwarding react-hook-form handlers and value
+              value={field.value}
+              onChange={field.onChange}
+              onBlur={field.onBlur}
+              name={field.name}
+              ref={field.ref}
             />
           </FormControl>
           {showFormMessage && (
-            <FormMessage className="max-w-full text-xs text-system-error dark:text-system-error" />
+            <FormMessage className="text-system-error dark:text-system-error" />
           )}
         </>
       )}

@@ -33,23 +33,23 @@ export function Sidebar({ user }: { user: UserProfileProps }) {
         className="no-scrollbar relative flex h-full flex-col overflow-y-auto overflow-x-hidden px-4 py-6 pb-16"
       >
         <div className="flex flex-col items-center justify-center mb-6">
-          <Link href="/" className="group flex flex-row items-center gap-3">
+          <Link href="/" className="group flex flex-row items-start gap-3">
             <div className="bg-gradient-to-r from-indigo-600 to-blue-600 rounded-xl w-12 h-12 flex items-center justify-center shadow-lg transition-transform duration-300 group-hover:scale-105">
-              <span className="text-2xl font-black text-white select-none">SS</span>
+              <span className="text-2xl font-black text-white select-none">VQ</span>
             </div>
             {getOpenState() && (
-              <div className="flex flex-col justify-center">
-                <span className="text-2xl font-extrabold tracking-tight text-black dark:text-white font-serif bg-gradient-to-r from-indigo-600 to-blue-600 bg-clip-text text-transparent">
-                  SecureStack
+              <div className="flex flex-col justify-center min-w-0 max-w-[12rem]">
+                <span className="text-2xl font-extrabold tracking-tight text-black dark:text-white font-serif bg-gradient-to-r from-indigo-600 to-blue-600 bg-clip-text text-transparent leading-tight">
+                  VulneralQ
                 </span>
-                <span className="block text-xs text-gray-400 tracking-wide text-center w-full">
-                  Cloud Security Platform
+                <span className="text-xs text-gray-500 dark:text-gray-400 tracking-wide text-left whitespace-normal break-words leading-snug">
+                  Defend Everything in the Cloud That Matters
                 </span>
               </div>
             )}
           </Link>
         </div>
-        <div className="border-b border-gray-200 dark:border-white mb-4"></div>
+        <div className="border-b border-gray-400 dark:border-white mb-4 -mx-4"></div>
         <Menu isOpen={getOpenState()} user={user} />
       </div>
     </aside>

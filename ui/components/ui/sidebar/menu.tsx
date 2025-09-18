@@ -36,37 +36,13 @@ export const Menu = ({ isOpen, user }: { isOpen: boolean; user: UserProfileProps
         {/* Removed search bar and Generate Report button */}
       </div>
       <ScrollArea className="[&>div>div[style]]:!block">
-        <nav className="mt-4 h-full w-full">
-          <ul className="flex min-h-[calc(100vh-16px-60px-40px-16px-32px-40px-32px-44px)] flex-col items-start space-y-1 px-2 lg:min-h-[calc(100vh-16px-60px-40px-16px-64px-16px-41px)]">
-            {menuList.map(({ groupLabel, menus }, index) => (
+        <nav className="mt-10 h-full w-full">
+          <ul className="flex min-h-[calc(100vh-16px-60px-40px-16px-32px-40px-32px-44px)] flex-col items-start space-y-5 px-2 lg:min-h-[calc(100vh-16px-60px-40px-16px-64px-16px-41px)]">
+            {menuList.map(({ menus }, index) => (
               <li
-                className={cn(
-                  "w-full",
-                  groupLabel ? "pt-2" : "",
-                  "last:!mt-auto",
-                )}
+                className="w-full"
                 key={index}
               >
-                {(isOpen && groupLabel) || isOpen === undefined ? (
-                  <p className="text-muted-foreground max-w-[248px] truncate px-4 pb-2 text-xs font-normal">
-                    {groupLabel}
-                  </p>
-                ) : !isOpen && isOpen !== undefined && groupLabel ? (
-                  <TooltipProvider>
-                    <Tooltip delayDuration={100}>
-                      <TooltipTrigger className="w-full">
-                        <div className="flex w-full items-center justify-center">
-                          <Ellipsis className="h-5 w-5" />
-                        </div>
-                      </TooltipTrigger>
-                      <TooltipContent className="z-100" side="right">
-                        <p>{groupLabel}</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                ) : (
-                  <p className="pb-2"></p>
-                )}
                 {menus.map(
                   (
                     { href, label, icon: Icon, active, submenus, defaultOpen },
@@ -94,7 +70,7 @@ export const Menu = ({ isOpen, user }: { isOpen: boolean; user: UserProfileProps
                                       isOpen === false ? "" : "mr-4",
                                     )}
                                   >
-                                    <Icon size={18} />
+                                    {Icon && <Icon size={18} />}
                                   </span>
                                   <p
                                     className={cn(
@@ -136,8 +112,9 @@ export const Menu = ({ isOpen, user }: { isOpen: boolean; user: UserProfileProps
       </ScrollArea>
      
 
-      <div className="absolute left-0 bottom-0 w-full text-muted-foreground border-t border-border bg-inherit flex items-center justify-center gap-x-2 pt-2 pb-2 px-2 mb-4">
-        <UserNav user={user} />
+      <div className="absolute left-0 bottom-7 w-full text-muted-foreground border-t border-gray-400 
+      dark:border-white border-border bg-inherit flex items-center justify-center gap-x-8 pt-10 pb-2 px-2 mb-4">
+        <UserNav user={user}  />
         <TooltipProvider disableHoverableContent>
           <Tooltip delayDuration={100}>
             <TooltipTrigger asChild>
@@ -147,7 +124,7 @@ export const Menu = ({ isOpen, user }: { isOpen: boolean; user: UserProfileProps
                 className={cn(
                   "text-default-700 bg-transparent shadow-none border-none hover:bg-transparent hover:text-indigo-600 transition-all duration-200",
                   isOpen
-                    ? "px-4 py-3 text-base justify-center"
+                    ? "px-8 py-3 pr-4 text-base justify-center"
                     : "p-2 justify-center",
                 )}
               >

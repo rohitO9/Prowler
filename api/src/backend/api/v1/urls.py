@@ -31,6 +31,7 @@ from api.v1.views import (
     UserRoleRelationshipView,
     UserViewSet,
 )
+from api.v1.views.trial import TrialViewSet
 from api.v1.views.azure_ad import AzureADSocialLoginView, azure_ad_config, AzureLoginView, AzureCallbackView, azure_ad_test, trial_status
 from dj_rest_auth.views import PasswordResetConfirmView, PasswordResetView
 
@@ -45,6 +46,7 @@ router.register(r"tasks", TaskViewSet, basename="task")
 router.register(r"resources", ResourceViewSet, basename="resource")
 router.register(r"findings", FindingViewSet, basename="finding")
 router.register(r"roles", RoleViewSet, basename="role")
+router.register(r"trial", TrialViewSet, basename="trial")
 router.register(
     r"compliance-overviews", ComplianceOverviewViewSet, basename="complianceoverview"
 )

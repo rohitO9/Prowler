@@ -19,7 +19,7 @@ module.exports = {
     },
     extend: {
       colors: {
-        prowler: {
+        vulneraiq: {
           theme: {
             midnight: "#030921",
             pale: "#f3fcff",

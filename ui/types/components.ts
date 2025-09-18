@@ -42,6 +42,18 @@ export interface CollapseMenuButtonProps {
   isOpen: boolean | undefined;
 }
 
+export interface SelectScanComplianceDataProps {
+  scans: (ScanProps & {
+    providerInfo: {
+      provider: "aws" | "azure" | "gcp" | "kubernetes";
+      uid: string;
+      alias: string;
+    };
+  })[];
+  selectedScanId: string;
+  onSelectionChange: (selectedKey: string) => void;
+}
+
 export type NextUIVariants =
   | "solid"
   | "faded"
@@ -162,6 +174,27 @@ export interface FindingsSeverityOverview {
   };
 }
 
+export interface ProviderOverviewProps {
+  data: {
+    type: "provider-overviews";
+    id: "aws" | "gcp" | "azure" | "kubernetes";
+    attributes: {
+      findings: {
+        pass: number;
+        fail: number;
+        manual: number;
+        total: number;
+      };
+      resources: {
+        total: number;
+      };
+    };
+  }[];
+  meta: {
+    version: string;
+  };
+}
+
 export interface TaskDetails {
   attributes: {
     state: string;
@@ -210,21 +243,15 @@ export type M365Credentials = {
   client_secret: string;
   tenant_id: string;
   user: string;
-  password: string;
+  encrypted_password: string;
   secretName: string;
   providerId: string;
 };
 
-export type GCPDefaultCredentials = {
+export type GCPCredentials = {
   client_id: string;
   client_secret: string;
   refresh_token: string;
-  secretName: string;
-  providerId: string;
-};
-
-export type GCPServiceAccountKey = {
-  service_account_key: string;
   secretName: string;
   providerId: string;
 };
@@ -238,8 +265,7 @@ export type KubernetesCredentials = {
 export type CredentialsFormSchema =
   | AWSCredentials
   | AzureCredentials
-  | GCPDefaultCredentials
-  | GCPServiceAccountKey
+  | GCPCredentials
   | KubernetesCredentials
   | M365Credentials;
 
@@ -254,6 +280,53 @@ export interface ApiError {
     pointer: string;
   };
   code: string;
+}
+export interface CompliancesOverview {
+  links: {
+    first: string;
+    last: string;
+    next: string | null;
+    prev: string | null;
+  };
+  data: ComplianceOverviewData[];
+  meta: {
+    pagination: {
+      page: number;
+      pages: number;
+      count: number;
+    };
+    version: string;
+  };
+}
+
+export interface ComplianceOverviewData {
+  type: "compliance-overviews";
+  id: string;
+  attributes: {
+    inserted_at: string;
+    compliance_id: string;
+    framework: string;
+    version: string;
+    requirements_status: {
+      passed: number;
+      failed: number;
+      manual: number;
+      total: number;
+    };
+    region: string;
+    provider_type: string;
+  };
+  relationships: {
+    scan: {
+      data: {
+        type: "scans";
+        id: string;
+      };
+    };
+  };
+  links: {
+    self: string;
+  };
 }
 
 export interface InvitationProps {
@@ -436,9 +509,97 @@ export interface UserProps {
   }[];
 }
 
-export interface FindingsResponse {
-  data: FindingProps[];
-  meta: MetaDataProps;
+export interface ProviderProps {
+  id: string;
+  type: "providers";
+  attributes: {
+    provider: "aws" | "azure" | "m365" | "gcp" | "kubernetes";
+    uid: string;
+    alias: string;
+    status: "completed" | "pending" | "cancelled";
+    resources: number;
+    connection: {
+      connected: boolean;
+      last_checked_at: string;
+    };
+    scanner_args: {
+      only_logs: boolean;
+      excluded_checks: string[];
+      aws_retries_max_attempts: number;
+    };
+    inserted_at: string;
+    updated_at: string;
+    created_by: {
+      object: string;
+      id: string;
+    };
+  };
+  relationships: {
+    secret: {
+      data: {
+        type: string;
+        id: string;
+      } | null;
+    };
+    provider_groups: {
+      meta: {
+        count: number;
+      };
+      data: Array<{
+        type: string;
+        id: string;
+      }>;
+    };
+  };
+  groupNames?: string[];
+}
+
+export interface ScanProps {
+  type: "scans";
+  id: string;
+  attributes: {
+    name: string;
+    trigger: "scheduled" | "manual";
+    state:
+      | "available"
+      | "scheduled"
+      | "executing"
+      | "completed"
+      | "failed"
+      | "cancelled";
+    unique_resource_count: number;
+    progress: number;
+    scanner_args: {
+      only_logs?: boolean;
+      excluded_checks?: string[];
+      aws_retries_max_attempts?: number;
+    } | null;
+    duration: number;
+    started_at: string;
+    inserted_at: string;
+    completed_at: string;
+    scheduled_at: string;
+    next_scan_at: string;
+  };
+  relationships: {
+    provider: {
+      data: {
+        id: string;
+        type: "providers";
+      };
+    };
+    task: {
+      data: {
+        id: string;
+        type: "tasks";
+      };
+    };
+  };
+  providerInfo?: {
+    provider: "aws" | "azure" | "gcp" | "kubernetes";
+    uid: string;
+    alias: string;
+  };
 }
 
 export interface FindingProps {

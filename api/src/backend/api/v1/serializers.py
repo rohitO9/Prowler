@@ -1530,13 +1530,11 @@ class RoleSerializer(RLSSerializer, BaseWriteSerializer):
             "provider_groups",
             "users",
             "invitations",
-            "url",
         ]
         extra_kwargs = {
             "id": {"read_only": True},
             "inserted_at": {"read_only": True},
             "updated_at": {"read_only": True},
-            "url": {"read_only": True},
         }
 
 

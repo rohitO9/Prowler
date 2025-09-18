@@ -9,8 +9,8 @@ from api.v1.views.admin_user_management import (
     AdminRoleManagementViewSet
 )
 
-# Create router for admin API endpoints
-router = DefaultRouter()
+# Create router for admin API endpoints (match main router style)
+router = DefaultRouter(trailing_slash=False)
 router.register(r'users', AdminUserManagementViewSet, basename='admin-users')
 router.register(r'roles', AdminRoleManagementViewSet, basename='admin-roles')
 
@@ -19,7 +19,8 @@ admin_patterns = [
     path('', include(router.urls)),
 ]
 
-# Include in main URL patterns
+# Expose admin endpoints under 'admin/' prefix. The project urlconf should include this
+# module under the 'api/v1/' prefix to avoid double prefixing.
 urlpatterns = [
-    path('api/v1/admin/', include(admin_patterns)),
+    path('admin/', include(admin_patterns)),
 ]

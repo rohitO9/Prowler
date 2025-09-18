@@ -65,11 +65,12 @@ const SSRAddGroupForm = async () => {
       name: provider.attributes.alias || provider.attributes.uid,
     })) || [];
 
-  const rolesData =
-    rolesResponse?.data?.map((role: Role) => ({
-      id: role.id,
-      name: role.attributes.name,
-    })) || [];
+     const rolesData = Array.isArray(rolesResponse?.data)
+       ? rolesResponse.data.map((role: Role) => ({
+            id: role.id,
+            name: role.attributes.name,
+          }))
+        : [];
 
   return <AddGroupForm providers={providersData} roles={rolesData} />;
 };
@@ -96,17 +97,19 @@ const SSRDataEditGroup = async ({
   const providersResponse = await getProviders({ pageSize: 50 });
   const rolesResponse = await getRoles({});
 
-  const providersList =
-    providersResponse?.data?.map((provider: ProviderProps) => ({
-      id: provider.id,
-      name: provider.attributes.alias || provider.attributes.uid,
-    })) || [];
+  const providersList = Array.isArray(providersResponse?.data)
+    ? providersResponse.data.map((provider: ProviderProps) => ({
+        id: provider.id,
+        name: provider.attributes.alias || provider.attributes.uid,
+      }))
+    : [];
 
-  const rolesList =
-    rolesResponse?.data?.map((role: Role) => ({
-      id: role.id,
-      name: role.attributes.name,
-    })) || [];
+  const rolesList = Array.isArray(rolesResponse?.data)
+    ? rolesResponse.data.map((role: Role) => ({
+        id: role.id,
+        name: role.attributes.name,
+      }))
+    : [];
 
   const { attributes, relationships } = providerGroupData.data;
 

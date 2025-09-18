@@ -32,6 +32,15 @@ export const getProvidersOverview = async ({
       headers,
     });
 
+    if (!response.ok) {
+      throw new Error(`Failed to fetch providers overview: ${response.status}`);
+    }
+
+    const contentType = response.headers.get("content-type") || "";
+    if (!contentType.includes("application/json")) {
+      throw new Error("Unexpected response format");
+    }
+
     const data = await response.json();
     const parsedData = parseStringify(data);
     revalidatePath("/");

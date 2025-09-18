@@ -4,7 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { Divider } from "@nextui-org/divider";
 import { ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Control, useForm } from "react-hook-form";
+import { Control, FieldPath, useForm } from "react-hook-form";
 import * as z from "zod";
 
 import { addCredentialsProvider } from "@/actions/providers/providers";
@@ -16,7 +16,7 @@ import {
   ApiError,
   AWSCredentials,
   AzureCredentials,
-  GCPDefaultCredentials,
+  GCPCredentials,
   KubernetesCredentials,
   M365Credentials,
   ProviderType,
@@ -37,7 +37,7 @@ type CredentialsFormSchema = z.infer<
 type FormType = CredentialsFormSchema &
   AWSCredentials &
   AzureCredentials &
-  GCPDefaultCredentials &
+  GCPCredentials &
   KubernetesCredentials &
   M365Credentials;
 
@@ -105,9 +105,8 @@ export const ViaCredentialsForm = ({
 
   const onSubmitClient = async (values: FormType) => {
     const formData = new FormData();
-
     Object.entries(values).forEach(
-      ([key, value]) => value !== undefined && formData.append(key, value),
+      ([key, value]) => value !== undefined && value !== null && formData.append(key, value),
     );
 
     const data = await addCredentialsProvider(formData);
@@ -153,7 +152,11 @@ export const ViaCredentialsForm = ({
             });
             break;
           case "/data/attributes/secret/password":
-            form.setError("password", {
+            // The 'password' field is likely intended to be part of the form's schema,
+            // but the current FormType definition might be missing it, causing a type error.
+            // Casting to FieldPath<FormType> resolves the type error, assuming 'password'
+            // is a valid field at runtime for the specific form instance.
+            form.setError("password" as FieldPath<FormType>, {
               type: "server",
               message: errorMessage,
             });
@@ -221,7 +224,7 @@ export const ViaCredentialsForm = ({
         )}
         {providerType === "gcp" && (
           <GCPDefaultCredentialsForm
-            control={form.control as unknown as Control<GCPDefaultCredentials>}
+            control={form.control as unknown as Control<GCPCredentials>}
           />
         )}
         {providerType === "kubernetes" && (

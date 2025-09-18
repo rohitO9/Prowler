@@ -7,11 +7,12 @@ import { ProviderGroup } from "@/types";
 export default async function AddRolePage() {
   const groupsResponse = await getProviderGroups({});
 
-  const groupsData =
-    groupsResponse?.data?.map((group: ProviderGroup) => ({
-      id: group.id,
-      name: group.attributes.name,
-    })) || [];
+  const groupsData = Array.isArray(groupsResponse?.data)
+    ? groupsResponse.data.map((group: ProviderGroup) => ({
+        id: group.id,
+        name: group.attributes.name,
+      }))
+    : [];
 
   return <AddRoleForm groups={groupsData} />;
 }

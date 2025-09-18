@@ -18,7 +18,7 @@ const SignIn = () => {
       isGoogleOAuthEnabled={isGoogleOAuthEnabled}
       isGithubOAuthEnabled={isGithubOAuthEnabled}
       azureAuthUrl={AZURE_AUTH_URL}
-      isAzureOAuthEnabled={isAzureOAuthEnabled}
+      // isAzureOAuthEnabled={isAzureOAuthEnabled}
     />
   );
 };

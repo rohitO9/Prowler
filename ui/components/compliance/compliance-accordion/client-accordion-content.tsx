@@ -13,7 +13,7 @@ import { DataTable } from "@/components/ui/table";
 import { createDict } from "@/lib";
 import { getComplianceMapper } from "@/lib/compliance/commons";
 import { Requirement } from "@/types/compliance";
-import { FindingProps, FindingsResponse } from "@/types/components";
+import { FindingProps } from "@/types/components";
 
 interface ClientAccordionContentProps {
   requirement: Requirement;
@@ -28,7 +28,7 @@ export const ClientAccordionContent = ({
   scanId,
   disableFindings = false,
 }: ClientAccordionContentProps) => {
-  const [findings, setFindings] = useState<FindingsResponse | null>(null);
+  const [findings, setFindings] = useState<{ data: FindingProps[]; meta: any; included?: any[] } | null>(null);
   const [expandedFindings, setExpandedFindings] = useState<FindingProps[]>([]);
   const searchParams = useSearchParams();
   const pageNumber = searchParams ? searchParams?.get("page") || "1" : "1";

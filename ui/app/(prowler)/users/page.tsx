@@ -65,10 +65,13 @@ const SSRDataTable = async ({
   const query = (filters["filter[search]"] as string) || "";
 
   const usersData = await getUsers({ query, page, sort, filters, pageSize });
-  const rolesData = await getRoles({});
+  const rolesData = await getRoles({}).catch((error) => {
+    console.error("Error fetching roles:", error);
+    return { data: [] };
+  });
 
   // Create a dictionary for roles by user ID
-  const roleDict = (usersData?.included || []).reduce(
+  const roleDict = (Array.isArray(usersData?.included) ? usersData.included : []).reduce(
     (acc: Record<string, any>, item: Role) => {
       if (item.type === "roles") {
         acc[item.id] = item.attributes;
@@ -81,7 +84,7 @@ const SSRDataTable = async ({
   // Generate the array of roles with all the roles available
   const roles = Array.from(
     new Map(
-      (rolesData?.data || []).map((role: Role) => [
+      (Array.isArray(rolesData?.data) ? rolesData.data : []).map((role: Role) => [
         role.id,
         { id: role.id, name: role.attributes?.name || "Unnamed Role" },
       ]),
@@ -89,7 +92,7 @@ const SSRDataTable = async ({
   );
 
   // Expand the users with their roles
-  const expandedUsers = (usersData?.data || []).map((user: UserProps) => {
+  const expandedUsers = (Array.isArray(usersData?.data) ? usersData.data : []).map((user: UserProps) => {
     // Check if the user has a role
     const roleId = user?.relationships?.roles?.data?.[0]?.id;
     const role = roleDict?.[roleId] || null;
