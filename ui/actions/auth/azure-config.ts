@@ -9,25 +9,30 @@ const azureConfigSchema = authFormSchema("azure-config");
 export const configureAzureAD = async (
   formData: z.infer<typeof azureConfigSchema>,
 ) => {
-  const url = new URL(`${apiBaseUrl}/azure-config`);
+  const url = new URL(`${apiBaseUrl}/tokens/azure/config`);
 
   const bodyData = {
-    data: {
-      type: "azure_configurations",
-      attributes: {
-        tenant_name: formData.tenant_name,
-        client_id: formData.client_id,
-        tenant_id: formData.tenant_id,
-      },
-    },
+    tenant_name: formData.tenant_name,
+    client_id: formData.client_id,
+    tenant_id: formData.tenant_id,
+    client_secret: (formData as any).client_secret,
+    redirect_uri: process.env.AZURE_AD_REDIRECT_URI || "",
+    scopes: [
+      "openid",
+      "profile",
+      "email",
+      "offline_access",
+      "User.Read",
+      "GroupMember.Read.All",
+    ],
   };
 
   try {
     const response = await fetch(url.toString(), {
       method: "POST",
       headers: {
-        "Content-Type": " application/vnd.api+json ",
-        Accept: " application/vnd.api+json ",
+        "Content-Type": "application/json",
+        Accept: "application/json",
       },
       body: JSON.stringify(bodyData),
     });

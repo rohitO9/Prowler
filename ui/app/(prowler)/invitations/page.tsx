@@ -64,21 +64,29 @@ const SSRDataTable = async ({
   });
   const rolesData = await getRoles({});
 
-  // Create a dictionary for roles by invitation ID
-  const roleDict = (rolesData?.data || []).reduce(
-    (acc: Record<string, Role>, role: Role) => {
-      role.relationships.invitations.data.forEach((invitation: any) => {
-        acc[invitation.id] = role;
-      });
-      return acc;
-    },
-    {},
-  );
+  const fixedInvationData = Array.isArray(invitationsData.data) ? invitationsData.data : invitationsData?.data ? [invitationsData.data] : [];
+
+  const newroles = Array.isArray(rolesData?.data)
+  ? rolesData.data
+  : rolesData?.data
+  ? [rolesData.data] // wrap single object in array
+  : [];
+
+const roleDict = newroles.reduce(
+  (acc: Record<string, Role>, role: Role) => {
+    role.relationships?.invitations?.data?.forEach((invitation: any) => {
+      acc[invitation.id] = role;
+    });
+    return acc;
+  },
+  {}
+);
+
 
   // Generate the array of roles with all the roles available
   const roles = Array.from(
     new Map(
-      (rolesData?.data || []).map((role: Role) => [
+      (newroles?.data || []).map((role: Role) => [
         role.id,
         { id: role.id, name: role.attributes?.name || "Unnamed Role" },
       ]),
@@ -86,7 +94,7 @@ const SSRDataTable = async ({
   );
 
   // Expand the invitations
-  const expandedInvitations = invitationsData?.data?.map(
+  const expandedInvitations = fixedInvationData?.data?.map(
     (invitation: InvitationProps) => {
       const role = roleDict[invitation.id];
 

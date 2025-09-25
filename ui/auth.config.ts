@@ -9,6 +9,9 @@ import { apiBaseUrl } from "./lib";
 interface CustomJwtPayload extends JwtPayload {
   user_id: string;
   tenant_id: string;
+  tenant_name?: string;
+  tenant_prefix?: string;
+  tenant_suffix?: string;
 }
 
 const refreshAccessToken = async (token: JwtPayload) => {
@@ -80,7 +83,8 @@ export const authConfig = {
 
         if (!parsedCredentials.success) return null;
 
-        const tokenResponse = await getToken(parsedCredentials.data);
+        // Forward optional tenant_name to backend for enterprise multi-tenant login
+        const tokenResponse = await getToken(parsedCredentials.data as any);
         if (!tokenResponse) return null;
 
         const userMeResponse = await getUserByMe(tokenResponse.accessToken);
@@ -165,6 +169,9 @@ export const authConfig = {
         token.accessTokenExpires = (decodedToken.exp as number) * 1000;
         token.user_id = decodedToken.user_id;
         token.tenant_id = decodedToken.tenant_id;
+        token.tenant_name = decodedToken.tenant_name;
+        token.tenant_prefix = decodedToken.tenant_prefix;
+        token.tenant_suffix = decodedToken.tenant_suffix;
       }
 
       const userInfo = {
@@ -179,6 +186,9 @@ export const authConfig = {
           ...token,
           userId: token.user_id,
           tenantId: token.tenant_id,
+          tenantName: (token as any).tenant_name,
+          tenantPrefix: (token as any).tenant_prefix,
+          tenantSuffix: (token as any).tenant_suffix,
           accessToken: (user as User & { accessToken: JwtPayload }).accessToken,
           refreshToken: (user as User & { refreshToken: JwtPayload })
             .refreshToken,
@@ -211,6 +221,9 @@ export const authConfig = {
         session.accessToken = token?.accessToken as string;
         session.refreshToken = token?.refreshToken as string;
         session.user = token.user as any;
+        (session as any).tenantName = (token as any).tenant_name;
+        (session as any).tenantPrefix = (token as any).tenant_prefix;
+        (session as any).tenantSuffix = (token as any).tenant_suffix;
       }
 
       // console.log("session", session);

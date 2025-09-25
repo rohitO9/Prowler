@@ -57,7 +57,7 @@ export const getAzureADConfig = async (): Promise<AzureADConfig | null> => {
 /**
  * Exchange authorization code for tokens
  */
-export const exchangeAzureADCode = async (code: string): Promise<AzureADTokenResponse | null> => {
+export const exchangeAzureADCode = async (code: string, tenantName?: string): Promise<AzureADTokenResponse | null> => {
   try {
     const response = await fetch(`${apiBaseUrl}/tokens/azure`, {
       method: "POST",
@@ -65,7 +65,7 @@ export const exchangeAzureADCode = async (code: string): Promise<AzureADTokenRes
         "Content-Type": "application/vnd.api+json",
         Accept: "application/vnd.api+json",
       },
-      body: JSON.stringify({ code }),
+      body: JSON.stringify({ code, tenant_name: tenantName }),
     });
 
     if (!response.ok) {
@@ -145,8 +145,9 @@ export const checkTrialStatus = async (email: string): Promise<any> => {
  */
 export const authenticateWithAzureAD = async (code: string) => {
   try {
+    const company = typeof window !== "undefined" ? localStorage.getItem("company") || undefined : undefined;
     // Exchange the authorization code for tokens
-    const tokenResponse = await exchangeAzureADCode(code);
+    const tokenResponse = await exchangeAzureADCode(code, company);
     
     if (!tokenResponse) {
       return {

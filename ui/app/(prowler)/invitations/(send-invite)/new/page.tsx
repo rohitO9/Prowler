@@ -18,9 +18,11 @@ export default async function SendInvitationPage() {
 const SSRSendInvitation = ({ rolesData }: { rolesData: Array<any> }) => {
   const hasRoles = rolesData && rolesData.length > 0;
 
+  const newroles = Array.isArray(rolesData)? rolesData : [];
+
   return (
     <SendInvitationForm
-      roles={rolesData.map((role) => ({
+      roles={newroles.map((role) => ({
         id: role.id,
         name: role.attributes.name,
       }))}

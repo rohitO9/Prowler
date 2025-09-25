@@ -53,7 +53,7 @@ export const AuthForm = ({
       password: "",
       ...(type === "sign-up" && {
         name: "",
-        company: "",
+        company: "", // Organization
         confirmPassword: "",
         ...(invitationToken && { invitationToken }),
       }),
@@ -69,11 +69,23 @@ export const AuthForm = ({
   const isLoading = form.formState.isSubmitting;
   const { toast } = useToast();
 
+  // Prefill organization from localStorage on sign-in
+  if (typeof window !== "undefined" && type === "sign-in") {
+    try {
+      const saved = localStorage.getItem("company");
+      if (saved && !(form.getValues() as any).company) {
+        (form as any).setValue("company", saved);
+      }
+    } catch {}
+  }
+
   const onSubmit = async (data: z.infer<typeof formSchema>) => {
     if (type === "sign-in") {
       const result = await authenticate(null, {
         email: data.email?.toLowerCase() || "",
         password: data.password || "",
+        // Forward organization as company for enterprise tenant selection
+        ...(data.company ? { company: data.company } : {}),
       });
       if (result?.message === "Success") {
         router.push("/");
@@ -94,6 +106,7 @@ export const AuthForm = ({
     }
 
     if (type === "sign-up") {
+      // Ensure company is collected on sign-up and stored in DB via company_name
       const newUser = await createNewUser(data);
 
       if (!newUser.errors) {

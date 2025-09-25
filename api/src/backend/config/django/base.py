@@ -215,8 +215,8 @@ SIMPLE_JWT = {
     "AUTH_HEADER_TYPES": ("Bearer",),
     "AUTH_HEADER_NAME": "HTTP_AUTHORIZATION",
     # Custom serializers
-    "TOKEN_OBTAIN_SERIALIZER": "api.serializers.TokenSerializer",
-    "TOKEN_REFRESH_SERIALIZER": "api.serializers.TokenRefreshSerializer",
+    "TOKEN_OBTAIN_SERIALIZER": "api.v1.serializers.TokenSerializer",
+    "TOKEN_REFRESH_SERIALIZER": "api.v1.serializers.TokenRefreshSerializer",
     # Standard JWT claims
     "TOKEN_TYPE_CLAIM": "typ",
     "JTI_CLAIM": "jti",

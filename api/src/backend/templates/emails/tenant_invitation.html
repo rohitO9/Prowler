@@ -1,0 +1,12 @@
+<!DOCTYPE html>
+<html>
+<body>
+    <h2>You've been invited to join {{ tenant_name }}</h2>
+    <p>Hello,</p>
+    <p>{{ inviter_name }} has invited you to join {{ tenant_name }} as a {{ role }}.</p>
+    <p>This invitation will expire on {{ expires_at|date:"F j, Y" }}.</p>
+    <a href="{{ invitation_link }}" style="background-color: #4CAF50; color: white; padding: 14px 20px; text-decoration: none; display: inline-block;">
+        Accept Invitation
+    </a>
+</body>
+</html>

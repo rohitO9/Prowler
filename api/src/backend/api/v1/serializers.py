@@ -36,6 +36,7 @@ from api.models import (
     UserRoleRelationship,
 )
 from api.models import Tenant
+from api.models import AzureOAuthConfig
 from api.v1.serializer_utils.integrations import (
     AWSCredentialSerializer,
     IntegrationConfigField,
@@ -45,6 +46,21 @@ from api.v1.serializer_utils.integrations import (
 from api.v1.serializer_utils.providers import ProviderSecretField
 
 # Tokens
+
+
+def _compute_tenant_prefix_suffix(tenant: Tenant) -> tuple[str, str]:
+    """Derive a deterministic prefix/suffix for a tenant without DB schema changes.
+
+    - prefix: first 3 alphanumeric chars of tenant name uppercased (fallback to 'ORG')
+    - suffix: first 8 chars of tenant UUID
+    """
+    import re
+
+    name = (tenant.name or "").strip()
+    alnum = "".join(re.findall(r"[A-Za-z0-9]", name))
+    prefix = (alnum[:3] or "ORG").upper()
+    suffix = str(tenant.id).replace("-", "")[:8]
+    return prefix, suffix
 
 
 def generate_tokens(user: User, tenant_id: str) -> dict:
@@ -62,8 +78,18 @@ def generate_tokens(user: User, tenant_id: str) -> dict:
         raise ValidationError({"detail": str(e)})
 
     # Post-process the tokens
-    # Set the tenant_id
+    # Set the tenant_id and tenant metadata claims
     refresh["tenant_id"] = tenant_id
+    try:
+        tenant = Tenant.objects.get(id=tenant_id)
+        tenant_name = tenant.name
+        prefix, suffix = _compute_tenant_prefix_suffix(tenant)
+        refresh["tenant_name"] = tenant_name
+        refresh["tenant_prefix"] = prefix
+        refresh["tenant_suffix"] = suffix
+    except Tenant.DoesNotExist:
+        # Do not fail token creation if tenant not found; keep minimal claims
+        pass
 
     # Set the nbf (not before) claim to the iat (issued at) claim. At this moment, simplejwt does not provide a
     # way to set the nbf claim
@@ -83,19 +109,30 @@ class BaseTokenSerializer(TokenObtainPairSerializer):
         email = attrs.get("email")
         password = attrs.get("password")
         tenant_id = str(attrs.get("tenant_id", ""))
+        tenant_name = attrs.get("tenant_name")
 
         # Authenticate user
-        user = (
-            User.objects.get(email=email)
-            if social
-            else authenticate(username=email, password=password)
-        )
+        if social:
+            user = User.objects.filter(email__iexact=email).first()
+        else:
+            # Avoid Django's default get_by_natural_key requirement by checking manually
+            user = User.objects.filter(email__iexact=email).first()
+            if user is None or not user.check_password(password or ""):
+                raise ValidationError("Invalid credentials")
         if user is None:
             raise ValidationError("Invalid credentials")
 
         if tenant_id:
             if not user.is_member_of_tenant(tenant_id):
                 raise ValidationError("Tenant does not exist or user is not a member.")
+        elif tenant_name:
+            # Try resolving by tenant_name if provided
+            membership = user.memberships.select_related("tenant").filter(
+                tenant__name__iexact=tenant_name.strip()
+            ).first()
+            if membership is None:
+                raise ValidationError("Tenant does not exist or user is not a member.")
+            tenant_id = str(membership.tenant_id)
         else:
             first_membership = user.memberships.order_by("date_joined").first()
             if first_membership is None:
@@ -103,7 +140,6 @@ class BaseTokenSerializer(TokenObtainPairSerializer):
             tenant_id = str(first_membership.tenant_id)
 
         return generate_tokens(user, tenant_id)
-
 
 class TokenSerializer(BaseTokenSerializer):
     email = serializers.EmailField(write_only=True)
@@ -113,6 +149,11 @@ class TokenSerializer(BaseTokenSerializer):
         required=False,
         help_text="If not provided, the tenant ID of the first membership that was added"
         " to the user will be used.",
+    )
+    tenant_name = serializers.CharField(
+        write_only=True,
+        required=False,
+        help_text="Alternative to tenant_id. Must match a tenant name the user is a member of.",
     )
 
     # Output tokens
@@ -296,6 +337,25 @@ class UserCreateSerializer(BaseWriteSerializer):
         validate_password(password, user=user)
         user.set_password(password)
         user.save()
+
+        # Auto-create a tenant for this user if they provided a company_name
+        # and the user has no memberships yet. Make the user OWNER of that tenant.
+        try:
+            from api.models import Membership  # local import to avoid cycles
+
+            if not user.memberships.exists():
+                org_name = (validated_data.get("company_name") or "").strip()
+                if not org_name:
+                    # Fallback: derive from email domain
+                    email_part = (user.email or "").split("@")
+                    org_name = (email_part[1].split(".")[0] if len(email_part) == 2 else user.name) or "Organization"
+
+                tenant = Tenant.objects.create(name=org_name)
+                Membership.objects.create(user=user, tenant=tenant, role=Membership.RoleChoices.OWNER)
+        except Exception:
+            # Do not block user creation if tenant creation fails
+            pass
+
         return user
 
 
@@ -486,6 +546,23 @@ class TenantSerializer(BaseSerializerV1):
     class Meta:
         model = Tenant
         fields = ["id", "name", "memberships"]
+
+
+class AzureOAuthConfigSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = AzureOAuthConfig
+        fields = [
+            "id",
+            "tenant_name",
+            "client_id",
+            "client_secret",
+            "tenant_id",
+            "redirect_uri",
+            "scopes",
+        ]
+
+    class JSONAPIMeta:
+        resource_name = "azure_oauth_configurations"
 
 
 # Memberships
@@ -2060,3 +2137,39 @@ class IntegrationUpdateSerializer(BaseWriteIntegrationSerializer):
             IntegrationProviderRelationship.objects.bulk_create(new_relationships)
 
         return super().update(instance, validated_data)
+
+
+class TenantInvitationSerializer(BaseSerializerV1):
+    """
+    Serializer for handling tenant invitations.
+    """
+    email = serializers.EmailField()
+    role = serializers.ChoiceField(choices=['member', 'admin'])
+    expires_in_days = serializers.IntegerField(
+        min_value=1, 
+        max_value=30, 
+        default=7,
+        required=False
+    )
+
+    def validate_email(self, value):
+        tenant_id = self.context.get('tenant_id')
+        email = value.lower().strip()
+        
+        # Check if user already exists and is a member
+        user = User.objects.filter(email=email).first()
+        if user and Membership.objects.filter(user=user, tenant_id=tenant_id).exists():
+            raise ValidationError("User is already a member of this tenant.")
+            
+        # Check for pending invitations
+        if Invitation.objects.filter(
+            email=email,
+            tenant_id=tenant_id,
+            state=Invitation.State.PENDING
+        ).exists():
+            raise ValidationError("An invitation is already pending for this email.")
+            
+        return email
+
+    class Meta:
+        resource_name = "tenant-invitations"

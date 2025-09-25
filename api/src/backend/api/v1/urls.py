@@ -33,7 +33,9 @@ from api.v1.views import (
 )
 from api.v1.views.trial import TrialViewSet
 from api.v1.views.azure_ad import AzureADSocialLoginView, azure_ad_config, AzureLoginView, AzureCallbackView, azure_ad_test, trial_status
+from api.v1.views.azure_ad import public_tenants
 from dj_rest_auth.views import PasswordResetConfirmView, PasswordResetView
+from rest_framework.routers import DefaultRouter
 
 router = routers.DefaultRouter(trailing_slash=False)
 
@@ -131,6 +133,7 @@ urlpatterns = [
     path("tokens/github", GithubSocialLoginView.as_view(), name="token-github"),
     path("tokens/azure", AzureADSocialLoginView.as_view(), name="token-azure"),
     path("tokens/azure/config", azure_ad_config, name="azure-config"),
+    path("tenants/public", public_tenants, name="public-tenants"),
     path("tokens/azure/test", azure_ad_test, name="azure-test"),
     path("tokens/azure/trial-status", trial_status, name="trial-status"),
     path("auth/azure/login", AzureLoginView.as_view(), name="azure-login"),

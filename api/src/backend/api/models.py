@@ -1245,6 +1245,25 @@ class InvitationRoleRelationship(RowLevelSecurityProtectedModel):
         resource_name = "invitation-roles"
 
 
+class AzureOAuthConfig(models.Model):
+    """
+    Stores Azure AD OAuth configuration per organization (pre-auth), keyed by tenant_name.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    tenant_name = models.CharField(max_length=255, db_index=True)
+    client_id = models.CharField(max_length=255)
+    client_secret = models.TextField()
+    tenant_id = models.CharField(max_length=255)
+    redirect_uri = models.CharField(max_length=500)
+    scopes = models.JSONField(default=list, blank=True)
+
+    class Meta:
+        db_table = "azure_oauth_configs"
+        unique_together = (("tenant_name",),)
+
 class ComplianceOverview(RowLevelSecurityProtectedModel):
     objects = ActiveProviderManager()
     all_objects = models.Manager()
@@ -1558,3 +1577,6 @@ class ResourceScanSummary(RowLevelSecurityProtectedModel):
                 statements=["SELECT", "INSERT", "UPDATE", "DELETE"],
             ),
         ]
+
+# Add this after the Invitation model definition
+TenantInvitation = Invitation  # Create an alias for backward compatibility

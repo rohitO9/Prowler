@@ -22,7 +22,7 @@ from api.models import Tenant
 # from api.v1.models.azure_ad import AzureADUserProfile  # Temporarily disabled
 from api.v1.serializers import UserSerializer
 from api.v1.utils.azure_ad_utils import AzureADUtils
-from api.models import Membership
+from api.models import Membership, AzureOAuthConfig
 
 
 logger = logging.getLogger(__name__)
@@ -50,6 +50,7 @@ class AzureADSocialLoginView(TokenObtainPairView):
             
             # Get the authorization code from request
             auth_code = request.data.get('code')
+            requested_tenant_name = (request.data.get('tenant_name') or '').strip() or None
             logger.info(f"Authorization code: {auth_code[:50] if auth_code else 'None'}...")
             
             if not auth_code:
@@ -59,7 +60,7 @@ class AzureADSocialLoginView(TokenObtainPairView):
                 )
 
             # Exchange authorization code for access token
-            token_data = self._exchange_code_for_token(auth_code)
+            token_data = self._exchange_code_for_token(auth_code, tenant_name=requested_tenant_name)
             if not token_data or 'access_token' not in token_data:
                 return Response(
                     {'error': 'Failed to exchange authorization code for token'}, 
@@ -84,8 +85,17 @@ class AzureADSocialLoginView(TokenObtainPairView):
                     status=status.HTTP_500_INTERNAL_SERVER_ERROR
                 )
 
-            # Detect or create tenant from Azure AD
-            tenant = self._get_or_create_tenant_from_azure(user_info, access_token_azure)
+            # Resolve tenant based on provided tenant_name when present
+            tenant = None
+            if requested_tenant_name:
+                tenant = Tenant.objects.filter(name__iexact=requested_tenant_name).first()
+                if not tenant:
+                    return Response({'error': 'Organization not found'}, status=status.HTTP_400_BAD_REQUEST)
+                if not Membership.objects.filter(user=user, tenant=tenant).exists():
+                    return Response({'error': 'User is not a member of the selected organization'}, status=status.HTTP_403_FORBIDDEN)
+            else:
+                # Detect or create tenant from Azure AD if not explicitly selected
+                tenant = self._get_or_create_tenant_from_azure(user_info, access_token_azure)
             
             # Create user membership in tenant
             if tenant:
@@ -135,25 +145,29 @@ class AzureADSocialLoginView(TokenObtainPairView):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
-    def _exchange_code_for_token(self, auth_code):
+    def _exchange_code_for_token(self, auth_code, tenant_name: str | None = None):
         """Exchange authorization code for access token"""
         try:
-            # Debug: Log Azure AD settings
-            logger.info(f"AZURE_AD_TENANT_ID: {getattr(settings, 'AZURE_AD_TENANT_ID', 'NOT_SET')}")
-            logger.info(f"AZURE_AD_CLIENT_ID: {getattr(settings, 'AZURE_AD_CLIENT_ID', 'NOT_SET')}")
-            logger.info(f"AZURE_AD_CLIENT_SECRET: {'SET' if getattr(settings, 'AZURE_AD_CLIENT_SECRET', None) else 'NOT_SET'}")
-            logger.info(f"AZURE_AD_REDIRECT_URI: {getattr(settings, 'AZURE_AD_REDIRECT_URI', 'NOT_SET')}")
-            
-            token_url = f"https://login.microsoftonline.com/{settings.AZURE_AD_TENANT_ID}/oauth2/v2.0/token"
+            # Prefer dynamic config if provided, else fallback to settings
+            cfg = None
+            if tenant_name:
+                cfg = AzureOAuthConfig.objects.filter(tenant_name__iexact=tenant_name).first()
+            client_id = (cfg.client_id if cfg else getattr(settings, 'AZURE_AD_CLIENT_ID', None))
+            client_secret = (cfg.client_secret if cfg else getattr(settings, 'AZURE_AD_CLIENT_SECRET', None))
+            tenant_id = (cfg.tenant_id if cfg else getattr(settings, 'AZURE_AD_TENANT_ID', None))
+            redirect_uri = (cfg.redirect_uri if cfg else getattr(settings, 'AZURE_AD_REDIRECT_URI', None))
+            scopes = (cfg.scopes if cfg else list(getattr(settings, 'AZURE_AD_SCOPES', ['openid', 'profile', 'email'])))
+
+            token_url = f"https://login.microsoftonline.com/{tenant_id}/oauth2/v2.0/token"
             logger.info(f"Token URL: {token_url}")
             
             data = {
-                'client_id': settings.AZURE_AD_CLIENT_ID,
-                'client_secret': settings.AZURE_AD_CLIENT_SECRET,
+                'client_id': client_id,
+                'client_secret': client_secret,
                 'code': auth_code,
                 'grant_type': 'authorization_code',
-                'redirect_uri': settings.AZURE_AD_REDIRECT_URI,
-                'scope': 'openid profile email'
+                'redirect_uri': redirect_uri,
+                'scope': ' '.join(scopes),
             }
             logger.info(f"Token exchange data: {data}")
 
@@ -385,11 +399,12 @@ class AzureLogoutView(View):
         return JsonResponse({"detail": "Logged out"})
 
 
-@api_view(['GET'])
+@api_view(['GET', 'POST'])
 @permission_classes([AllowAny])
 def azure_ad_config(request):
     """
-    Return Azure AD configuration for frontend
+    GET: Return Azure AD configuration (from settings only for bootstrapping)
+    POST: Save or update Azure AD configuration per tenant_name
     """
     # Debug logging
     logger.info(f"Azure AD config request - Method: {request.method}")
@@ -397,15 +412,37 @@ def azure_ad_config(request):
     logger.info(f"Azure AD config request - Accept: {request.headers.get('Accept', 'Not set')}")
     
     try:
-        config = {
-            'client_id': settings.AZURE_AD_CLIENT_ID,
-            'tenant_id': settings.AZURE_AD_TENANT_ID,
-            'redirect_uri': settings.AZURE_AD_REDIRECT_URI,
-            'authority': f"https://login.microsoftonline.com/{settings.AZURE_AD_TENANT_ID}",
-            'scopes': list(getattr(settings, 'AZURE_AD_SCOPES', ['openid', 'profile', 'email']))
+        if request.method == 'GET':
+            config = {
+                'client_id': getattr(settings, 'AZURE_AD_CLIENT_ID', None),
+                'tenant_id': getattr(settings, 'AZURE_AD_TENANT_ID', None),
+                'redirect_uri': getattr(settings, 'AZURE_AD_REDIRECT_URI', None),
+                'authority': f"https://login.microsoftonline.com/{getattr(settings, 'AZURE_AD_TENANT_ID', 'common')}",
+                'scopes': list(getattr(settings, 'AZURE_AD_SCOPES', ['openid', 'profile', 'email']))
+            }
+            logger.info(f"Azure AD config response: {config}")
+            return Response(config)
+
+        # POST - JSON body with tenant_name, client_id, tenant_id, client_secret, redirect_uri, scopes
+        body = request.data or {}
+        tenant_name = (body.get('tenant_name') or '').strip()
+        if not tenant_name:
+            return Response({'error': 'tenant_name is required'}, status=status.HTTP_400_BAD_REQUEST)
+
+        payload = {
+            'tenant_name': tenant_name,
+            'client_id': body.get('client_id'),
+            'client_secret': body.get('client_secret'),
+            'tenant_id': body.get('tenant_id'),
+            'redirect_uri': body.get('redirect_uri'),
+            'scopes': body.get('scopes') or ['openid', 'profile', 'email', 'offline_access', 'User.Read'],
         }
-        logger.info(f"Azure AD config response: {config}")
-        return Response(config)
+
+        config_obj, _ = AzureOAuthConfig.objects.update_or_create(
+            tenant_name__iexact=tenant_name,
+            defaults=payload,
+        )
+        return Response({'message': 'Azure AD config saved', 'id': str(config_obj.id)})
     except Exception as e:
         logger.error(f"Azure AD config error: {str(e)}")
         return Response(
@@ -532,3 +569,15 @@ def azure_ad_test(request):
             {'error': f'Test failed: {str(e)}'}, 
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def public_tenants(request):
+    """Public endpoint to list organizations (tenants) for pre-auth selection."""
+    try:
+        qs = Tenant.objects.all().order_by('name').values('id', 'name')
+        return Response({'tenants': list(qs)})
+    except Exception as e:
+        logger.error(f"Public tenants list error: {str(e)}")
+        return Response({'error': 'Failed to load organizations'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

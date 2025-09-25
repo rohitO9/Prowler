@@ -54,6 +54,9 @@ export async function authenticate(
     console.log("Attempting authentication for:", formData.email);
     await signIn("credentials", {
       ...formData,
+      // Support enterprise: allow passing organization/tenant name from UI as "company"
+      // NextAuth authorize will forward these to the backend token endpoint
+      tenant_name: (formData as any).company,
       redirect: false,
     });
     return {
@@ -149,6 +152,8 @@ export const createNewUser = async (
   }
 };
 
+// Replace the getToken function in your actions/auth/auth.ts file with this:
+
 export const getToken = async (formData: z.infer<typeof formSchemaSignIn>) => {
   const url = new URL(`${apiBaseUrl}/tokens`);
   
@@ -161,6 +166,8 @@ export const getToken = async (formData: z.infer<typeof formSchemaSignIn>) => {
       attributes: {
         email: formData.email,
         password: formData.password,
+        // enterprise: optionally send tenant_name to select organization context
+        ...(formData as any)?.company ? { tenant_name: (formData as any).company } : {},
       },
     },
   };
@@ -187,7 +194,6 @@ export const getToken = async (formData: z.infer<typeof formSchemaSignIn>) => {
         if (parseErr instanceof Error) {
           errorMsg = `${errorMsg} - Parse error: ${parseErr.message}`;
         } else {
-          // Ensure all types of parse errors are included in the message
           errorMsg = `${errorMsg} - Parse error: ${String(parseErr)}`;
         }
       }
@@ -195,8 +201,10 @@ export const getToken = async (formData: z.infer<typeof formSchemaSignIn>) => {
     }
 
     const parsedResponse = await safeJsonParse(response);
-    const accessToken = parsedResponse?.data?.attributes?.access;
-    const refreshToken = parsedResponse?.data?.attributes?.refresh;
+    
+    // FIX: Access tokens directly from data object, not data.attributes
+    const accessToken = parsedResponse?.data?.access;
+    const refreshToken = parsedResponse?.data?.refresh;
 
     if (!accessToken || !refreshToken) {
       console.error("Missing tokens in response:", parsedResponse);
