@@ -45,7 +45,7 @@ export const InvitationDetails = ({ attributes }: InvitationDetailsProps) => {
   const baseUrl =
     typeof window !== "undefined"
       ? window.location.origin
-      : "http://localhost:3000";
+      : "http://localhost:8080";
 
   const invitationLink = `${baseUrl}/sign-up?invitation_token=${attributes.token}`;
 

@@ -22,6 +22,7 @@ INSTALLED_APPS = [
     # Third party apps
     'rest_framework',
     'drf_yasg',
+    'rest_framework_simplejwt',
     
     # Your apps
     'api',
@@ -92,3 +93,12 @@ LOGGING = {
 }
 
 LOGGING_LEVEL = 'INFO'  # Can be overridden in environment-specific settings
+
+# JWT Settings
+SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=60),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=1),
+    'ROTATE_REFRESH_TOKENS': False,
+    'BLACKLIST_AFTER_ROTATION': False,
+    'UPDATE_LAST_LOGIN': True,
+}

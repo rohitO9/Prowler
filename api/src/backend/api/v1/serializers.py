@@ -7,11 +7,11 @@ from django.contrib.auth.models import update_last_login
 from django.contrib.auth.password_validation import validate_password
 from drf_spectacular.utils import extend_schema_field
 from jwt.exceptions import InvalidKeyError
-from rest_framework_json_api import serializers
-from rest_framework_json_api.serializers import ValidationError
-from rest_framework_simplejwt.exceptions import TokenError
-from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
-from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework_json_api import serializers as json_api_serializers
+from rest_framework import serializers
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer  # Add this import
+from rest_framework_simplejwt.tokens import RefreshToken  # Add this import too
+from rest_framework_simplejwt.exceptions import TokenError  # And this one
 
 from api.models import (
     Finding,
@@ -282,9 +282,9 @@ class UserSerializer(BaseSerializerV1):
     """
     Serializer for the User model.
     """
-
-    memberships = serializers.ResourceRelatedField(many=True, read_only=True)
-    roles = serializers.ResourceRelatedField(many=True, read_only=True)
+    # Change from ResourceRelatedField to SerializerMethodField
+    memberships = serializers.SerializerMethodField()
+    roles = serializers.SerializerMethodField()
 
     class Meta:
         model = User
@@ -300,15 +300,21 @@ class UserSerializer(BaseSerializerV1):
             "trial_end",
             "is_trial_active"
         ]
-        extra_kwargs = {
-            "roles": {"read_only": True},
-        }
 
-    included_serializers = {
-        "roles": "api.v1.serializers.RoleSerializer",
-    }
+    class JSONAPIMeta:
+        included_resources = ['roles', 'memberships']
+        resource_name = 'users'
 
+    def get_memberships(self, obj):
+        """Return serialized memberships"""
+        memberships = obj.memberships.all()
+        return MembershipSerializer(memberships, many=True, context=self.context).data
 
+    def get_roles(self, obj):
+        """Return serialized roles"""
+        roles = obj.roles.all()
+        return RoleSerializer(roles, many=True, context=self.context).data
+    
 class UserCreateSerializer(BaseWriteSerializer):
     password = serializers.CharField(write_only=True)
     company_name = serializers.CharField(required=False)
@@ -541,7 +547,7 @@ class TenantSerializer(BaseSerializerV1):
     Serializer for the Tenant model.
     """
 
-    memberships = serializers.ResourceRelatedField(many=True, read_only=True)
+    memberships = serializers.SlugRelatedField(many=True, read_only=True, slug_field = 'id')
 
     class Meta:
         model = Tenant
@@ -575,24 +581,46 @@ class MemberRoleEnumSerializerField(serializers.ChoiceField):
 
 
 class MembershipSerializer(serializers.ModelSerializer):
+    """
+    Serializer for the Membership model.
+    """
     role = MemberRoleEnumSerializerField()
-    user = serializers.HyperlinkedRelatedField(view_name="user-detail", read_only=True)
-    tenant = serializers.HyperlinkedRelatedField(
-        view_name="tenant-detail", read_only=True
-    )
+    # Change from HyperlinkedRelatedField to more basic fields
+    user = serializers.SerializerMethodField()
+    tenant = serializers.SerializerMethodField()
 
     class Meta:
         model = Membership
         fields = ["id", "user", "tenant", "role", "date_joined"]
 
+    def get_user(self, obj):
+        """Return user data without requiring hyperlink"""
+        return {
+            'id': str(obj.user.id),
+            'email': obj.user.email,
+            'name': obj.user.name
+        }
+
+    def get_tenant(self, obj):
+        """Return tenant data without requiring hyperlink"""
+        return {
+            'id': str(obj.tenant.id),
+            'name': obj.tenant.name
+        }
 
 # Provider Groups
 class ProviderGroupSerializer(RLSSerializer, BaseWriteSerializer):
-    providers = serializers.ResourceRelatedField(
-        queryset=Provider.objects.all(), many=True, required=False
+    providers = serializers.SlugRelatedField(
+        slug_field='uid',  # or 'alias' depending on which one you want to use
+        queryset=Provider.objects.all(),
+        many=True,
+        required=False
     )
-    roles = serializers.ResourceRelatedField(
-        queryset=Role.objects.all(), many=True, required=False
+    roles = serializers.SlugRelatedField(
+        slug_field='name',  # Role model has a 'name' field
+        queryset=Role.objects.all(),
+        many=True,
+        required=False
     )
 
     def validate(self, attrs):
@@ -600,7 +628,6 @@ class ProviderGroupSerializer(RLSSerializer, BaseWriteSerializer):
             raise serializers.ValidationError(
                 {"name": "A provider group with this name already exists."}
             )
-
         return super().validate(attrs)
 
     class Meta:
@@ -622,6 +649,14 @@ class ProviderGroupSerializer(RLSSerializer, BaseWriteSerializer):
             "url": {"read_only": True},
         }
 
+# Note: For the Provider model, you can choose between:
+# - slug_field='uid' (if you want to use the UID as identifier)
+# - slug_field='alias' (if you want to use the alias as identifier)
+# - slug_field='provider' (if this field contains a string identifier)
+
+# The choice depends on which field contains human-readable identifiers
+# that you want to use in your API
+
 
 class ProviderGroupIncludedSerializer(ProviderGroupSerializer):
     class Meta:
@@ -630,11 +665,17 @@ class ProviderGroupIncludedSerializer(ProviderGroupSerializer):
 
 
 class ProviderGroupCreateSerializer(ProviderGroupSerializer):
-    providers = serializers.ResourceRelatedField(
-        queryset=Provider.objects.all(), many=True, required=False
+    providers = serializers.SlugRelatedField(
+        slug_field='uid',
+        queryset=Provider.objects.all(),
+        many=True,
+        required=False
     )
-    roles = serializers.ResourceRelatedField(
-        queryset=Role.objects.all(), many=True, required=False
+    roles = serializers.SlugRelatedField(
+        slug_field='name',  # Add this line
+        queryset=Role.objects.all(), 
+        many=True, 
+        required=False
     )
 
     class Meta:
@@ -675,10 +716,7 @@ class ProviderGroupCreateSerializer(ProviderGroupSerializer):
             for role in roles
         ]
         RoleProviderGroupRelationship.objects.bulk_create(through_model_instances)
-
         return provider_group
-
-
 class ProviderGroupUpdateSerializer(ProviderGroupSerializer):
     def update(self, instance, validated_data):
         tenant_id = self.context.get("tenant_id")
@@ -1067,7 +1105,11 @@ class ResourceSerializer(RLSSerializer):
     tags = serializers.SerializerMethodField()
     type_ = serializers.CharField(read_only=True)
 
-    findings = serializers.ResourceRelatedField(many=True, read_only=True)
+    findings = serializers.SlugRelatedField(
+        slug_field='uid',  # or whatever field you want to use - replace after checking Finding model fields
+        many=True, 
+        read_only=True
+    )
 
     class Meta:
         model = Resource
@@ -1164,7 +1206,7 @@ class FindingSerializer(RLSSerializer):
     Serializer for the Finding model.
     """
 
-    resources = serializers.ResourceRelatedField(many=True, read_only=True)
+    resources = serializers.SlugRelatedField(many=True, read_only=True, slug_field='uid')
 
     class Meta:
         model = Finding
@@ -1408,7 +1450,7 @@ class InvitationSerializer(RLSSerializer):
     Serializer for the Invitation model.
     """
 
-    roles = serializers.ResourceRelatedField(many=True, queryset=Role.objects.all())
+    roles = serializers.SlugRelatedField(many=True, queryset=Role.objects.all(), slug_field='uid',)
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -1433,7 +1475,11 @@ class InvitationSerializer(RLSSerializer):
 
 
 class InvitationBaseWriteSerializer(BaseWriteSerializer):
-    roles = serializers.ResourceRelatedField(many=True, queryset=Role.objects.all())
+    roles = serializers.SlugRelatedField( 
+        slug_field='name',  # ADD THIS
+        many=True,
+        queryset=Role.objects.all()
+        )
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -1501,7 +1547,7 @@ class InvitationCreateSerializer(InvitationBaseWriteSerializer, RLSSerializer):
 
 
 class InvitationUpdateSerializer(InvitationBaseWriteSerializer):
-    roles = serializers.ResourceRelatedField(
+    roles = serializers.SlugRelatedField(slug_field='name',  # ADD THIS
         required=False, many=True, queryset=Role.objects.all()
     )
 
@@ -1549,10 +1595,10 @@ class InvitationAcceptSerializer(RLSSerializer):
 
 class RoleSerializer(RLSSerializer, BaseWriteSerializer):
     permission_state = serializers.SerializerMethodField()
-    users = serializers.ResourceRelatedField(
+    users = json_api_serializers.SlugRelatedField(slug_field='email',  # ADD THIS - User model typically uses email or username
         queryset=User.objects.all(), many=True, required=False
     )
-    provider_groups = serializers.ResourceRelatedField(
+    provider_groups = json_api_serializers.SlugRelatedField(slug_field='name',
         queryset=ProviderGroup.objects.all(), many=True, required=False
     )
 
@@ -1616,10 +1662,10 @@ class RoleSerializer(RLSSerializer, BaseWriteSerializer):
 
 
 class RoleCreateSerializer(RoleSerializer):
-    provider_groups = serializers.ResourceRelatedField(
+    provider_groups = serializers.SlugRelatedField(slug_field='name',
         many=True, queryset=ProviderGroup.objects.all(), required=False
     )
-    users = serializers.ResourceRelatedField(
+    users = serializers.SlugRelatedField(slug_field='email',
         many=True, queryset=User.objects.all(), required=False
     )
 
@@ -1989,7 +2035,7 @@ class IntegrationSerializer(RLSSerializer):
     Serializer for the Integration model.
     """
 
-    providers = serializers.ResourceRelatedField(
+    providers = serializers.SlugRelatedField(slug_field='uid',
         queryset=Provider.objects.all(), many=True
     )
 
@@ -2028,7 +2074,7 @@ class IntegrationSerializer(RLSSerializer):
 class IntegrationCreateSerializer(BaseWriteIntegrationSerializer):
     credentials = IntegrationCredentialField(write_only=True)
     configuration = IntegrationConfigField()
-    providers = serializers.ResourceRelatedField(
+    providers = serializers.SlugRelatedField(slug_field='uid',
         queryset=Provider.objects.all(), many=True, required=False
     )
 
@@ -2087,7 +2133,7 @@ class IntegrationCreateSerializer(BaseWriteIntegrationSerializer):
 class IntegrationUpdateSerializer(BaseWriteIntegrationSerializer):
     credentials = IntegrationCredentialField(write_only=True, required=False)
     configuration = IntegrationConfigField(required=False)
-    providers = serializers.ResourceRelatedField(
+    providers = serializers.SlugRelatedField(slug_field='uid',
         queryset=Provider.objects.all(), many=True, required=False
     )
 
@@ -2139,10 +2185,8 @@ class IntegrationUpdateSerializer(BaseWriteIntegrationSerializer):
         return super().update(instance, validated_data)
 
 
-class TenantInvitationSerializer(BaseSerializerV1):
-    """
-    Serializer for handling tenant invitations.
-    """
+class TenantInvitationSerializer(serializers.ModelSerializer):
+    tenant_id = serializers.UUIDField(write_only=True)
     email = serializers.EmailField()
     role = serializers.ChoiceField(choices=['member', 'admin'])
     expires_in_days = serializers.IntegerField(
@@ -2152,24 +2196,7 @@ class TenantInvitationSerializer(BaseSerializerV1):
         required=False
     )
 
-    def validate_email(self, value):
-        tenant_id = self.context.get('tenant_id')
-        email = value.lower().strip()
-        
-        # Check if user already exists and is a member
-        user = User.objects.filter(email=email).first()
-        if user and Membership.objects.filter(user=user, tenant_id=tenant_id).exists():
-            raise ValidationError("User is already a member of this tenant.")
-            
-        # Check for pending invitations
-        if Invitation.objects.filter(
-            email=email,
-            tenant_id=tenant_id,
-            state=Invitation.State.PENDING
-        ).exists():
-            raise ValidationError("An invitation is already pending for this email.")
-            
-        return email
-
     class Meta:
-        resource_name = "tenant-invitations"
+        model = Invitation
+        fields = ['tenant_id', 'email', 'role', 'expires_in_days']
+        read_only_fields = ['id', 'created_at', 'expires_at']

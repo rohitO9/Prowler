@@ -2,6 +2,8 @@ import logging
 import time
 
 from config.custom_logging import BackendLogger
+from django.utils.functional import SimpleLazyObject
+from api.models import Tenant
 
 
 def extract_auth_info(request) -> dict:
@@ -46,4 +48,44 @@ class APILoggingMiddleware:
             },
         )
 
+        return response
+
+
+logger = logging.getLogger(__name__)
+
+
+class TenantMiddleware:
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        # Set tenant as None by default
+        request.tenant = None
+
+        if request.user.is_authenticated:
+            # Try to get tenant ID from header
+            tenant_id = request.headers.get("X-Tenant-ID")
+
+            # If not in header, try to get from query params
+            if not tenant_id and request.GET.get("tenant"):
+                tenant_id = request.GET.get("tenant")
+
+            logger.debug(f"Looking for tenant with ID: {tenant_id}")
+
+            if tenant_id:
+                try:
+                    tenant = Tenant.objects.get(id=tenant_id)
+                    if tenant.members.filter(id=request.user.id).exists():
+                        request.tenant = tenant
+                        logger.debug(f"Set tenant for request: {tenant.id}")
+                except Tenant.DoesNotExist:
+                    logger.debug(f"Tenant not found: {tenant_id}")
+            else:
+                # If no tenant specified, try to get user's default tenant
+                default_tenant = request.user.memberships.first()
+                if default_tenant:
+                    request.tenant = default_tenant.tenant
+                    logger.debug(f"Set default tenant: {default_tenant.tenant.id}")
+
+        response = self.get_response(request)
         return response

@@ -9,6 +9,8 @@ from api.models import Tenant, Invitation
 from api.v1.serializers import TenantSerializer, TenantInvitationSerializer
 from api.services.invitation_service import TenantInvitationService
 from api.utils.logging import get_logger
+from django.utils import timezone
+from datetime import timedelta
 
 logger = get_logger(__name__)
 
@@ -26,79 +28,69 @@ class TenantViewSet(BaseTenantViewset):
         return Tenant.objects.all()
 
     @action(
-        detail=True,
+        detail=False,
         methods=['post'],
         url_path='invitations',
         permission_classes=[IsAuthenticated],
     )
-    def create_invitation(self, request, pk=None):
-        """
-        Create an invitation for a new member to join the tenant.
-        
-        Expected payload:
-        {
-            "email": "user@example.com",
-            "role": "member|admin",
-            "expires_in_days": 7  # optional
-        }
-        """
-        tenant = self.get_object()
-        serializer = TenantInvitationSerializer(data=request.data)
-
+    def create_invitation(self, request):
+        """Create an invitation for a new member to join the tenant."""
+        tenant_id = request.data.get('tenant_id')
         try:
+            tenant = Tenant.objects.get(id=tenant_id)
+            
+            serializer = TenantInvitationSerializer(data=request.data)
             serializer.is_valid(raise_exception=True)
             
-            with transaction.atomic():
-                invitation = Invitation.objects.create(
-                    tenant=tenant,
-                    invited_by=request.user,
-                    **serializer.validated_data
+            invitation = Invitation.objects.create(
+                tenant=tenant,
+                email=serializer.validated_data['email'],
+                invited_by=request.user,
+                state='pending',
+                role=serializer.validated_data['role'],
+                expires_at=timezone.now() + timedelta(
+                    days=serializer.validated_data.get('expires_in_days', 7)
                 )
-
-                # Log the invitation creation
-                logger.info(
-                    f"Tenant invitation created",
-                    extra={
-                        "tenant_id": tenant.id,
-                        "invited_by": request.user.id,
-                        "invited_email": serializer.validated_data["email"],
-                        "invitation_id": invitation.id
-                    }
-                )
-
-                return Response({
-                    "message": "Invitation sent successfully",
-                    "invitation_id": invitation.id,
-                    "expires_at": invitation.expires_at
-                }, status=status.HTTP_201_CREATED)
+            )
+            
+            return Response(
+                TenantInvitationSerializer(invitation).data,
+                status=status.HTTP_201_CREATED
+            )
+    
+        except Tenant.DoesNotExist:
+            return Response(
+                {"error": "Tenant not found"},
+                status=status.HTTP_404_NOT_FOUND
+            )
 
         except ValidationError as e:
             logger.warning(
                 f"Invalid invitation request",
                 extra={
-                    "tenant_id": tenant.id,
+                    "tenant_id": tenant_id,
                     "error": str(e),
                     "request_data": request.data
                 }
             )
-            return Response({
-                "error": "Invalid invitation request",
-                "details": str(e)
-            }, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {"error": str(e)},
+                status=status.HTTP_400_BAD_REQUEST
+            )
         
         except Exception as e:
             logger.error(
-                f"Failed to create tenant invitation",
+                f"Failed to create invitation",
                 extra={
-                    "tenant_id": tenant.id,
-                    "error": str(e),
-                    "request_data": request.data
+                    "tenant_id": tenant_id,
+                    "error": str(e)
                 },
                 exc_info=True
             )
-            return Response({
-                "error": "Failed to create invitation. Please try again later."
-            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            return Response(
+                {"error": "Failed to create invitation"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
 
     @action(
         detail=True,
