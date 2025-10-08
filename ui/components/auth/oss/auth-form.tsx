@@ -88,7 +88,7 @@ export const AuthForm = ({
         ...(data.company ? { company: data.company } : {}),
       });
       if (result?.message === "Success") {
-        router.push("/");
+        router.push("/home");
       } else if (result?.errors && "credentials" in result.errors) {
         form.setError("email", {
           type: "server",

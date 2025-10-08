@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import {
-  apiBaseUrl,
+  getApiBaseUrl,
   getAuthHeaders,
   getErrorMessage,
   parseStringify,
@@ -21,7 +21,7 @@ export const getInvitations = async ({
 
   if (isNaN(Number(page)) || page < 1) redirect("/invitations");
 
-  const url = new URL(`${apiBaseUrl}/tenants/invitations`);
+  const url = new URL(`${getApiBaseUrl()}/tenants/invitations`);
 
   if (page) url.searchParams.append("page[number]", page.toString());
   if (pageSize) url.searchParams.append("page[size]", pageSize.toString());
@@ -36,17 +36,106 @@ export const getInvitations = async ({
   });
 
   try {
+    console.log('Fetching invitations from:', url.toString());
+    
     const invitations = await fetch(url.toString(), {
       headers,
     });
+
+    if (!invitations.ok) {
+      console.error(`HTTP Error: ${invitations.status} ${invitations.statusText}`);
+      const errorText = await invitations.text();
+      console.error('Error response body:', errorText);
+      
+      // Return a consistent error structure instead of undefined
+      return {
+        data: [],
+        meta: {
+          total: 0,
+          page: Number(page),
+          pageSize: Number(pageSize)
+        },
+        error: {
+          status: invitations.status,
+          message: invitations.statusText,
+          details: errorText
+        }
+      };
+    }
+
+    // Check if response is JSON
+    const contentType = invitations.headers.get('content-type');
+    if (!contentType?.includes('application/json')) {
+      console.error('Invalid content type:', contentType);
+      const text = await invitations.text();
+      console.error('Non-JSON response:', text.substring(0, 500));
+      
+      return {
+        data: [],
+        meta: {
+          total: 0,
+          page: Number(page),
+          pageSize: Number(pageSize)
+        },
+        error: {
+          message: 'Invalid response format - expected JSON',
+          details: `Content-Type: ${contentType}`
+        }
+      };
+    }
+
     const data = await invitations.json();
     const parsedData = parseStringify(data);
+    
+    // Validate the response structure
+    if (!parsedData || typeof parsedData !== 'object') {
+      console.error('Invalid response data structure:', parsedData);
+      return {
+        data: [],
+        meta: {
+          total: 0,
+          page: Number(page),
+          pageSize: Number(pageSize)
+        },
+        error: {
+          message: 'Invalid response data structure',
+          details: 'Response is not a valid object'
+        }
+      };
+    }
+
+    // Ensure consistent data structure
+    const normalizedData = {
+      data: Array.isArray(parsedData.data) ? parsedData.data : 
+            parsedData.data ? [parsedData.data] : [],
+      meta: parsedData.meta || {
+        total: 0,
+        page: Number(page),
+        pageSize: Number(pageSize)
+      },
+      ...parsedData
+    };
+
+    console.log('Successfully fetched invitations:', normalizedData.data.length, 'items');
     revalidatePath("/invitations");
-    return parsedData;
+    return normalizedData;
+
   } catch (error) {
-    // eslint-disable-next-line no-console
     console.error("Error fetching invitations:", error);
-    return undefined;
+    
+    // Return a consistent error structure instead of undefined
+    return {
+      data: [],
+      meta: {
+        total: 0,
+        page: Number(page),
+        pageSize: Number(pageSize)
+      },
+      error: {
+        message: getErrorMessage(error),
+        details: error instanceof Error ? error.stack : String(error)
+      }
+    };
   }
 };
 
@@ -55,7 +144,7 @@ export const sendInvite = async (formData: FormData) => {
 
   const email = formData.get("email");
   const role = formData.get("role");
-  const url = new URL(`${apiBaseUrl}/tenants/invitations`);
+  const url = new URL(`${getApiBaseUrl()}/tenants/invitations`);
 
   const body = JSON.stringify({
     data: {
@@ -84,12 +173,27 @@ export const sendInvite = async (formData: FormData) => {
       headers,
       body,
     });
-    const data = await response.json();
 
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({ message: 'Unknown error' }));
+      return {
+        error: {
+          status: response.status,
+          message: errorData.message || response.statusText,
+          details: errorData
+        }
+      };
+    }
+
+    const data = await response.json();
     return parseStringify(data);
+    
   } catch (error) {
     return {
-      error: getErrorMessage(error),
+      error: {
+        message: getErrorMessage(error),
+        details: error instanceof Error ? error.stack : String(error)
+      }
     };
   }
 };
@@ -104,7 +208,7 @@ export const updateInvite = async (formData: FormData) => {
     formData.get("expires_at") ||
     new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
 
-  const url = new URL(`${apiBaseUrl}/tenants/invitations/${invitationId}`);
+  const url = new URL(`${getApiBaseUrl()}/tenants/invitations/${invitationId}`);
 
   const body: any = {
     data: {
@@ -141,23 +245,33 @@ export const updateInvite = async (formData: FormData) => {
     });
 
     if (!response.ok) {
-      const error = await response.json();
-      return { error };
+      const error = await response.json().catch(() => ({ message: 'Unknown error' }));
+      return { 
+        error: {
+          status: response.status,
+          message: error.message || response.statusText,
+          details: error
+        }
+      };
     }
 
     const data = await response.json();
     revalidatePath("/invitations");
     return parseStringify(data);
+    
   } catch (error) {
     return {
-      error: getErrorMessage(error),
+      error: {
+        message: getErrorMessage(error),
+        details: error instanceof Error ? error.stack : String(error)
+      }
     };
   }
 };
 
 export const getInvitationInfoById = async (invitationId: string) => {
   const headers = await getAuthHeaders({ contentType: false });
-  const url = new URL(`${apiBaseUrl}/tenants/invitations/${invitationId}`);
+  const url = new URL(`${getApiBaseUrl()}/tenants/invitations/${invitationId}`);
 
   try {
     const response = await fetch(url.toString(), {
@@ -165,11 +279,26 @@ export const getInvitationInfoById = async (invitationId: string) => {
       headers,
     });
 
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({ message: 'Unknown error' }));
+      return {
+        error: {
+          status: response.status,
+          message: errorData.message || response.statusText,
+          details: errorData
+        }
+      };
+    }
+
     const data = await response.json();
     return parseStringify(data);
+    
   } catch (error) {
     return {
-      error: getErrorMessage(error),
+      error: {
+        message: getErrorMessage(error),
+        details: error instanceof Error ? error.stack : String(error)
+      }
     };
   }
 };
@@ -179,10 +308,15 @@ export const revokeInvite = async (formData: FormData) => {
   const invitationId = formData.get("invitationId");
 
   if (!invitationId) {
-    return { error: "Invitation ID is required" };
+    return { 
+      error: {
+        message: "Invitation ID is required",
+        details: "No invitation ID provided in form data"
+      }
+    };
   }
 
-  const url = new URL(`${apiBaseUrl}/tenants/invitations/${invitationId}`);
+  const url = new URL(`${getApiBaseUrl()}/tenants/invitations/${invitationId}`);
 
   try {
     const response = await fetch(url.toString(), {
@@ -208,9 +342,14 @@ export const revokeInvite = async (formData: FormData) => {
 
     revalidatePath("/invitations");
     return data || { success: true };
+    
   } catch (error) {
-    // eslint-disable-next-line no-console
     console.error("Error revoking invitation:", error);
-    return { error: getErrorMessage(error) };
+    return { 
+      error: {
+        message: getErrorMessage(error),
+        details: error instanceof Error ? error.stack : String(error)
+      }
+    };
   }
 };

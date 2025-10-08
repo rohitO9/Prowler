@@ -5,6 +5,28 @@ import { useToast } from "@/components/ui";
 import { AuthSocialProvider, MetaDataProps, PermissionInfo } from "@/types";
 
 export const baseUrl = process.env.AUTH_URL || "http://localhost:3000";
+<<<<<<< Updated upstream
+=======
+// Dynamic API base URL that respects subdomains
+export const getApiBaseUrl = () => {
+  if (typeof window !== 'undefined') {
+    const hostname = window.location.hostname;
+    const port = '8080'; // Backend API port
+    
+    // Handle localhost development with subdomains
+    if (hostname.includes('localhost')) {
+      return `http://${hostname}:${port}/api/v1`;
+    }
+    
+    // Handle production - assume API is on same domain but different port
+    return `https://${hostname}:${port}/api/v1`;
+  }
+  
+  // Server-side fallback
+  return process.env.API_BASE_URL || "http://127.0.0.1:8080/api/v1";
+};
+
+>>>>>>> Stashed changes
 export const apiBaseUrl = process.env.API_BASE_URL || "http://127.0.0.1:8080/api/v1";
 
 export const getAuthHeaders = async (options?: { contentType?: boolean }) => {

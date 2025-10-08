@@ -1,7 +1,9 @@
+"use client";
 import { AuthForm } from "@/components/auth/oss";
-import { getAuthUrl, isGithubOAuthEnabled } from "@/lib/helper";
-import { isGoogleOAuthEnabled } from "@/lib/helper";
+import { getAuthUrl, isGithubOAuthEnabled, isGoogleOAuthEnabled } from "@/lib/helper";
 import { SearchParamsProps } from "@/types";
+import { useEffect } from "react";
+import { getSubdomain } from "../../../src/utils/subdomain";
 
 const SignUp = ({ searchParams }: { searchParams: SearchParamsProps }) => {
   const invitationToken =
@@ -11,6 +13,14 @@ const SignUp = ({ searchParams }: { searchParams: SearchParamsProps }) => {
 
   const GOOGLE_AUTH_URL = getAuthUrl("google");
   const GITHUB_AUTH_URL = getAuthUrl("github");
+
+  useEffect(() => {
+    // Auto-detect organization from subdomain
+    const subdomain = getSubdomain();
+    if (subdomain && typeof window !== "undefined") {
+      localStorage.setItem("company", subdomain);
+    }
+  }, []);
 
   return (
     <AuthForm

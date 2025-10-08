@@ -3,7 +3,7 @@ import NextAuth, { type NextAuthConfig, User } from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import { z } from "zod";
 
-import { getToken, getUserByMe } from "./actions/auth";
+import { getToken, getUserByMe } from "./actions/auth/auth";
 import { apiBaseUrl } from "./lib";
 
 interface CustomJwtPayload extends JwtPayload {
@@ -65,7 +65,6 @@ export const authConfig = {
     signIn: "/sign-in",
     newUser: "/sign-up",
   },
-
   providers: [
     Credentials({
       name: "credentials",
@@ -141,8 +140,22 @@ export const authConfig = {
     }),
   ],
   callbacks: {
+    redirect({ url, baseUrl }) {
+      // If it's a relative URL, make it absolute
+      if (url.startsWith("/")) {
+        return `${baseUrl}${url}`;
+      }
+      // If it's the same origin, allow it
+      else if (new URL(url).origin === baseUrl) {
+        return url;
+      }
+      // Otherwise redirect to home (authenticated dashboard)
+      return `${baseUrl}/home`;
+    },
+
     authorized({ auth, request: { nextUrl } }) {
       const isLoggedIn = !!auth?.user;
+<<<<<<< Updated upstream
       const isOnDashboard = nextUrl.pathname?.startsWith("/");
       const isSignUpPage = nextUrl.pathname === "/sign-up";
       const isAzureConfigPage = nextUrl.pathname === "/azure";
@@ -155,8 +168,27 @@ export const authConfig = {
         return false; // Redirect users who are not logged in to the login page
       } else if (isLoggedIn) {
         return Response.redirect(new URL("/", nextUrl));
+=======
+      const pathname = nextUrl.pathname;
+      
+      // Public routes that don't require authentication
+      const publicRoutes = ['/register', '/verify-tenant', '/sign-up', '/azure', '/sign-in'];
+      const isPublicRoute = publicRoutes.some(route => pathname.startsWith(route));
+      
+      // Allow access to public routes
+      if (isPublicRoute) {
+        return true;
+>>>>>>> Stashed changes
       }
-      return true;
+      
+      // For root path, allow access (landing page)
+      if (pathname === '/') {
+        return true;
+      }
+      
+      // For all other routes, require authentication
+      if (isLoggedIn) return true;
+      return false; // Redirect users who are not logged in to the login page
     },
 
     jwt: async ({ token, account, user }) => {
