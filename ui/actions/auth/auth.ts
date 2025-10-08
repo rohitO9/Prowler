@@ -155,16 +155,9 @@ export const createNewUser = async (
 // Replace the getToken function in your actions/auth/auth.ts file with this:
 
 export const getToken = async (formData: z.infer<typeof formSchemaSignIn>) => {
-<<<<<<< Updated upstream
-  const url = new URL(`${apiBaseUrl}/tokens`);
-  
-  console.log("Getting token from:", url.toString());
-  console.log("API Base URL:", apiBaseUrl);
-=======
   const url = new URL(`${getApiBaseUrl()}/tokens`);
   
   // Getting token from backend
->>>>>>> Stashed changes
 
   const bodyData = {
     data: {
@@ -233,16 +226,9 @@ export const getToken = async (formData: z.infer<typeof formSchemaSignIn>) => {
 };
 
 export const getUserByMe = async (accessToken: string) => {
-<<<<<<< Updated upstream
-  const url = new URL(`${apiBaseUrl}/users/me`);
-  
-  console.log("Getting user info from:", url.toString());
-  console.log("Using access token length:", accessToken.length);
-=======
   const url = new URL(`${getApiBaseUrl()}/users/me`);
   
   // Getting user info from backend
->>>>>>> Stashed changes
 
   try {
     const response = await fetch(url.toString(), {

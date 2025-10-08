@@ -7,8 +7,13 @@ import {
   isAzureOAuthEnabled,
 } from "@/lib/helper";
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
 import { useEffect, useState } from "react";
 import { apiBaseUrl } from "@/lib";
+=======
+import { useEffect } from "react";
+import { getSubdomain } from "../../../src/utils/subdomain";
+>>>>>>> Stashed changes
 =======
 import { useEffect } from "react";
 import { getSubdomain } from "../../../src/utils/subdomain";
@@ -19,6 +24,7 @@ const SignIn = () => {
   const GITHUB_AUTH_URL = getAuthUrl("github");
   const AZURE_AUTH_URL = getAuthUrl("azure");
 
+<<<<<<< Updated upstream
 <<<<<<< Updated upstream
   const [step, setStep] = useState<number>(1);
   const [tenants, setTenants] = useState<Array<{ id: string; name: string }>>([]);
@@ -87,6 +93,8 @@ const SignIn = () => {
   }
 
 =======
+=======
+>>>>>>> Stashed changes
   useEffect(() => {
     // Auto-detect organization from subdomain
     const subdomain = getSubdomain();
@@ -95,6 +103,9 @@ const SignIn = () => {
     }
   }, []);
 
+<<<<<<< Updated upstream
+>>>>>>> Stashed changes
+=======
 >>>>>>> Stashed changes
   return (
     <AuthForm
@@ -105,7 +116,10 @@ const SignIn = () => {
       isGithubOAuthEnabled={isGithubOAuthEnabled}
       azureAuthUrl={AZURE_AUTH_URL}
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
       // isAzureOAuthEnabled={isAzureOAuthEnabled}
+=======
+>>>>>>> Stashed changes
 =======
 >>>>>>> Stashed changes
     />

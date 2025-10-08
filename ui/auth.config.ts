@@ -156,6 +156,7 @@ export const authConfig = {
     authorized({ auth, request: { nextUrl } }) {
       const isLoggedIn = !!auth?.user;
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
       const isOnDashboard = nextUrl.pathname?.startsWith("/");
       const isSignUpPage = nextUrl.pathname === "/sign-up";
       const isAzureConfigPage = nextUrl.pathname === "/azure";
@@ -169,6 +170,8 @@ export const authConfig = {
       } else if (isLoggedIn) {
         return Response.redirect(new URL("/", nextUrl));
 =======
+=======
+>>>>>>> Stashed changes
       const pathname = nextUrl.pathname;
       
       // Public routes that don't require authentication
@@ -178,6 +181,9 @@ export const authConfig = {
       // Allow access to public routes
       if (isPublicRoute) {
         return true;
+<<<<<<< Updated upstream
+>>>>>>> Stashed changes
+=======
 >>>>>>> Stashed changes
       }
       

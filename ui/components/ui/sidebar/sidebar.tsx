@@ -34,7 +34,11 @@ export function Sidebar({ user }: { user: UserProfileProps }) {
       >
         <div className="flex flex-col items-center justify-center mb-6">
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
           <Link href="/" className="group flex flex-row items-start gap-3">
+=======
+          <Link href="/home" className="group flex flex-row items-start gap-3">
+>>>>>>> Stashed changes
 =======
           <Link href="/home" className="group flex flex-row items-start gap-3">
 >>>>>>> Stashed changes
