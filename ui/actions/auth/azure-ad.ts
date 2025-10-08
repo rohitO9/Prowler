@@ -1,7 +1,7 @@
 "use server";
 
 import { signIn } from "@/auth.config";
-import { apiBaseUrl } from "@/lib";
+import { getApiBaseUrl } from "@/lib/helper";
 
 export interface AzureADConfig {
   client_id: string;
@@ -30,7 +30,7 @@ export interface AzureADTokenResponse {
  */
 export const getAzureADConfig = async (): Promise<AzureADConfig | null> => {
   try {
-    const response = await fetch(`${apiBaseUrl}/tokens/azure/config`, {
+    const response = await fetch(`${getApiBaseUrl()}/tokens/azure/config`, {
       method: "GET",
       headers: {
         "Content-Type": "application/vnd.api+json",
@@ -59,7 +59,7 @@ export const getAzureADConfig = async (): Promise<AzureADConfig | null> => {
  */
 export const exchangeAzureADCode = async (code: string, tenantName?: string): Promise<AzureADTokenResponse | null> => {
   try {
-    const response = await fetch(`${apiBaseUrl}/tokens/azure`, {
+    const response = await fetch(`${getApiBaseUrl()}/tokens/azure`, {
       method: "POST",
       headers: {
         "Content-Type": "application/vnd.api+json",
@@ -88,7 +88,7 @@ export const exchangeAzureADCode = async (code: string, tenantName?: string): Pr
  */
 export const testAzureADAuth = async (code: string): Promise<any> => {
   try {
-    const response = await fetch(`${apiBaseUrl}/tokens/azure/test`, {
+    const response = await fetch(`${getApiBaseUrl()}/tokens/azure/test`, {
       method: "POST",
       headers: {
         "Content-Type": "application/vnd.api+json",
@@ -117,7 +117,7 @@ export const testAzureADAuth = async (code: string): Promise<any> => {
  */
 export const checkTrialStatus = async (email: string): Promise<any> => {
   try {
-    const response = await fetch(`${apiBaseUrl}/tokens/azure/trial-status?email=${encodeURIComponent(email)}`, {
+    const response = await fetch(`${getApiBaseUrl()}/tokens/azure/trial-status?email=${encodeURIComponent(email)}`, {
       method: "GET",
       headers: {
         "Content-Type": "application/vnd.api+json",

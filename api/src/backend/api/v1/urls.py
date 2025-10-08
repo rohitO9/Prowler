@@ -2,6 +2,7 @@ from django.urls import include, path
 from drf_spectacular.views import SpectacularRedocView
 from rest_framework_nested import routers
 
+from api.v1.views.tenant_views import get_public_tenant_info
 from api.v1.views import (
     ComplianceOverviewViewSet,
     CustomTokenObtainView,
@@ -138,6 +139,7 @@ urlpatterns = [
     path("tokens/azure/trial-status", trial_status, name="trial-status"),
     path("auth/azure/login", AzureLoginView.as_view(), name="azure-login"),
     path("auth/azure/callback", AzureCallbackView.as_view(), name="azure-callback"),
+    path("tenant/public-info", get_public_tenant_info, name="tenant-public-info"),
 
     path("", include(router.urls)),
     path("", include(tenants_router.urls)),

@@ -1,7 +1,7 @@
 "use server";
 
 import { z } from "zod";
-import { apiBaseUrl } from "@/lib";
+import { getApiBaseUrl } from "@/lib/helper";
 import { authFormSchema } from "@/types";
 
 const azureConfigSchema = authFormSchema("azure-config");
@@ -9,7 +9,7 @@ const azureConfigSchema = authFormSchema("azure-config");
 export const configureAzureAD = async (
   formData: z.infer<typeof azureConfigSchema>,
 ) => {
-  const url = new URL(`${apiBaseUrl}/tokens/azure/config`);
+  const url = new URL(`${getApiBaseUrl()}/tokens/azure/config`);
 
   const bodyData = {
     tenant_name: formData.tenant_name,

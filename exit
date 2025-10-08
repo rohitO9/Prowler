@@ -1,0 +1,872 @@
+[1mdiff --git a/ui/.gitignore b/ui/.gitignore[m
+[1mindex 9f1179b12..45c1abce8 100644[m
+[1m--- a/ui/.gitignore[m
+[1m+++ b/ui/.gitignore[m
+[36m@@ -34,8 +34,3 @@[m [myarn-error.log*[m
+ # typescript[m
+ *.tsbuildinfo[m
+ next-env.d.ts[m
+[31m-[m
+[31m-[m
+[31m-node_modules_tmp/[m
+[31m-node_modules/[m
+[31m-.next/[m
+[1mdiff --git a/ui/actions/auth/auth.ts b/ui/actions/auth/auth.ts[m
+[1mindex e0e3a75e2..0cad6cafa 100644[m
+[1m--- a/ui/actions/auth/auth.ts[m
+[1m+++ b/ui/actions/auth/auth.ts[m
+[36m@@ -4,7 +4,7 @@[m [mimport { AuthError } from "next-auth";[m
+ import { z } from "zod";[m
+ [m
+ import { signIn, signOut } from "@/auth.config";[m
+[31m-import { apiBaseUrl } from "@/lib";[m
+[32m+[m[32mimport { getApiBaseUrl } from "@/lib/helper";[m
+ import { authFormSchema } from "@/types";[m
+ [m
+ const formSchemaSignIn = authFormSchema("sign-in");[m
+[36m@@ -15,19 +15,56 @@[m [mconst defaultValues: z.infer<typeof formSchemaSignIn> = {[m
+   password: "",[m
+ };[m
+ [m
+[32m+[m[32m// Enhanced helper to check JSON content type with better error handling[m
+[32m+[m[32masync function safeJsonParse(response: Response) {[m
+[32m+[m[32m  const contentType = response.headers.get("content-type") || "";[m
+[32m+[m[41m  [m
+[32m+[m[32m  // Log response details for debugging[m
+[32m+[m[32m  console.log(`Response status: ${response.status} ${response.statusText}`);[m
+[32m+[m[32m  console.log(`Content-Type: ${contentType}`);[m
+[32m+[m[32m  console.log(`Response URL: ${response.url}`);[m
+[32m+[m[41m  [m
+[32m+[m[32m  if ([m
+[32m+[m[32m    !contentType.includes("application/json") &&[m
+[32m+[m[32m    !contentType.includes("application/vnd.api+json")[m
+[32m+[m[32m  ) {[m
+[32m+[m[32m    const text = await response.text();[m
+[32m+[m[32m    console.error("Non-JSON response received:", text.substring(0, 500));[m
+[32m+[m[32m    throw new Error([m
+[32m+[m[32m      `Non-JSON response from backend (${response.status}):\n${text.substring(0, 200)}`[m
+[32m+[m[32m    );[m
+[32m+[m[32m  }[m
+[32m+[m[41m  [m
+[32m+[m[41m  [m
+[32m+[m[32m  try {[m
+[32m+[m[32m    const json = await response.json();[m
+[32m+[m[32m    console.log("Parsed JSON response:", JSON.stringify(json, null, 2));[m
+[32m+[m[32m    return json;[m
+[32m+[m[32m  } catch (parseError) {[m
+[32m+[m[32m    console.error("Failed to parse JSON:", parseError);[m
+[32m+[m[32m    throw new Error("Invalid JSON response from backend");[m
+[32m+[m[32m  }[m
+[32m+[m[32m}[m
+[32m+[m
+ export async function authenticate([m
+   prevState: unknown,[m
+[31m-  formData: z.infer<typeof formSchemaSignIn>,[m
+[32m+[m[32m  formData: z.infer<typeof formSchemaSignIn>[m
+ ) {[m
+   try {[m
+[32m+[m[32m    console.log("Attempting authentication for:", formData.email);[m
+     await signIn("credentials", {[m
+       ...formData,[m
+[32m+[m[32m      // Support enterprise: allow passing organization/tenant name from UI as "company"[m
+[32m+[m[32m      // NextAuth authorize will forward these to the backend token endpoint[m
+[32m+[m[32m      tenant_name: (formData as any).company,[m
+       redirect: false,[m
+     });[m
+     return {[m
+       message: "Success",[m
+     };[m
+   } catch (error) {[m
+[32m+[m[32m    console.error("Authentication error:", error);[m
+[32m+[m[41m    [m
+     if (error instanceof AuthError) {[m
+       switch (error.type) {[m
+         case "CredentialsSignin":[m
+[36m@@ -40,25 +77,32 @@[m [mexport async function authenticate([m
+           };[m
+         case "CallbackRouteError":[m
+           return {[m
+[31m-            message: error.cause?.err?.message,[m
+[32m+[m[32m            message: error.cause?.err?.message || "Callback route error",[m
+           };[m
+         default:[m
+           return {[m
+[31m-            message: "Unknown error",[m
+[32m+[m[32m            message: "Unknown auth error",[m
+             errors: {[m
+               ...defaultValues,[m
+[31m-              unknown: "Unknown error",[m
+[32m+[m[32m              unknown: error.message || "Unknown authentication error",[m
+             },[m
+           };[m
+       }[m
+     }[m
+[32m+[m[32m    return {[m
+[32m+[m[32m      message: "Unexpected error",[m
+[32m+[m[32m      errors: {[m
+[32m+[m[32m        ...defaultValues,[m
+[32m+[m[32m        unknown: (error as Error).message || "Unexpected error occurred",[m
+[32m+[m[32m      },[m
+[32m+[m[32m    };[m
+   }[m
+ }[m
+ [m
+ export const createNewUser = async ([m
+[31m-  formData: z.infer<typeof formSchemaSignUp>,[m
+[32m+[m[32m  formData: z.infer<typeof formSchemaSignUp>[m
+ ) => {[m
+[31m-  const url = new URL(`${apiBaseUrl}/users`);[m
+[32m+[m[32m  const url = new URL(`${getApiBaseUrl()}/users`);[m
+ [m
+   if (formData.invitationToken) {[m
+     url.searchParams.append("invitation_token", formData.invitationToken);[m
+[36m@@ -75,6 +119,9 @@[m [mexport const createNewUser = async ([m
+       },[m
+     },[m
+   };[m
+[32m+[m[41m  [m
+[32m+[m[32m  console.log("Creating new user with payload:", bodyData);[m
+[32m+[m[32m  console.log("API URL:", url.toString());[m
+ [m
+   try {[m
+     const response = await fetch(url.toString(), {[m
+[36m@@ -86,26 +133,31 @@[m [mexport const createNewUser = async ([m
+       body: JSON.stringify(bodyData),[m
+     });[m
+ [m
+[31m-    const parsedResponse = await response.json();[m
+[32m+[m[32m    const parsedResponse = await safeJsonParse(response);[m
+     if (!response.ok) {[m
+       return parsedResponse;[m
+     }[m
+ [m
+     return parsedResponse;[m
+   } catch (error) {[m
+[32m+[m[32m    console.error("Create user error:", error);[m
+     return {[m
+       errors: [[m
+         {[m
+           source: { pointer: "" },[m
+[31m-          detail: "Network error or server is unreachable",[m
+[32m+[m[32m          detail: error instanceof Error ? error.message : "Network error or server is unreachable",[m
+         },[m
+       ],[m
+     };[m
+   }[m
+ };[m
+ [m
+[32m+[m[32m// Replace the getToken function in your actions/auth/auth.ts file with this:[m
+[32m+[m
+ export const getToken = async (formData: z.infer<typeof formSchemaSignIn>) => {[m
+[31m-  const url = new URL(`${apiBaseUrl}/tokens`);[m
+[32m+[m[32m  const url = new URL(`${getApiBaseUrl()}/tokens`);[m
+[32m+[m[41m  [m
+[32m+[m[32m  // Getting token from backend[m
+ [m
+   const bodyData = {[m
+     data: {[m
+[36m@@ -113,11 +165,15 @@[m [mexport const getToken = async (formData: z.infer<typeof formSchemaSignIn>) => {[m
+       attributes: {[m
+         email: formData.email,[m
+         password: formData.password,[m
+[32m+[m[32m        // enterprise: optionally send tenant_name to select organization context[m
+[32m+[m[32m        ...(formData as any)?.company ? { tenant_name: (formData as any).company } : {},[m
+       },[m
+     },[m
+   };[m
+ [m
+   try {[m
+[32m+[m[32m    console.log("Token request payload:", bodyData);[m
+[32m+[m[41m    [m
+     const response = await fetch(url.toString(), {[m
+       method: "POST",[m
+       headers: {[m
+[36m@@ -127,23 +183,52 @@[m [mexport const getToken = async (formData: z.infer<typeof formSchemaSignIn>) => {[m
+       body: JSON.stringify(bodyData),[m
+     });[m
+ [m
+[31m-    if (!response.ok) return null;[m
+[32m+[m[32m    if (!response.ok) {[m
+[32m+[m[32m      let errorMsg = `Token request failed (${response.status} ${response.statusText})`;[m
+[32m+[m[32m      try {[m
+[32m+[m[32m        const parsed = await safeJsonParse(response);[m
+[32m+[m[32m        errorMsg = parsed?.errors?.[0]?.detail || errorMsg;[m
+[32m+[m[32m      } catch (parseErr: unknown) {[m
+[32m+[m[32m        console.error("Failed to parse error response:", parseErr);[m
+[32m+[m[32m        if (parseErr instanceof Error) {[m
+[32m+[m[32m          errorMsg = `${errorMsg} - Parse error: ${parseErr.message}`;[m
+[32m+[m[32m        } else {[m
+[32m+[m[32m          errorMsg = `${errorMsg} - Parse error: ${String(parseErr)}`;[m
+[32m+[m[32m        }[m
+[32m+[m[32m      }[m
+[32m+[m[32m      throw new Error(errorMsg);[m
+[32m+[m[32m    }[m
+[32m+[m
+[32m+[m[32m    const parsedResponse = await safeJsonParse(response);[m
+[32m+[m[41m    [m
+[32m+[m[32m    // FIX: Access tokens directly from data object, not data.attributes[m
+[32m+[m[32m    const accessToken = parsedResponse?.data?.access;[m
+[32m+[m[32m    const refreshToken = parsedResponse?.data?.refresh;[m
+[32m+[m
+[32m+[m[32m    if (!accessToken || !refreshToken) {[m
+[32m+[m[32m      console.error("Missing tokens in response:", parsedResponse);[m
+[32m+[m[32m      throw new Error("Tokens missing in backend response.");[m
+[32m+[m[32m    }[m
+ [m
+[31m-    const parsedResponse = await response.json();[m
+[32m+[m[32m    console.log("Successfully received tokens:", {[m
+[32m+[m[32m      accessTokenLength: accessToken.length,[m
+[32m+[m[32m      refreshTokenLength: refreshToken.length,[m
+[32m+[m[32m    });[m
+ [m
+[31m-    const accessToken = parsedResponse.data.attributes.access;[m
+[31m-    const refreshToken = parsedResponse.data.attributes.refresh;[m
+     return {[m
+       accessToken,[m
+       refreshToken,[m
+     };[m
+   } catch (error) {[m
+[31m-    throw new Error("Error in trying to get token");[m
+[32m+[m[32m    console.error("getToken error:", error);[m
+[32m+[m[32m    throw new Error(error instanceof Error ? error.message : "Error in trying to get token");[m
+   }[m
+ };[m
+ [m
+ export const getUserByMe = async (accessToken: string) => {[m
+[31m-  const url = new URL(`${apiBaseUrl}/users/me`);[m
+[32m+[m[32m  const url = new URL(`${getApiBaseUrl()}/users/me`);[m
+[32m+[m[41m  [m
+[32m+[m[32m  // Getting user info from backend[m
+ [m
+   try {[m
+     const response = await fetch(url.toString(), {[m
+[36m@@ -154,34 +239,44 @@[m [mexport const getUserByMe = async (accessToken: string) => {[m
+       },[m
+     });[m
+ [m
+[31m-    const parsedResponse = await response.json();[m
+[32m+[m[32m    const parsedResponse = await safeJsonParse(response);[m
+[32m+[m
+     if (!response.ok) {[m
+[31m-      // Handle different HTTP error codes[m
+[32m+[m[32m      let errorMsg = `Get user failed (${response.status} ${response.statusText})`;[m
+[32m+[m
+       switch (response.status) {[m
+         case 401:[m
+[31m-          throw new Error("Invalid or expired token");[m
+[32m+[m[32m          errorMsg = "Invalid or expired token";[m
+[32m+[m[32m          break;[m
+         case 403:[m
+[31m-          throw new Error(parsedResponse.errors?.[0]?.detail);[m
+[32m+[m[32m          errorMsg = parsedResponse.errors?.[0]?.detail || "Forbidden";[m
+[32m+[m[32m          break;[m
+         case 404:[m
+[31m-          throw new Error("User not found");[m
+[32m+[m[32m          errorMsg = "User not found";[m
+[32m+[m[32m          break;[m
+         default:[m
+[31m-          throw new Error([m
+[31m-            parsedResponse.errors?.[0]?.detail || "Unknown error",[m
+[31m-          );[m
+[32m+[m[32m          errorMsg = parsedResponse.errors?.[0]?.detail || errorMsg;[m
+       }[m
+[32m+[m[32m      throw new Error(errorMsg);[m
+     }[m
+ [m
+[31m-    return {[m
+[32m+[m[32m    const userData = {[m
+       name: parsedResponse.data.attributes.name,[m
+       email: parsedResponse.data.attributes.email,[m
+       company: parsedResponse.data.attributes.company_name,[m
+       dateJoined: parsedResponse.data.attributes.date_joined,[m
+     };[m
+[32m+[m[41m    [m
+[32m+[m[32m    console.log("Successfully retrieved user data:", userData);[m
+[32m+[m[32m    return userData;[m
+[32m+[m[41m    [m
+   } catch (error: any) {[m
+[32m+[m[32m    console.error("getUserByMe error:", error);[m
+     throw new Error(error.message || "Network error or server unreachable");[m
+   }[m
+ };[m
+ [m
+ export async function logOut() {[m
+[32m+[m[32m  console.log("Logging out user");[m
+   await signOut();[m
+[31m-}[m
+[32m+[m[32m}[m
+\ No newline at end of file[m
+[1mdiff --git a/ui/actions/invitations/invitation.ts b/ui/actions/invitations/invitation.ts[m
+[1mindex 44cbd1a45..76f142c33 100644[m
+[1m--- a/ui/actions/invitations/invitation.ts[m
+[1m+++ b/ui/actions/invitations/invitation.ts[m
+[36m@@ -4,7 +4,7 @@[m [mimport { revalidatePath } from "next/cache";[m
+ import { redirect } from "next/navigation";[m
+ [m
+ import {[m
+[31m-  apiBaseUrl,[m
+[32m+[m[32m  getApiBaseUrl,[m
+   getAuthHeaders,[m
+   getErrorMessage,[m
+   parseStringify,[m
+[36m@@ -21,7 +21,7 @@[m [mexport const getInvitations = async ({[m
+ [m
+   if (isNaN(Number(page)) || page < 1) redirect("/invitations");[m
+ [m
+[31m-  const url = new URL(`${apiBaseUrl}/tenants/invitations`);[m
+[32m+[m[32m  const url = new URL(`${getApiBaseUrl()}/tenants/invitations`);[m
+ [m
+   if (page) url.searchParams.append("page[number]", page.toString());[m
+   if (pageSize) url.searchParams.append("page[size]", pageSize.toString());[m
+[36m@@ -36,17 +36,106 @@[m [mexport const getInvitations = async ({[m
+   });[m
+ [m
+   try {[m
+[32m+[m[32m    console.log('Fetching invitations from:', url.toString());[m
+[32m+[m[41m    [m
+     const invitations = await fetch(url.toString(), {[m
+       headers,[m
+     });[m
+[32m+[m
+[32m+[m[32m    if (!invitations.ok) {[m
+[32m+[m[32m      console.error(`HTTP Error: ${invitations.status} ${invitations.statusText}`);[m
+[32m+[m[32m      const errorText = await invitations.text();[m
+[32m+[m[32m      console.error('Error response body:', errorText);[m
+[32m+[m[41m      [m
+[32m+[m[32m      // Return a consistent error structure instead of undefined[m
+[32m+[m[32m      return {[m
+[32m+[m[32m        data: [],[m
+[32m+[m[32m        meta: {[m
+[32m+[m[32m          total: 0,[m
+[32m+[m[32m          page: Number(page),[m
+[32m+[m[32m          pageSize: Number(pageSize)[m
+[32m+[m[32m        },[m
+[32m+[m[32m        error: {[m
+[32m+[m[32m          status: invitations.status,[m
+[32m+[m[32m          message: invitations.statusText,[m
+[32m+[m[32m          details: errorText[m
+[32m+[m[32m        }[m
+[32m+[m[32m      };[m
+[32m+[m[32m    }[m
+[32m+[m
+[32m+[m[32m    // Check if response is JSON[m
+[32m+[m[32m    const contentType = invitations.headers.get('content-type');[m
+[32m+[m[32m    if (!contentType?.includes('application/json')) {[m
+[32m+[m[32m      console.error('Invalid content type:', contentType);[m
+[32m+[m[32m      const text = await invitations.text();[m
+[32m+[m[32m      console.error('Non-JSON response:', text.substring(0, 500));[m
+[32m+[m[41m      [m
+[32m+[m[32m      return {[m
+[32m+[m[32m        data: [],[m
+[32m+[m[32m        meta: {[m
+[32m+[m[32m          total: 0,[m
+[32m+[m[32m          page: Number(page),[m
+[32m+[m[32m          pageSize: Number(pageSize)[m
+[32m+[m[32m        },[m
+[32m+[m[32m        error: {[m
+[32m+[m[32m          message: 'Invalid response format - expected JSON',[m
+[32m+[m[32m          details: `Content-Type: ${contentType}`[m
+[32m+[m[32m        }[m
+[32m+[m[32m      };[m
+[32m+[m[32m    }[m
+[32m+[m
+     const data = await invitations.json();[m
+     const parsedData = parseStringify(data);[m
+[32m+[m[41m    [m
+[32m+[m[32m    // Validate the response structure[m
+[32m+[m[32m    if (!parsedData || typeof parsedData !== 'object') {[m
+[32m+[m[32m      console.error('Invalid response data structure:', parsedData);[m
+[32m+[m[32m      return {[m
+[32m+[m[32m        data: [],[m
+[32m+[m[32m        meta: {[m
+[32m+[m[32m          total: 0,[m
+[32m+[m[32m          page: Number(page),[m
+[32m+[m[32m          pageSize: Number(pageSize)[m
+[32m+[m[32m        },[m
+[32m+[m[32m        error: {[m
+[32m+[m[32m          message: 'Invalid response data structure',[m
+[32m+[m[32m          details: 'Response is not a valid object'[m
+[32m+[m[32m        }[m
+[32m+[m[32m      };[m
+[32m+[m[32m    }[m
+[32m+[m
+[32m+[m[32m    // Ensure consistent data structure[m
+[32m+[m[32m    const normalizedData = {[m
+[32m+[m[32m      data: Array.isArray(parsedData.data) ? parsedData.data :[m[41m [m
+[32m+[m[32m            parsedData.data ? [parsedData.data] : [],[m
+[32m+[m[32m      meta: parsedData.meta || {[m
+[32m+[m[32m        total: 0,[m
+[32m+[m[32m        page: Number(page),[m
+[32m+[m[32m        pageSize: Number(pageSize)[m
+[32m+[m[32m      },[m
+[32m+[m[32m      ...parsedData[m
+[32m+[m[32m    };[m
+[32m+[m
+[32m+[m[32m    console.log('Successfully fetched invitations:', normalizedData.data.length, 'items');[m
+     revalidatePath("/invitations");[m
+[31m-    return parsedData;[m
+[32m+[m[32m    return normalizedData;[m
+[32m+[m
+   } catch (error) {[m
+[31m-    // eslint-disable-next-line no-console[m
+     console.error("Error fetching invitations:", error);[m
+[31m-    return undefined;[m
+[32m+[m[41m    [m
+[32m+[m[32m    // Return a consistent error structure instead of undefined[m
+[32m+[m[32m    return {[m
+[32m+[m[32m      data: [],[m
+[32m+[m[32m      meta: {[m
+[32m+[m[32m        total: 0,[m
+[32m+[m[32m        page: Number(page),[m
+[32m+[m[32m        pageSize: Number(pageSize)[m
+[32m+[m[32m      },[m
+[32m+[m[32m      error: {[m
+[32m+[m[32m        message: getErrorMessage(error),[m
+[32m+[m[32m        details: error instanceof Error ? error.stack : String(error)[m
+[32m+[m[32m      }[m
+[32m+[m[32m    };[m
+   }[m
+ };[m
+ [m
+[36m@@ -55,7 +144,7 @@[m [mexport const sendInvite = async (formData: FormData) => {[m
+ [m
+   const email = formData.get("email");[m
+   const role = formData.get("role");[m
+[31m-  const url = new URL(`${apiBaseUrl}/tenants/invitations`);[m
+[32m+[m[32m  const url = new URL(`${getApiBaseUrl()}/tenants/invitations`);[m
+ [m
+   const body = JSON.stringify({[m
+     data: {[m
+[36m@@ -84,12 +173,27 @@[m [mexport const sendInvite = async (formData: FormData) => {[m
+       headers,[m
+       body,[m
+     });[m
+[31m-    const data = await response.json();[m
+ [m
+[32m+[m[32m    if (!response.ok) {[m
+[32m+[m[32m      const errorData = await response.json().catch(() => ({ message: 'Unknown error' }));[m
+[32m+[m[32m      return {[m
+[32m+[m[32m        error: {[m
+[32m+[m[32m          status: response.status,[m
+[32m+[m[32m          message: errorData.message || response.statusText,[m
+[32m+[m[32m          details: errorData[m
+[32m+[m[32m        }[m
+[32m+[m[32m      };[m
+[32m+[m[32m    }[m
+[32m+[m
+[32m+[m[32m    const data = await response.json();[m
+     return parseStringify(data);[m
+[32m+[m[41m    [m
+   } catch (error) {[m
+     return {[m
+[31m-      error: getErrorMessage(error),[m
+[32m+[m[32m      error: {[m
+[32m+[m[32m        message: getErrorMessage(error),[m
+[32m+[m[32m        details: error instanceof Error ? error.stack : String(error)[m
+[32m+[m[32m      }[m
+     };[m
+   }[m
+ };[m
+[36m@@ -104,7 +208,7 @@[m [mexport const updateInvite = async (formData: FormData) => {[m
+     formData.get("expires_at") ||[m
+     new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();[m
+ [m
+[31m-  const url = new URL(`${apiBaseUrl}/tenants/invitations/${invitationId}`);[m
+[32m+[m[32m  const url = new URL(`${getApiBaseUrl()}/tenants/invitations/${invitationId}`);[m
+ [m
+   const body: any = {[m
+     data: {[m
+[36m@@ -141,23 +245,33 @@[m [mexport const updateInvite = async (formData: FormData) => {[m
+     });[m
+ [m
+     if (!response.ok) {[m
+[31m-      const error = await response.json();[m
+[31m-      return { error };[m
+[32m+[m[32m      const error = await response.json().catch(() => ({ message: 'Unknown error' }));[m
+[32m+[m[32m      return {[m[41m [m
+[32m+[m[32m        error: {[m
+[32m+[m[32m          status: response.status,[m
+[32m+[m[32m          message: error.message || response.statusText,[m
+[32m+[m[32m          details: error[m
+[32m+[m[32m        }[m
+[32m+[m[32m      };[m
+     }[m
+ [m
+     const data = await response.json();[m
+     revalidatePath("/invitations");[m
+     return parseStringify(data);[m
+[32m+[m[41m    [m
+   } catch (error) {[m
+     return {[m
+[31m-      error: getErrorMessage(error),[m
+[32m+[m[32m      error: {[m
+[32m+[m[32m        message: getErrorMessage(error),[m
+[32m+[m[32m        details: error instanceof Error ? error.stack : String(error)[m
+[32m+[m[32m      }[m
+     };[m
+   }[m
+ };[m
+ [m
+ export const getInvitationInfoById = async (invitationId: string) => {[m
+   const headers = await getAuthHeaders({ contentType: false });[m
+[31m-  const url = new URL(`${apiBaseUrl}/tenants/invitations/${invitationId}`);[m
+[32m+[m[32m  const url = new URL(`${getApiBaseUrl()}/tenants/invitations/${invitationId}`);[m
+ [m
+   try {[m
+     const response = await fetch(url.toString(), {[m
+[36m@@ -165,11 +279,26 @@[m [mexport const getInvitationInfoById = async (invitationId: string) => {[m
+       headers,[m
+     });[m
+ [m
+[32m+[m[32m    if (!response.ok) {[m
+[32m+[m[32m      const errorData = await response.json().catch(() => ({ message: 'Unknown error' }));[m
+[32m+[m[32m      return {[m
+[32m+[m[32m        error: {[m
+[32m+[m[32m          status: response.status,[m
+[32m+[m[32m          message: errorData.message || response.statusText,[m
+[32m+[m[32m          details: errorData[m
+[32m+[m[32m        }[m
+[32m+[m[32m      };[m
+[32m+[m[32m    }[m
+[32m+[m
+     const data = await response.json();[m
+     return parseStringify(data);[m
+[32m+[m[41m    [m
+   } catch (error) {[m
+     return {[m
+[31m-      error: getErrorMessage(error),[m
+[32m+[m[32m      error: {[m
+[32m+[m[32m        message: getErrorMessage(error),[m
+[32m+[m[32m        details: error instanceof Error ? error.stack : String(error)[m
+[32m+[m[32m      }[m
+     };[m
+   }[m
+ };[m
+[36m@@ -179,10 +308,15 @@[m [mexport const revokeInvite = async (formData: FormData) => {[m
+   const invitationId = formData.get("invitationId");[m
+ [m
+   if (!invitationId) {[m
+[31m-    return { error: "Invitation ID is required" };[m
+[32m+[m[32m    return {[m[41m [m
+[32m+[m[32m      error: {[m
+[32m+[m[32m        message: "Invitation ID is required",[m
+[32m+[m[32m        details: "No invitation ID provided in form data"[m
+[32m+[m[32m      }[m
+[32m+[m[32m    };[m
+   }[m
+ [m
+[31m-  const url = new URL(`${apiBaseUrl}/tenants/invitations/${invitationId}`);[m
+[32m+[m[32m  const url = new URL(`${getApiBaseUrl()}/tenants/invitations/${invitationId}`);[m
+ [m
+   try {[m
+     const response = await fetch(url.toString(), {[m
+[36m@@ -208,9 +342,14 @@[m [mexport const revokeInvite = async (formData: FormData) => {[m
+ [m
+     revalidatePath("/invitations");[m
+     return data || { success: true };[m
+[32m+[m[41m    [m
+   } catch (error) {[m
+[31m-    // eslint-disable-next-line no-console[m
+     console.error("Error revoking invitation:", error);[m
+[31m-    return { error: getErrorMessage(error) };[m
+[32m+[m[32m    return {[m[41m [m
+[32m+[m[32m      error: {[m
+[32m+[m[32m        message: getErrorMessage(error),[m
+[32m+[m[32m        details: error instanceof Error ? error.stack : String(error)[m
+[32m+[m[32m      }[m
+[32m+[m[32m    };[m
+   }[m
+[31m-};[m
+[32m+[m[32m};[m
+\ No newline at end of file[m
+[1mdiff --git a/ui/actions/overview/overview.ts b/ui/actions/overview/overview.ts[m
+[1mindex 3a95a2a3f..62a0f5194 100644[m
+[1m--- a/ui/actions/overview/overview.ts[m
+[1m+++ b/ui/actions/overview/overview.ts[m
+[36m@@ -32,6 +32,15 @@[m [mexport const getProvidersOverview = async ({[m
+       headers,[m
+     });[m
+ [m
+[32m+[m[32m    if (!response.ok) {[m
+[32m+[m[32m      throw new Error(`Failed to fetch providers overview: ${response.status}`);[m
+[32m+[m[32m    }[m
+[32m+[m
+[32m+[m[32m    const contentType = response.headers.get("content-type") || "";[m
+[32m+[m[32m    if (!contentType.includes("application/json")) {[m
+[32m+[m[32m      throw new Error("Unexpected response format");[m
+[32m+[m[32m    }[m
+[32m+[m
+     const data = await response.json();[m
+     const parsedData = parseStringify(data);[m
+     revalidatePath("/");[m
+[1mdiff --git a/ui/actions/users/users.ts b/ui/actions/users/users.ts[m
+[1mindex 4eb730125..5cc80423e 100644[m
+[1m--- a/ui/actions/users/users.ts[m
+[1m+++ b/ui/actions/users/users.ts[m
+[36m@@ -36,10 +36,22 @@[m [mexport const getUsers = async ({[m
+   });[m
+ [m
+   try {[m
+[32m+[m[32m    console.log("Fetching users from:", url.toString());[m
+[32m+[m[32m    console.log("Headers:", headers);[m
+[32m+[m[41m    [m
+     const users = await fetch(url.toString(), {[m
+       headers,[m
+     });[m
+[32m+[m[41m    [m
+[32m+[m[32m    console.log("Response status:", users.status, users.statusText);[m
+[32m+[m[41m    [m
+     const data = await users.json();[m
+[32m+[m[32m    console.log("Users response data:", {[m
+[32m+[m[32m      totalUsers: data?.data?.length || 0,[m
+[32m+[m[32m      firstUser: data?.data?.[0] || null,[m
+[32m+[m[32m      meta: data?.meta || null[m
+[32m+[m[32m    });[m
+[32m+[m[41m    [m
+     const parsedData = parseStringify(data);[m
+     revalidatePath("/users");[m
+     return parsedData;[m
+[36m@@ -210,6 +222,109 @@[m [mexport const getUserInfo = async () => {[m
+   }[m
+ };[m
+ [m
+[32m+[m[32mexport const getTrialInfo = async () => {[m
+[32m+[m[32m  const headers = await getAuthHeaders({ contentType: false });[m
+[32m+[m[32m  const url = new URL(`${apiBaseUrl}/trial/info`);[m
+[32m+[m
+[32m+[m[32m  try {[m
+[32m+[m[32m    console.log("Fetching trial info from:", url.toString());[m
+[32m+[m[41m    [m
+[32m+[m[32m    const response = await fetch(url.toString(), {[m
+[32m+[m[32m      method: "GET",[m
+[32m+[m[32m      headers,[m
+[32m+[m[32m    });[m
+[32m+[m
+[32m+[m[32m    if (!response.ok) {[m
+[32m+[m[32m      throw new Error(`Failed to fetch trial data: ${response.statusText}`);[m
+[32m+[m[32m    }[m
+[32m+[m
+[32m+[m[32m    const data = await response.json();[m
+[32m+[m[32m    console.log("Raw trial API response:", data);[m
+[32m+[m[41m    [m
+[32m+[m[32m    return data;[m
+[32m+[m[32m  } catch (error) {[m
+[32m+[m[32m    console.error("Error fetching trial info:", error);[m
+[32m+[m[32m    return {[m
+[32m+[m[32m      trial_start: null,[m
+[32m+[m[32m      trial_end: null,[m
+[32m+[m[32m      is_trial_active: false,[m
+[32m+[m[32m      days_remaining: null,[m
+[32m+[m[32m      trial_status: 'error'[m
+[32m+[m[32m    };[m
+[32m+[m[32m  }[m
+[32m+[m[32m};[m
+[32m+[m
+[32m+[m[32mexport const startTrial = async (days: number = 7) => {[m
+[32m+[m[32m  const headers = await getAuthHeaders({ contentType: true });[m
+[32m+[m[32m  const url = new URL(`${apiBaseUrl}/trial/start`);[m
+[32m+[m
+[32m+[m[32m  try {[m
+[32m+[m[32m    const response = await fetch(url.toString(), {[m
+[32m+[m[32m      method: "POST",[m
+[32m+[m[32m      headers,[m
+[32m+[m[32m      body: JSON.stringify({ days }),[m
+[32m+[m[32m    });[m
+[32m+[m
+[32m+[m[32m    if (!response.ok) {[m
+[32m+[m[32m      throw new Error(`Failed to start trial: ${response.statusText}`);[m
+[32m+[m[32m    }[m
+[32m+[m
+[32m+[m[32m    const data = await response.json();[m
+[32m+[m[32m    revalidatePath("/");[m
+[32m+[m[32m    return data;[m
+[32m+[m[32m  } catch (error) {[m
+[32m+[m[32m    console.error("Error starting trial:", error);[m
+[32m+[m[32m    return { error: getErrorMessage(error) };[m
+[32m+[m[32m  }[m
+[32m+[m[32m};[m
+[32m+[m
+[32m+[m[32mexport const extendTrial = async (days: number = 7) => {[m
+[32m+[m[32m  const headers = await getAuthHeaders({ contentType: true });[m
+[32m+[m[32m  const url = new URL(`${apiBaseUrl}/trial/extend`);[m
+[32m+[m
+[32m+[m[32m  try {[m
+[32m+[m[32m    const response = await fetch(url.toString(), {[m
+[32m+[m[32m      method: "POST",[m
+[32m+[m[32m      headers,[m
+[32m+[m[32m      body: JSON.stringify({ days }),[m
+[32m+[m[32m    });[m
+[32m+[m
+[32m+[m[32m    if (!response.ok) {[m
+[32m+[m[32m      throw new Error(`Failed to extend trial: ${response.statusText}`);[m
+[32m+[m[32m    }[m
+[32m+[m
+[32m+[m[32m    const data = await response.json();[m
+[32m+[m[32m    revalidatePath("/");[m
+[32m+[m[32m    return data;[m
+[32m+[m[32m  } catch (error) {[m
+[32m+[m[32m    console.error("Error extending trial:", error);[m
+[32m+[m[32m    return { error: getErrorMessage(error) };[m
+[32m+[m[32m  }[m
+[32m+[m[32m};[m
+[32m+[m
+[32m+[m[32mexport const endTrial = async () => {[m
+[32m+[m[32m  const headers = await getAuthHeaders({ contentType: false });[m
+[32m+[m[32m  const url = new URL(`${apiBaseUrl}/trial/end`);[m
+[32m+[m
+[32m+[m[32m  try {[m
+[32m+[m[32m    const response = await fetch(url.toString(), {[m
+[32m+[m[32m      method: "POST",[m
+[32m+[m[32m      headers,[m
+[32m+[m[32m    });[m
+[32m+[m
+[32m+[m[32m    if (!response.ok) {[m
+[32m+[m[32m      throw new Error(`Failed to end trial: ${response.statusText}`);[m
+[32m+[m[32m    }[m
+[32m+[m
+[32m+[m[32m    const data = await response.json();[m
+[32m+[m[32m    revalidatePath("/");[m
+[32m+[m[32m    return data;[m
+[32m+[m[32m  } catch (error) {[m
+[32m+[m[32m    console.error("Error ending trial:", error);[m
+[32m+[m[32m    return { error: getErrorMessage(error) };[m
+[32m+[m[32m  }[m
+[32m+[m[32m};[m
+[32m+[m
+ export const getUserMemberships = async (userId: string) => {[m
+   if (!userId) {[m
+     return { data: [] };[m
+[1mdiff --git a/ui/app/(auth)/sign-in/page.tsx b/ui/app/(auth)/sign-in/page.tsx[m
+[1mindex c36226e61..6e327de97 100644[m
+[1m--- a/ui/app/(auth)/sign-in/page.tsx[m
+[1m+++ b/ui/app/(auth)/sign-in/page.tsx[m
+[36m@@ -1,13 +1,27 @@[m
+[32m+[m[32m"use client";[m
+ import { AuthForm } from "@/components/auth/oss";[m
+ import {[m
+   getAuthUrl,[m
+   isGithubOAuthEnabled,[m
+   isGoogleOAuthEnabled,[m
+[32m+[m[32m  isAzureOAuthEnabled,[m
+ } from "@/lib/helper";[m
+[32m+[m[32mimport { useEffect } from "react";[m
+[32m+[m[32mimport { getSubdomain } from "../../../src/utils/subdomain";[m
+ [m
+ const SignIn = () => {[m
+   const GOOGLE_AUTH_URL = getAuthUrl("google");[m
+   const GITHUB_AUTH_URL = getAuthUrl("github");[m
+[32m+[m[32m  const AZURE_AUTH_URL = getAuthUrl("azure");[m
+[32m+[m
+[32m+[m[32m  useEffect(() => {[m
+[32m+[m[32m    // Auto-detect organization from subdomain[m
+[32m+[m[32m    const subdomain = getSubdomain();[m
+[32m+[m[32m    if (subdomain && typeof window !== "undefined") {[m
+[32m+[m[32m      localStorage.setItem("company", subdomain);[m
+[32m+[m[32m    }[m
+[32m+[m[32m  }, []);[m
+[32m+[m
+   return ([m
+     <AuthForm[m
+       type="sign-in"[m
+[36m@@ -15,6 +29,7 @@[m [mconst SignIn = () => {[m
+       githubAuthUrl={GITHUB_AUTH_URL}[m
+       isGoogleOAuthEnabled={isGoogleOAuthEnabled}[m
+       isGithubOAuthEnabled={isGithubOAuthEnabled}[m
+[32m+[m[32m      azureAuthUrl={AZURE_AUTH_URL}[m
+     />[m
+   );[m
+ };[m
+[1mdiff --git a/ui/app/(auth)/sign-up/page.tsx b/ui/app/(auth)/sign-up/page.tsx[m
+[1mindex 6dc5c81c8..7b6810ba1 100644[m
+[1m--- a/ui/app/(auth)/sign-up/page.tsx[m
+[1m+++ b/ui/app/(auth)/sign-up/page.tsx[m
+[36m@@ -1,7 +1,9 @@[m
+[32m+[m[32m"use client";[m
+ import { AuthForm } from "@/components/auth/oss";[m
+[31m-import { getAuthUrl, isGithubOAuthEnabled } from "@/lib/helper";[m
+[31m-import { isGoogleOAuthEnabled } from "@/lib/helper";[m
+[32m+[m[32mimport { getAuthUrl, isGithubOAuthEnabled, isGoogleOAuthEnabled } from "@/lib/helper";[m
+ import { SearchParamsProps } from "@/types";[m
+[32m+[m[32mimport { useEffect } from "react";[m
+[32m+[m[32mimport { getSubdomain } from "../../../src/utils/subdomain";[m
+ [m
+ const SignUp = ({ searchParams }: { searchParams: SearchParamsProps }) => {[m
+   const invitationToken =[m
+[36m@@ -12,6 +14,14 @@[m [mconst SignUp = ({ searchParams }: { searchParams: SearchParamsProps }) => {[m
+   const GOOGLE_AUTH_URL = getAuthUrl("google");[m
+   const GITHUB_AUTH_URL = getAuthUrl("github");[m
+ [m
+[32m+[m[32m  useEffect(() => {[m
+[32m+[m[32m    // Auto-detect organization from subdomain[m
+[32m+[m[32m    const subdomain = getSubdomain();[m
+[32m+[m[32m    if (subdomain && typeof window !== "undefined") {[m
+[32m+[m[32m      localStorage.setItem("company", subdomain);[m
+[32m+[m[32m    }[m
+[32m+[m[32m  }, []);[m
+[32m+[m
+   return ([m
+     <AuthForm[m
+       type="sign-up"[m
+[1mdiff --git a/ui/app/(prowler)/findings/page.tsx b/ui/app/(prowler)/findings/page.tsx[m
+[1mindex e8290a416..dfd6f51c6 100644[m
+[1m--- a/ui/app/(prowler)/findings/page.tsx[m
+[1m+++ b/ui/app/(prowler)/findings/page.tsx[m
+[36m@@ -30,6 +30,7 @@[m [mimport {[m
+ } from "@/lib/provider-helpers";[m
+ import { ScanProps } from "@/types";[m
+ import { FindingProps, SearchParamsProps } from "@/types/components";[m
+[32m+[m[32mimport { DashboardSummary } from "@/components/findings/table/dashboard-summary";[m
+ [m
+ export default async function Findings({[m
+   searchParams,[m
+[36m@@ -88,12 +89,149 @@[m [mexport default async function Findings({[m
+ [m
+   const scanDetails = createScanDetailsMapping(completedScans, providersData);[m
+ [m
+[31m-  return ([m
+[31m-    <ContentLayout title="Findings" icon="carbon:data-view-alt">[m
+[31m-      <FilterControls search date />[m
+[31m-      <Spacer y={8} />[m
+[31m-      <DataTableFilterCustom[m
+[31m-        filters={[[m
+[32m+[m[32m  // After fetching and expanding findings data for the table, reuse it for the dashboard summary[m
+[32m+[m[32m  // expandedFindings is already created in SSRDataTable, but we need to fetch it here for the summary as well[m
+[32m+[m
+[32m+[m[32m  // Fetch findings data for the summary (first page, large pageSize for accuracy)[m
+[32m+[m[32m  const page = 1;[m
+[32m+[m[32m  const pageSize = 1000; // Get more data for accurate dashboard stats[m
+[32m+[m[32m  const defaultSort = "severity,status,-inserted_at";[m
+[32m+[m[32m  const { encodedSort: encodedSortForSummary } = extractSortAndKey({[m
+[32m+[m[32m    ...searchParams,[m
+[32m+[m[32m    sort: searchParams.sort ?? defaultSort,[m
+[32m+[m[32m  });[m
+[32m+[m[32m  const { filters: filtersForSummary, query: queryForSummary } = extractFiltersAndQuery(searchParams);[m
+[32m+[m[32m  const hasDateOrScanForSummary = hasDateOrScanFilter(searchParams);[m
+[32m+[m[32m  const fetchFindingsForSummary = hasDateOrScanForSummary ? getFindings : getLatestFindings;[m
+[32m+[m[32m  const findingsDataForSummary = await fetchFindingsForSummary({[m
+[32m+[m[32m    query: queryForSummary,[m
+[32m+[m[32m    page,[m
+[32m+[m[32m    sort: encodedSortForSummary,[m
+[32m+[m[32m    filters: filtersForSummary,[m
+[32m+[m[32m    pageSize,[m
+[32m+[m[32m  });[m
+[32m+[m[32m  const resourceDictForSummary = createDict("resources", findingsDataForSummary);[m
+[32m+[m[32m  const scanDictForSummary = createDict("scans", findingsDataForSummary);[m
+[32m+[m[32m  const providerDictForSummary = createDict("providers", findingsDataForSummary);[m
+[32m+[m[32m  const expandedFindingsForSummary = findingsDataForSummary?.data[m
+[32m+[m[32m    ? findingsDataForSummary.data.map((finding: FindingProps) => {[m
+[32m+[m[32m        const scan = scanDictForSummary[finding.relationships?.scan?.data?.id];[m
+[32m+[m[32m        const resource = resourceDictForSummary[finding.relationships?.resources?.data?.[0]?.id];[m
+[32m+[m[32m        const provider = providerDictForSummary[scan?.relationships?.provider?.data?.id];[m
+[32m+[m[32m        return {[m
+[32m+[m[32m          ...finding,[m
+[32m+[m[32m          relationships: { scan, resource, provider },[m
+[32m+[m[32m        };[m
+[32m+[m[32m      })[m
+[32m+[m[32m    : [];[m
+[32m+[m
+[32m+[m[32m  // No separate full counts needed; metrics will reflect current table data directly[m
+[32m+[m
+[32m+[m[32m  // Get table data for the dashboard[m
+[32m+[m[32m  const tablePage = parseInt(searchParams.page?.toString() || "1", 10);[m
+[32m+[m[32m  const tablePageSize = parseInt(s

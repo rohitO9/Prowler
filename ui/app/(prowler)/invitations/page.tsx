@@ -60,100 +60,6 @@ const SSRDataTable = async ({
     console.log('SSRDataTable: Fetching data with params:', {
       query, page, sort, filters, pageSize
     });
-<<<<<<< Updated upstream
-
-<<<<<<< Updated upstream
-  const fixedInvationData = Array.isArray(invitationsData.data) ? invitationsData.data : invitationsData?.data ? [invitationsData.data] : [];
-
-  const newroles = Array.isArray(rolesData?.data)
-  ? rolesData.data
-  : rolesData?.data
-  ? [rolesData.data] // wrap single object in array
-  : [];
-
-const roleDict = newroles.reduce(
-  (acc: Record<string, Role>, role: Role) => {
-    role.relationships?.invitations?.data?.forEach((invitation: any) => {
-      acc[invitation.id] = role;
-    });
-    return acc;
-  },
-  {}
-);
-
-
-  // Generate the array of roles with all the roles available
-  const roles = Array.from(
-    new Map(
-      (newroles?.data || []).map((role: Role) => [
-        role.id,
-        { id: role.id, name: role.attributes?.name || "Unnamed Role" },
-      ]),
-    ).values(),
-  );
-
-  // Expand the invitations
-  const expandedInvitations = fixedInvationData?.data?.map(
-    (invitation: InvitationProps) => {
-      const role = roleDict[invitation.id];
-=======
-    // Fetch invitations and roles
-    const [invitationsData, rolesData] = await Promise.all([
-      getInvitations({
-        query,
-        page,
-        sort,
-        filters,
-        pageSize,
-      }),
-      getRoles({})
-    ]);
-
-    console.log('SSRDataTable: Received invitations:', invitationsData);
-    console.log('SSRDataTable: Received roles:', rolesData);
-
-    // Check for errors in invitations
-    if (invitationsData?.error) {
-      console.error('Invitations API error:', invitationsData.error);
-      
-      // Handle specific error types
-      if (invitationsData.error.status === 403) {
-        return (
-          <div className="p-8 text-center border border-orange-200 rounded-lg bg-orange-50">
-            <div className="flex flex-col items-center space-y-4">
-              <div className="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center">
-                <svg 
-                  className="w-8 h-8 text-orange-600" 
-                  fill="none" 
-                  stroke="currentColor" 
-                  viewBox="0 0 24 24"
-                >
-                  <path 
-                    strokeLinecap="round" 
-                    strokeLinejoin="round" 
-                    strokeWidth={2} 
-                    d="M12 15v2m0 0v2m0-2h2m-2 0H10m4-6V9a4 4 0 00-8 0v2M7 13h10a2 2 0 012 2v4a2 2 0 01-2 2H7a2 2 0 01-2-2v-4a2 2 0 012-2z" 
-                  />
-                </svg>
-              </div>
-              <div>
-                <h3 className="text-lg font-semibold text-orange-800 mb-2">
-                  Access Denied
-                </h3>
-                <p className="text-orange-700 mb-2">
-                  You don't have permission to view invitations.
-                </p>
-                <p className="text-sm text-orange-600">
-                  Please contact your administrator to request access to this feature.
-                </p>
-              </div>
-            </div>
-          </div>
-        );
-      }
->>>>>>> Stashed changes
-
-=======
 
     // Fetch invitations and roles
     const [invitationsData, rolesData] = await Promise.all([
@@ -210,7 +116,6 @@ const roleDict = newroles.reduce(
         );
       }
 
->>>>>>> Stashed changes
       // Handle other error types (401, 404, 500, etc.)
       const getErrorMessage = (status: number) => {
         switch (status) {

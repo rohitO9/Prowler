@@ -33,15 +33,7 @@ export function Sidebar({ user }: { user: UserProfileProps }) {
         className="no-scrollbar relative flex h-full flex-col overflow-y-auto overflow-x-hidden px-4 py-6 pb-16"
       >
         <div className="flex flex-col items-center justify-center mb-6">
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
-          <Link href="/" className="group flex flex-row items-start gap-3">
-=======
           <Link href="/home" className="group flex flex-row items-start gap-3">
->>>>>>> Stashed changes
-=======
-          <Link href="/home" className="group flex flex-row items-start gap-3">
->>>>>>> Stashed changes
             <div className="bg-gradient-to-r from-indigo-600 to-blue-600 rounded-xl w-12 h-12 flex items-center justify-center shadow-lg transition-transform duration-300 group-hover:scale-105">
               <span className="text-2xl font-black text-white select-none">VQ</span>
             </div>

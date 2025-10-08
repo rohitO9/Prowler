@@ -5,11 +5,6 @@ import { useToast } from "@/components/ui";
 import { AuthSocialProvider, MetaDataProps, PermissionInfo } from "@/types";
 
 export const baseUrl = process.env.AUTH_URL || "http://localhost:3000";
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
-=======
-=======
->>>>>>> Stashed changes
 // Dynamic API base URL that respects subdomains
 export const getApiBaseUrl = () => {
   if (typeof window !== 'undefined') {
@@ -29,10 +24,6 @@ export const getApiBaseUrl = () => {
   return process.env.API_BASE_URL || "http://127.0.0.1:8080/api/v1";
 };
 
-<<<<<<< Updated upstream
->>>>>>> Stashed changes
-=======
->>>>>>> Stashed changes
 export const apiBaseUrl = process.env.API_BASE_URL || "http://127.0.0.1:8080/api/v1";
 
 export const getAuthHeaders = async (options?: { contentType?: boolean }) => {

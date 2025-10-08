@@ -12,14 +12,16 @@ export default function middleware(request: NextRequest) {
   if (hostname.includes('.localhost') && !hostname.startsWith('www.')) {
     const subdomain = hostname.split('.')[0];
     
-    // If accessing root path on subdomain, redirect to tenant dashboard
+    // For subdomains, let the LandingPage component handle the routing
+    // Don't rewrite here, let the component decide based on auth status
     if (pathname === '/') {
-      return NextResponse.rewrite(new URL('/tenant-dashboard', request.url));
+      // Let the page component handle the logic
+      return NextResponse.next();
     }
     
-    // If accessing main site paths on subdomain, redirect to tenant dashboard
+    // If accessing main site paths on subdomain, redirect to root
     if (pathname.startsWith('/register') || pathname.startsWith('/verify-tenant')) {
-      return NextResponse.rewrite(new URL('/tenant-dashboard', request.url));
+      return NextResponse.redirect(new URL('/', request.url));
     }
   }
   

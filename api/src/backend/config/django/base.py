@@ -10,7 +10,16 @@ from api.settings.azure_ad import *  # noqa
 
 SECRET_KEY = env("SECRET_KEY", default="secret")
 DEBUG = env.bool("DJANGO_DEBUG", default=False)
-ALLOWED_HOSTS = ["localhost", "127.0.0.1", "0.0.0.0", "DESKTOP-QEBDPJQ"]
+# For development, allow all hosts ending with .localhost
+ALLOWED_HOSTS = ["*"] if DEBUG else [
+    "localhost", 
+    "127.0.0.1", 
+    "0.0.0.0", 
+    "DESKTOP-QEBDPJQ",
+    "company1.localhost",
+    "company2.localhost",
+    "test.localhost",
+]
 
 # Application definition
 
@@ -90,6 +99,8 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    "api.middleware.subdomain.SubdomainMiddleware",
+    "api.middleware.subdomain.TenantMiddleware",
     "api.middleware.APILoggingMiddleware",
     "allauth.account.middleware.AccountMiddleware",
 ]

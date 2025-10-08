@@ -81,7 +81,7 @@ class SubdomainMiddleware:
         tenant = self.get_tenant_from_request(request)
         if tenant:
             request.tenant = tenant
-            logger.debug(f"Set tenant from subdomain: {tenant.subdomain} ({tenant.name})")
+            logger.debug(f"Set tenant from subdomain: {tenant.name} (ID: {tenant.id})")
         else:
             request.tenant = None
             logger.debug("No tenant found for subdomain")
@@ -100,24 +100,25 @@ class SubdomainMiddleware:
             subdomain = host.replace('.localhost', '')
             if subdomain and subdomain != 'www':
                 try:
-                    return Tenant.objects.get(subdomain=subdomain, is_active=True)
-                except Tenant.DoesNotExist:
-                    logger.warning(f"Tenant not found for subdomain: {subdomain}")
+                    # First, try to get existing tenant
+                    tenant = Tenant.objects.filter(name=subdomain).first()
+                    if tenant:
+                        logger.info(f"Found existing tenant: {tenant.name} (ID: {tenant.id})")
+                        return tenant
+                    
+                    # If no tenant exists, create one
+                    tenant = Tenant.objects.create(name=subdomain)
+                    logger.info(f"Created new tenant: {tenant.name} (ID: {tenant.id})")
+                    return tenant
+                except Exception as e:
+                    logger.error(f"Error getting/creating tenant: {e}")
                     return None
         
-        # Handle custom domains
+        # Handle custom domains - try to find by name
         try:
-            return Tenant.objects.get(domain=host, is_active=True)
+            return Tenant.objects.get(name=host)
         except Tenant.DoesNotExist:
             pass
-        
-        # Handle www subdomain (redirect to main domain)
-        if host.startswith('www.'):
-            main_domain = host[4:]  # Remove 'www.'
-            try:
-                return Tenant.objects.get(domain=main_domain, is_active=True)
-            except Tenant.DoesNotExist:
-                pass
         
         return None
 

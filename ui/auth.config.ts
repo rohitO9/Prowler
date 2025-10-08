@@ -3,7 +3,7 @@ import NextAuth, { type NextAuthConfig, User } from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import { z } from "zod";
 
-import { getToken, getUserByMe } from "./actions/auth/auth";
+import { getToken, getUserByMe } from "./actions/auth";
 import { apiBaseUrl } from "./lib";
 
 interface CustomJwtPayload extends JwtPayload {
@@ -56,6 +56,7 @@ const refreshAccessToken = async (token: JwtPayload) => {
 };
 
 export const authConfig = {
+  secret: process.env.NEXTAUTH_SECRET || "development-secret-key-change-in-production",
   session: {
     strategy: "jwt",
     // The session will be valid for 24 hours
@@ -155,23 +156,6 @@ export const authConfig = {
 
     authorized({ auth, request: { nextUrl } }) {
       const isLoggedIn = !!auth?.user;
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
-      const isOnDashboard = nextUrl.pathname?.startsWith("/");
-      const isSignUpPage = nextUrl.pathname === "/sign-up";
-      const isAzureConfigPage = nextUrl.pathname === "/azure";
-
-      // Allow access to sign-up page and azure config page
-      if (isSignUpPage || isAzureConfigPage) return true;
-
-      if (isOnDashboard) {
-        if (isLoggedIn) return true;
-        return false; // Redirect users who are not logged in to the login page
-      } else if (isLoggedIn) {
-        return Response.redirect(new URL("/", nextUrl));
-=======
-=======
->>>>>>> Stashed changes
       const pathname = nextUrl.pathname;
       
       // Public routes that don't require authentication
@@ -179,18 +163,10 @@ export const authConfig = {
       const isPublicRoute = publicRoutes.some(route => pathname.startsWith(route));
       
       // Allow access to public routes
-      if (isPublicRoute) {
-        return true;
-<<<<<<< Updated upstream
->>>>>>> Stashed changes
-=======
->>>>>>> Stashed changes
-      }
+      if (isPublicRoute) return true;
       
       // For root path, allow access (landing page)
-      if (pathname === '/') {
-        return true;
-      }
+      if (pathname === '/') return true;
       
       // For all other routes, require authentication
       if (isLoggedIn) return true;
