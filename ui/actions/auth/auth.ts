@@ -102,20 +102,27 @@ export async function authenticate(
 export const createNewUser = async (
   formData: z.infer<typeof formSchemaSignUp>
 ) => {
-  const url = new URL(`${getApiBaseUrl()}/users`);
+  // Use tenant-aware registration endpoint
+  const url = new URL(`${getApiBaseUrl()}/tenant/register`);
 
   if (formData.invitationToken) {
     url.searchParams.append("invitation_token", formData.invitationToken);
   }
 
+  // Get company from localStorage if available (for subdomain-based registration)
+  let company = formData.company;
+  if (typeof window !== 'undefined' && !company) {
+    company = localStorage.getItem('company');
+  }
+
   const bodyData = {
     data: {
-      type: "users",
+      type: "tenant_register",
       attributes: {
         name: formData.name,
         email: formData.email,
         password: formData.password,
-        ...(formData.company && { company_name: formData.company }),
+        ...(company && { company_name: company }),
       },
     },
   };
@@ -157,8 +164,13 @@ export const createNewUser = async (
 export const getToken = async (formData: z.infer<typeof formSchemaSignIn>) => {
   const url = new URL(`${getApiBaseUrl()}/tokens`);
   
+  // Get company from localStorage if available (for subdomain-based authentication)
+  let company = (formData as any)?.company;
+  if (typeof window !== 'undefined' && !company) {
+    company = localStorage.getItem('company');
+  }
+  
   // Getting token from backend
-
   const bodyData = {
     data: {
       type: "tokens",
@@ -166,13 +178,14 @@ export const getToken = async (formData: z.infer<typeof formSchemaSignIn>) => {
         email: formData.email,
         password: formData.password,
         // enterprise: optionally send tenant_name to select organization context
-        ...(formData as any)?.company ? { tenant_name: (formData as any).company } : {},
+        ...(company ? { tenant_name: company } : {}),
       },
     },
   };
 
   try {
     console.log("Token request payload:", bodyData);
+    console.log("Making POST request to:", url.toString());
     
     const response = await fetch(url.toString(), {
       method: "POST",
@@ -182,6 +195,9 @@ export const getToken = async (formData: z.infer<typeof formSchemaSignIn>) => {
       },
       body: JSON.stringify(bodyData),
     });
+    
+    console.log("Response status:", response.status);
+    console.log("Response URL:", response.url);
 
     if (!response.ok) {
       let errorMsg = `Token request failed (${response.status} ${response.statusText})`;
@@ -240,6 +256,10 @@ export const getUserByMe = async (accessToken: string) => {
     });
 
     const parsedResponse = await safeJsonParse(response);
+    
+    console.log("🔍 [getUserByMe] Raw response:", parsedResponse);
+    console.log("🔍 [getUserByMe] data:", parsedResponse?.data);
+    console.log("🔍 [getUserByMe] attributes:", parsedResponse?.data?.attributes);
 
     if (!response.ok) {
       let errorMsg = `Get user failed (${response.status} ${response.statusText})`;
@@ -260,11 +280,18 @@ export const getUserByMe = async (accessToken: string) => {
       throw new Error(errorMsg);
     }
 
+    // Safety check for response structure (handle double-nested data)
+    const attributes = parsedResponse?.data?.data?.attributes || parsedResponse?.data?.attributes;
+    if (!attributes) {
+      console.error("🔍 [getUserByMe] Invalid response structure:", parsedResponse);
+      throw new Error("Invalid response structure from server");
+    }
+    
     const userData = {
-      name: parsedResponse.data.attributes.name,
-      email: parsedResponse.data.attributes.email,
-      company: parsedResponse.data.attributes.company_name,
-      dateJoined: parsedResponse.data.attributes.date_joined,
+      name: attributes.name,
+      email: attributes.email,
+      company: attributes.company_name,
+      dateJoined: attributes.date_joined,
     };
     
     console.log("Successfully retrieved user data:", userData);

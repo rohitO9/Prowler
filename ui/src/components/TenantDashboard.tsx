@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { getSubdomain, isOnSubdomain } from '../utils/subdomain';
 
 interface TenantInfo {
@@ -23,18 +23,15 @@ interface TenantDashboardProps {
 }
 
 const TenantDashboard: React.FC<TenantDashboardProps> = ({ tenant: propTenant }) => {
+  console.log('🔍 [TenantDashboard] Component rendering with propTenant:', propTenant);
   const [tenant, setTenant] = useState<TenantInfo | null>(propTenant || null);
   const [loading, setLoading] = useState(!propTenant);
   const [error, setError] = useState<string | null>(null);
   const [hasFetched, setHasFetched] = useState(false);
+  console.log('🔍 [TenantDashboard] State - tenant:', tenant, 'loading:', loading, 'error:', error);
 
-  useEffect(() => {
-    if (!propTenant && !hasFetched) {
-      fetchTenantInfo();
-    }
-  }, [propTenant, hasFetched]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  const fetchTenantInfo = async () => {
+  const fetchTenantInfo = useCallback(async () => {
+    console.log('🔍 [TenantDashboard] fetchTenantInfo called');
     if (hasFetched) return; // Prevent multiple calls
     
     setLoading(true);
@@ -51,30 +48,42 @@ const TenantDashboard: React.FC<TenantDashboardProps> = ({ tenant: propTenant })
         headers = await getAuthHeaders({ contentType: false });
         // If we have auth headers, use the authenticated endpoint
         endpoint = '/api/v1/tenant/info';
+        console.log('🔍 [TenantDashboard] Using authenticated endpoint:', endpoint);
       } catch (authError) {
         // No authentication available, use public endpoint without headers
         headers = {
           'Accept': 'application/vnd.api+json'
         };
+        console.log('🔍 [TenantDashboard] Using public endpoint:', endpoint);
       }
       
+      console.log('🔍 [TenantDashboard] Fetching from:', endpoint, 'with headers:', headers);
       const response = await fetch(endpoint, {
         headers,
         cache: 'no-cache' // Prevent caching issues
       });
+      
+      console.log('🔍 [TenantDashboard] Response status:', response.status, 'ok:', response.ok);
       
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
       
       const data = await response.json();
+      console.log('🔍 [TenantDashboard] API Response:', data);
+      console.log('🔍 [TenantDashboard] data.data:', data.data);
+      console.log('🔍 [TenantDashboard] data.data?.data:', data.data?.data);
+      console.log('🔍 [TenantDashboard] data.data?.attributes:', data.data?.attributes);
       
       // Handle the nested data structure from the API
-      const tenantData = data.data?.data?.attributes || data.data?.attributes;
+      const tenantData = data.data?.tenant || data.data?.data?.attributes || data.data?.attributes;
+      console.log('🔍 [TenantDashboard] Parsed tenantData:', tenantData);
       
       if (tenantData) {
+        console.log('🔍 [TenantDashboard] Setting tenant with:', tenantData);
         setTenant(tenantData);
       } else {
+        console.error('❌ [TenantDashboard] Invalid tenant data structure');
         setError('Invalid tenant data structure');
       }
     } catch (err) {
@@ -83,7 +92,15 @@ const TenantDashboard: React.FC<TenantDashboardProps> = ({ tenant: propTenant })
     } finally {
       setLoading(false);
     }
-  };
+  }, [hasFetched]);
+
+  useEffect(() => {
+    console.log('🔍 [TenantDashboard] useEffect running - propTenant:', propTenant, 'hasFetched:', hasFetched);
+    if (!propTenant && !hasFetched) {
+      console.log('🔍 [TenantDashboard] Calling fetchTenantInfo');
+      fetchTenantInfo();
+    }
+  }, [propTenant, hasFetched, fetchTenantInfo]);
 
   const getTrialDaysRemaining = () => {
     if (!tenant?.trial_ends_at) return null;

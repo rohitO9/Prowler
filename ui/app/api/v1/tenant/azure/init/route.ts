@@ -2,10 +2,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getApiBaseUrl } from '@/lib/helper';
 
 /**
- * Authenticated Tenant Information API Route
+ * Azure AD Login Initiation API Route
  * 
- * This route returns detailed tenant information for authenticated users,
- * including their membership details and permissions.
+ * This route initiates Azure AD login for the current tenant.
+ * It generates the authorization URL and handles the OAuth flow.
  */
 
 export async function GET(request: NextRequest) {
@@ -19,12 +19,23 @@ export async function GET(request: NextRequest) {
       apiBaseUrl = `http://${subdomain}.localhost:8080/api/v1`;
     }
 
-    // Forward the request to the backend with proper headers
-    const response = await fetch(`${apiBaseUrl}/tenant/info`, {
+    // Get query parameters
+    const { searchParams } = new URL(request.url);
+    const domainHint = searchParams.get('domain_hint');
+    const loginHint = searchParams.get('login_hint');
+
+    // Build query parameters for backend
+    const queryParams = new URLSearchParams();
+    if (domainHint) queryParams.set('domain_hint', domainHint);
+    if (loginHint) queryParams.set('login_hint', loginHint);
+
+    const backendUrl = `${apiBaseUrl}/tenant/azure/init${queryParams.toString() ? '?' + queryParams.toString() : ''}`;
+
+    // Forward the request to the backend
+    const response = await fetch(backendUrl, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': request.headers.get('authorization') || '',
         'x-tenant-subdomain': host.split('.')[0] || '',
       }
     });
@@ -32,7 +43,7 @@ export async function GET(request: NextRequest) {
     if (!response.ok) {
       const errorData = await response.json();
       return NextResponse.json(
-        { error: errorData.error || 'Failed to fetch tenant information' },
+        { error: errorData.error || 'Failed to initialize Azure login' },
         { status: response.status }
       );
     }
@@ -41,7 +52,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(data);
 
   } catch (error) {
-    console.error('Tenant info fetch error:', error);
+    console.error('Azure init error:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

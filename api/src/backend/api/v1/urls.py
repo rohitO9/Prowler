@@ -1,150 +1,85 @@
-from django.urls import include, path
-from drf_spectacular.views import SpectacularRedocView
-from rest_framework_nested import routers
+"""
+Enhanced URL Configuration for Multi-Tenant API
 
-from api.v1.views.tenant_views import get_public_tenant_info
-from api.v1.views import (
-    ComplianceOverviewViewSet,
-    CustomTokenObtainView,
-    CustomTokenRefreshView,
-    CustomTokenSwitchTenantView,
-    FindingViewSet,
-    GithubSocialLoginView,
-    GoogleSocialLoginView,
-    IntegrationViewSet,
-    InvitationAcceptViewSet,
-    InvitationViewSet,
-    MembershipViewSet,
-    OverviewViewSet,
-    ProviderGroupProvidersRelationshipView,
-    ProviderGroupViewSet,
-    ProviderSecretViewSet,
-    ProviderViewSet,
-    ResourceViewSet,
-    RoleProviderGroupRelationshipView,
-    RoleViewSet,
-    ScanViewSet,
-    ScheduleView,
-    SchemaView,
-    TaskViewSet,
-    TenantMembersViewSet,
-    TenantViewSet,
-    UserRoleRelationshipView,
-    UserViewSet,
-)
-from api.v1.views.trial import TrialViewSet
-from api.v1.views.azure_ad import AzureADSocialLoginView, azure_ad_config, AzureLoginView, AzureCallbackView, azure_ad_test, trial_status
-from api.v1.views.azure_ad import public_tenants
-from dj_rest_auth.views import PasswordResetConfirmView, PasswordResetView
+This module provides comprehensive URL routing for the multi-tenant API,
+including tenant-aware authentication, validation, and data access endpoints.
+"""
+
+from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-
-router = routers.DefaultRouter(trailing_slash=False)
-
-router.register(r"users", UserViewSet, basename="user")
-router.register(r"tenants", TenantViewSet, basename="tenant")
-router.register(r"providers", ProviderViewSet, basename="provider")
-router.register(r"provider-groups", ProviderGroupViewSet, basename="providergroup")
-router.register(r"scans", ScanViewSet, basename="scan")
-router.register(r"tasks", TaskViewSet, basename="task")
-router.register(r"resources", ResourceViewSet, basename="resource")
-router.register(r"findings", FindingViewSet, basename="finding")
-router.register(r"roles", RoleViewSet, basename="role")
-router.register(r"trial", TrialViewSet, basename="trial")
-router.register(
-    r"compliance-overviews", ComplianceOverviewViewSet, basename="complianceoverview"
-)
-router.register(r"overviews", OverviewViewSet, basename="overview")
-router.register(r"schedules", ScheduleView, basename="schedule")
-router.register(r"integrations", IntegrationViewSet, basename="integration")
-
-tenants_router = routers.NestedSimpleRouter(router, r"tenants", lookup="tenant")
-tenants_router.register(
-    r"memberships", TenantMembersViewSet, basename="tenant-membership"
+from api.v1.views import (
+    tenant_auth,
+    tenant_validation,
+    tenant_azure_auth,
+    tenant_registration,
+    TenantViewSet,
+    InvitationViewSet,
+    InvitationAcceptViewSet,
+    CustomTokenObtainView,
 )
 
-users_router = routers.NestedSimpleRouter(router, r"users", lookup="user")
-users_router.register(r"memberships", MembershipViewSet, basename="user-membership")
+# Create router for ViewSets
+router = DefaultRouter()
+router.register(r'tenants', TenantViewSet, basename='tenant')
+router.register(r'invitations', InvitationViewSet, basename='invitation')
+router.register(r'invitation-accept', InvitationAcceptViewSet, basename='invitation-accept')
 
+# Multi-tenant URL patterns
 urlpatterns = [
-    path("tokens", CustomTokenObtainView.as_view(), name="token-obtain"),
-    path("tokens/refresh", CustomTokenRefreshView.as_view(), name="token-refresh"),
-    path("tokens/switch", CustomTokenSwitchTenantView.as_view(), name="token-switch"),
-
-    path(
-        "auth/password/reset",
-        PasswordResetView.as_view(),
-        name="auth-password-reset",
-    ),
-    path(
-        "auth/password/reset/confirm",
-        PasswordResetConfirmView.as_view(),
-        name="auth-password-reset-confirm",
-    ),
-
-    path(
-        "providers/secrets",
-        ProviderSecretViewSet.as_view({"get": "list", "post": "create"}),
-        name="providersecret-list",
-    ),
-    path(
-        "providers/secrets/<uuid:pk>",
-        ProviderSecretViewSet.as_view(
-            {"get": "retrieve", "patch": "partial_update", "delete": "destroy"}
-        ),
-        name="providersecret-detail",
-    ),
-
-    path(
-        "tenants/invitations",
-        InvitationViewSet.as_view({"get": "list", "post": "create"}),
-        name="invitation-list",
-    ),
-    path(
-        "tenants/invitations/<uuid:pk>",
-        InvitationViewSet.as_view(
-            {"get": "retrieve", "patch": "partial_update", "delete": "destroy"}
-        ),
-        name="invitation-detail",
-    ),
-
-    path(
-        "invitations/accept",
-        InvitationAcceptViewSet.as_view({"post": "accept"}),
-        name="invitation-accept",
-    ),
-
-    # Fixed calls for APIViews (removed method dicts)
-    path(
-        "roles/<uuid:pk>/relationships/provider_groups",
-        RoleProviderGroupRelationshipView.as_view(),  # no args
-        name="role-provider-groups-relationship",
-    ),
-    path(
-        "users/<uuid:pk>/relationships/roles",
-        UserRoleRelationshipView.as_view(),  # no args
-        name="user-roles-relationship",
-    ),
-    path(
-        "provider-groups/<uuid:pk>/relationships/providers",
-        ProviderGroupProvidersRelationshipView.as_view(),  # no args
-        name="provider_group-providers-relationship",
-    ),
-
-    path("tokens/google", GoogleSocialLoginView.as_view(), name="token-google"),
-    path("tokens/github", GithubSocialLoginView.as_view(), name="token-github"),
-    path("tokens/azure", AzureADSocialLoginView.as_view(), name="token-azure"),
-    path("tokens/azure/config", azure_ad_config, name="azure-config"),
-    path("tenants/public", public_tenants, name="public-tenants"),
-    path("tokens/azure/test", azure_ad_test, name="azure-test"),
-    path("tokens/azure/trial-status", trial_status, name="trial-status"),
-    path("auth/azure/login", AzureLoginView.as_view(), name="azure-login"),
-    path("auth/azure/callback", AzureCallbackView.as_view(), name="azure-callback"),
-    path("tenant/public-info", get_public_tenant_info, name="tenant-public-info"),
-
-    path("", include(router.urls)),
-    path("", include(tenants_router.urls)),
-    path("", include(users_router.urls)),
-
-    path("schema", SchemaView.as_view(), name="schema"),
-    path("docs", SpectacularRedocView.as_view(url_name="schema"), name="docs"),
+    # Basic Authentication Endpoints (working)
+    path('tokens/', CustomTokenObtainView.as_view(), name='token-obtain'),
+    path('tokens', CustomTokenObtainView.as_view(), name='token-obtain-no-slash'),
+    
+    # User endpoints
+    path('users/me/', tenant_validation.get_user_me, name='user-me'),
+    path('users/me', tenant_validation.get_user_me, name='user-me-no-slash'),
+    
+    # Tenant Authentication Endpoints
+    path('tenant/login/', tenant_auth.TenantLoginView.as_view(), name='tenant-login'),
+    path('tenant/login', tenant_auth.TenantLoginView.as_view(), name='tenant-login-no-slash'),
+    path('tenant/refresh-token/', tenant_auth.TenantRefreshTokenView.as_view(), name='tenant-refresh-token'),
+    path('tenant/logout/', tenant_auth.TenantLogoutView.as_view(), name='tenant-logout'),
+    path('tenant/register/', tenant_auth.tenant_register, name='tenant-register'),
+    path('tenant/register', tenant_auth.tenant_register, name='tenant-register-no-slash'),
+    path('tenant/register-test/', tenant_auth.tenant_register_test, name='tenant-register-test'),
+    
+    # Tenant Registration Endpoints (for creating new tenants)
+    path('tenant/register-tenant/', tenant_registration.register_tenant, name='register-tenant'),
+    path('tenant/register-tenant', tenant_registration.register_tenant, name='register-tenant-no-slash'),
+    
+    # Tenant Validation Endpoints
+    path('tenant/validate-access/', tenant_validation.TenantAccessValidationView.as_view(), name='tenant-validate-access'),
+    path('tenant/validate-permission/', tenant_validation.TenantPermissionValidationView.as_view(), name='tenant-validate-permission'),
+    path('tenant/check-feature/', tenant_validation.TenantFeatureAccessView.as_view(), name='tenant-check-feature'),
+    path('tenant/members/', tenant_validation.get_tenant_members, name='tenant-members'),
+    path('tenant/invite-member/', tenant_validation.invite_tenant_member, name='tenant-invite-member'),
+    path('tenant/settings/', tenant_validation.get_tenant_settings, name='tenant-settings'),
+    
+    # Public Tenant Information (no authentication required)
+    path('tenant/public-info/', tenant_validation.get_tenant_public_info, name='tenant-public-info'),
+    
+    # Authenticated Tenant Information
+    # path('tenant/info/', include('api.v1.views.tenant_info.urls')),
+    
+    # Tenant-specific Data Endpoints
+    # path('tenant/data/', include('api.v1.views.tenant_data.urls')),
+    
+    # User Management within Tenant
+    # path('tenant/users/', include('api.v1.views.tenant_users.urls')),
+    
+    # Tenant Analytics and Reporting
+    # path('tenant/analytics/', include('api.v1.views.tenant_analytics.urls')),
+    
+    # Tenant Configuration and Settings
+    # path('tenant/config/', include('api.v1.views.tenant_config.urls')),
+    
+    # Tenant Azure AD Authentication
+    path('tenant/azure/init/', tenant_azure_auth.TenantAzureInitView.as_view(), name='tenant-azure-init'),
+    path('tenant/azure/callback/', tenant_azure_auth.TenantAzureCallbackView.as_view(), name='tenant-azure-callback'),
+    path('tenant/azure/refresh/', tenant_azure_auth.TenantAzureRefreshView.as_view(), name='tenant-azure-refresh'),
+    path('tenant/azure/config/', tenant_azure_auth.TenantAzureConfigView.as_view(), name='tenant-azure-config'),
+    path('tenant/azure/login-url/', tenant_azure_auth.get_azure_login_url, name='tenant-azure-login-url'),
+    
+    # Include router URLs at the end to avoid conflicts
+    path('', include(router.urls)),
 ]

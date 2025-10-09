@@ -14,7 +14,7 @@ import logging
 import random
 import string
 
-from api.models import Tenant, Membership
+from api.models import Tenant, TenantMembership
 from api.v1.serializers import TenantSerializer, UserSerializer
 
 logger = logging.getLogger(__name__)
@@ -183,38 +183,44 @@ def register_tenant(request):
 
             logger.info(f"Admin user created: id={getattr(user, 'id', None)} email={getattr(user, 'email', None)}")
 
-            # Create membership with enum role (no separate Role model needed)
+            # Create tenant membership
             try:
-                membership = Membership.objects.create(
+                membership = TenantMembership.objects.create(
                     tenant=tenant,
                     user=user,
-                    role=Membership.RoleChoices.OWNER  # Use the enum choice directly
+                    role='owner'  # Use string directly
                 )
-                logger.info(f"Membership created for user={getattr(user, 'id', None)} tenant={getattr(tenant, 'id', None)} role=owner")
+                logger.info(f"TenantMembership created for user={getattr(user, 'id', None)} tenant={getattr(tenant, 'id', None)} role=owner")
             except Exception as membership_error:
-                logger.error(f"Failed to create membership: {membership_error}")
-                raise Exception(f"Cannot create membership: {membership_error}")
+                logger.error(f"Failed to create tenant membership: {membership_error}")
+                raise Exception(f"Cannot create tenant membership: {membership_error}")
 
             # Optionally send welcome email (safe logging)
             try:
-                send_mail(
-                    subject=f"Your {tenant.name} account",
-                    message=f"Welcome {admin_first_name}. Your temporary password is {temp_password}",
-                    from_email=settings.DEFAULT_FROM_EMAIL,
-                    recipient_list=[admin_email],
-                    fail_silently=False
-                )
-                logger.info(f"Sent registration email to {admin_email}")
+                # Skip email sending for now to avoid configuration issues
+                logger.info(f"Would send registration email to {admin_email} with temp password: {temp_password}")
+                # send_mail(
+                #     subject=f"Your {tenant.name} account",
+                #     message=f"Welcome {admin_first_name}. Your temporary password is {temp_password}",
+                #     from_email=settings.DEFAULT_FROM_EMAIL,
+                #     recipient_list=[admin_email],
+                #     fail_silently=False
+                # )
+                logger.info(f"Email sending skipped for testing")
             except Exception:
                 logger.exception("Failed to send registration email")
 
             tenant_data = TenantSerializer(tenant).data
             return Response({"data": tenant_data}, status=status.HTTP_201_CREATED)
 
-    except Exception:
-        logger.exception("Tenant registration failed during DB operations")
+    except Exception as e:
+        logger.exception(f"Tenant registration failed during DB operations: {e}")
+        logger.error(f"Error type: {type(e)}")
+        logger.error(f"Error args: {e.args}")
+        import traceback
+        logger.error(f"Traceback: {traceback.format_exc()}")
         return Response(
-            {"errors": [{"detail": "Internal error while creating tenant"}]},
+            {"errors": [{"detail": f"Internal error while creating tenant: {str(e)}"}]},
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
 

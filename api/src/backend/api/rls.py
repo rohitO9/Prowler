@@ -20,7 +20,7 @@ class Tenant(models.Model):
     name = models.CharField(max_length=100)
 
     class Meta:
-        db_table = "tenants"
+        db_table = "rls_tenants"
 
     class JSONAPIMeta:
         resource_name = "tenants"

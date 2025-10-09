@@ -10,16 +10,8 @@ from api.settings.azure_ad import *  # noqa
 
 SECRET_KEY = env("SECRET_KEY", default="secret")
 DEBUG = env.bool("DJANGO_DEBUG", default=False)
-# For development, allow all hosts ending with .localhost
-ALLOWED_HOSTS = ["*"] if DEBUG else [
-    "localhost", 
-    "127.0.0.1", 
-    "0.0.0.0", 
-    "DESKTOP-QEBDPJQ",
-    "company1.localhost",
-    "company2.localhost",
-    "test.localhost",
-]
+# For development, allow all hosts (including dynamic subdomains)
+ALLOWED_HOSTS = ["*"]
 
 # Application definition
 
@@ -99,7 +91,10 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    # Multi-tenant security middleware (order is important)
     "api.middleware.subdomain.SubdomainMiddleware",
+    "api.middleware.tenant_security.TenantSecurityMiddleware",
+    "api.middleware.tenant_security.TenantContextMiddleware",
     "api.middleware.subdomain.TenantMiddleware",
     "api.middleware.APILoggingMiddleware",
     "allauth.account.middleware.AccountMiddleware",
@@ -107,7 +102,16 @@ MIDDLEWARE = [
 
 SITE_ID = 1
 
-CORS_ALLOWED_ORIGINS = ["http://localhost", "http://127.0.0.1", "http://localhost:3000", "http://localhost:8080"]
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost", 
+    "http://127.0.0.1", 
+    "http://localhost:3000", 
+    "http://localhost:8080",
+    "http://company1.localhost:3000",
+    "http://company2.localhost:3000", 
+    "http://test.localhost:3000",
+    "http://*.localhost:3000",  # Allow all subdomains
+]
 
 ROOT_URLCONF = "config.urls"
 

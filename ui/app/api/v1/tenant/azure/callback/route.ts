@@ -2,13 +2,13 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getApiBaseUrl } from '@/lib/helper';
 
 /**
- * Authenticated Tenant Information API Route
+ * Azure AD Callback API Route
  * 
- * This route returns detailed tenant information for authenticated users,
- * including their membership details and permissions.
+ * This route handles the Azure AD OAuth callback and completes authentication.
+ * It exchanges the authorization code for tokens and creates/links the user.
  */
 
-export async function GET(request: NextRequest) {
+export async function POST(request: NextRequest) {
   try {
     const host = request.headers.get('host') || '';
     let apiBaseUrl = getApiBaseUrl();
@@ -19,20 +19,31 @@ export async function GET(request: NextRequest) {
       apiBaseUrl = `http://${subdomain}.localhost:8080/api/v1`;
     }
 
-    // Forward the request to the backend with proper headers
-    const response = await fetch(`${apiBaseUrl}/tenant/info`, {
-      method: 'GET',
+    // Get request body
+    const body = await request.json();
+    const { code, state } = body;
+
+    if (!code) {
+      return NextResponse.json(
+        { error: 'Authorization code is required' },
+        { status: 400 }
+      );
+    }
+
+    // Forward the request to the backend
+    const response = await fetch(`${apiBaseUrl}/tenant/azure/callback`, {
+      method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': request.headers.get('authorization') || '',
         'x-tenant-subdomain': host.split('.')[0] || '',
-      }
+      },
+      body: JSON.stringify({ code, state })
     });
 
     if (!response.ok) {
       const errorData = await response.json();
       return NextResponse.json(
-        { error: errorData.error || 'Failed to fetch tenant information' },
+        { error: errorData.error || 'Authentication failed' },
         { status: response.status }
       );
     }
@@ -41,7 +52,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(data);
 
   } catch (error) {
-    console.error('Tenant info fetch error:', error);
+    console.error('Azure callback error:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

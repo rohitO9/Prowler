@@ -12,7 +12,8 @@ from django.contrib.auth import get_user_model
 from rest_framework import status
 from rest_framework.response import Response
 
-from api.v1.models import User, Role, Tenant
+from api.models import User, Tenant
+from api.v1.models import Role
 
 logger = logging.getLogger(__name__)
 User = get_user_model()

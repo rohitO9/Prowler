@@ -17,6 +17,7 @@ from django.core.validators import MinLengthValidator
 from django.db import models
 from django.db.models import Q
 from django.utils.translation import gettext_lazy as _
+from django.utils import timezone
 from django_celery_beat.models import PeriodicTask
 from django_celery_results.models import TaskResult
 from psqlextra.manager import PostgresManager
@@ -194,17 +195,186 @@ def get_base_security_constraint():
 
 
 class Tenant(models.Model):
+    """
+    Enhanced Tenant model with full multi-tenant isolation.
+    Each tenant represents a completely isolated organization.
+    """
     id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
     inserted_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
-    name = models.CharField(max_length=100)
+    
+    # Core tenant identification
+    name = models.CharField(max_length=100, help_text="Organization name")
+    subdomain = models.CharField(
+        max_length=63, 
+        unique=True, 
+        default="default",
+        help_text="Subdomain for tenant isolation (e.g., 'company1')"
+    )
+    domain = models.CharField(
+        max_length=255, 
+        blank=True, 
+        null=True,
+        help_text="Custom domain (optional)"
+    )
+    
+    # Tenant configuration
+    is_active = models.BooleanField(default=True, help_text="Whether tenant is active")
+    is_verified = models.BooleanField(default=False, help_text="Whether tenant is verified")
+    
+    # Contact information
+    contact_email = models.EmailField(default="admin@example.com", help_text="Primary contact email")
+    contact_phone = models.CharField(max_length=20, blank=True, null=True)
+    address = models.TextField(blank=True, null=True)
+    
+    # Branding
+    logo_url = models.URLField(blank=True, null=True)
+    theme_color = models.CharField(max_length=7, default="#3B82F6", help_text="Primary theme color")
+    secondary_color = models.CharField(max_length=7, default="#1E40AF", help_text="Secondary theme color")
+    
+    # Subscription & billing
+    trial_ends_at = models.DateTimeField(null=True, blank=True)
+    subscription_status = models.CharField(
+        max_length=20, 
+        choices=[
+            ('trial', 'Trial'),
+            ('active', 'Active'),
+            ('suspended', 'Suspended'),
+            ('cancelled', 'Cancelled'),
+        ],
+        default='trial'
+    )
+    
+    # Security settings
+    allow_registration = models.BooleanField(default=True, help_text="Allow new user registration")
+    require_email_verification = models.BooleanField(default=True)
+    session_timeout_minutes = models.IntegerField(default=480, help_text="Session timeout in minutes")
+    
+    # Audit fields
+    created_by = models.ForeignKey(
+        'User', 
+        on_delete=models.SET_NULL, 
+        null=True, 
+        blank=True,
+        related_name='created_tenants'
+    )
+    last_activity = models.DateTimeField(auto_now=True)
 
     class Meta:
         db_table = "tenants"
-        constraints = []  # Initialize empty to avoid import errors
+        constraints = [
+            models.UniqueConstraint(
+                fields=['subdomain'], 
+                name='unique_tenant_subdomain'
+            ),
+            models.CheckConstraint(
+                check=models.Q(subdomain__regex=r'^[a-z0-9]([a-z0-9-]*[a-z0-9])?$'),
+                name='valid_subdomain_format'
+            )
+        ]
+        indexes = [
+            models.Index(fields=['subdomain']),
+            models.Index(fields=['is_active']),
+            models.Index(fields=['subscription_status']),
+        ]
 
     class JSONAPIMeta:
         resource_name = "tenants"
+
+    def __str__(self):
+        return f"{self.name} ({self.subdomain})"
+
+    def get_absolute_url(self):
+        """Get the tenant's subdomain URL"""
+        if self.domain:
+            return f"https://{self.domain}"
+        return f"https://{self.subdomain}.localhost"  # Development URL
+
+    def is_trial_expired(self):
+        """Check if trial period has expired"""
+        if not self.trial_ends_at:
+            return False
+        return timezone.now() > self.trial_ends_at
+
+    def can_access_feature(self, feature_name):
+        """Check if tenant can access a specific feature"""
+        if self.subscription_status == 'active':
+            return True
+        if self.subscription_status == 'trial' and not self.is_trial_expired():
+            return True
+        return False
+
+
+class TenantMembership(models.Model):
+    """
+    Represents a user's membership in a tenant with a specific role.
+    This is the core of multi-tenant user management.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
+    user = models.ForeignKey(
+        'User',
+        on_delete=models.CASCADE,
+        related_name='tenant_memberships'
+    )
+    tenant = models.ForeignKey(
+        'Tenant',
+        on_delete=models.CASCADE,
+        related_name='members'
+    )
+    role = models.CharField(
+        max_length=50,
+        choices=[
+            ('owner', 'Owner'),
+            ('admin', 'Administrator'),
+            ('member', 'Member'),
+            ('viewer', 'Viewer'),
+        ],
+        default='member'
+    )
+    is_active = models.BooleanField(default=True)
+    joined_at = models.DateTimeField(auto_now_add=True)
+    invited_by = models.ForeignKey(
+        'User',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='invited_memberships'
+    )
+    
+    # Permissions (can be extended)
+    can_invite_users = models.BooleanField(default=False)
+    can_manage_settings = models.BooleanField(default=False)
+    can_view_analytics = models.BooleanField(default=True)
+
+    class Meta:
+        db_table = "memberships"
+        constraints = [
+            models.UniqueConstraint(
+                fields=['user', 'tenant'],
+                name='unique_user_tenant_membership'
+            )
+        ]
+        indexes = [
+            models.Index(fields=['user', 'tenant']),
+            models.Index(fields=['tenant', 'is_active']),
+            models.Index(fields=['role']),
+        ]
+
+    def __str__(self):
+        return f"{self.user.name} - {self.tenant.name} ({self.role})"
+
+    def has_permission(self, permission):
+        """Check if membership has a specific permission"""
+        permission_map = {
+            'invite_users': self.can_invite_users,
+            'manage_settings': self.can_manage_settings,
+            'view_analytics': self.can_view_analytics,
+        }
+        return permission_map.get(permission, False)
+
+    def is_owner_or_admin(self):
+        """Check if user is owner or admin of the tenant"""
+        return self.role in ['owner', 'admin']
 
 
 def apply_constraints_to_model(model_class):
@@ -224,6 +394,10 @@ apply_constraints_to_model(Tenant)
 
 
 class User(AbstractBaseUser):
+    """
+    Enhanced User model with multi-tenant support.
+    Users can belong to multiple tenants with different roles.
+    """
     id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
     name = models.CharField(max_length=150, validators=[MinLengthValidator(3)])
     email = models.EmailField(
@@ -236,7 +410,23 @@ class User(AbstractBaseUser):
     is_active = models.BooleanField(default=True)
     date_joined = models.DateTimeField(auto_now_add=True, editable=False)
 
-    # Free trial fields
+    # Multi-tenant fields
+    primary_tenant = models.ForeignKey(
+        'Tenant',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='primary_users',
+        help_text="User's primary tenant"
+    )
+    
+    # Security fields
+    is_verified = models.BooleanField(default=False, help_text="Email verification status")
+    last_login_ip = models.GenericIPAddressField(null=True, blank=True)
+    failed_login_attempts = models.IntegerField(default=0)
+    locked_until = models.DateTimeField(null=True, blank=True)
+    
+    # Free trial fields (deprecated - moved to tenant level)
     trial_start = models.DateTimeField(null=True, blank=True)
     trial_end = models.DateTimeField(null=True, blank=True)
     is_trial_active = models.BooleanField(default=False)
@@ -247,7 +437,54 @@ class User(AbstractBaseUser):
     objects = CustomUserManager()
 
     def is_member_of_tenant(self, tenant_id):
+        """Check if user is a member of the specified tenant"""
         return self.memberships.filter(tenant_id=tenant_id).exists()
+
+    def get_tenant_role(self, tenant_id):
+        """Get user's role in a specific tenant"""
+        try:
+            membership = self.memberships.get(tenant_id=tenant_id)
+            return membership.role
+        except TenantMembership.DoesNotExist:
+            return None
+
+    def can_access_tenant(self, tenant_id):
+        """Check if user can access a specific tenant"""
+        if not self.is_active:
+            return False
+        return self.is_member_of_tenant(tenant_id)
+
+    def is_locked(self):
+        """Check if user account is locked"""
+        if not self.locked_until:
+            return False
+        return timezone.now() < self.locked_until
+
+    def lock_account(self, duration_minutes=30):
+        """Lock user account for specified duration"""
+        self.locked_until = timezone.now() + timezone.timedelta(minutes=duration_minutes)
+        self.save(update_fields=['locked_until'])
+
+    def unlock_account(self):
+        """Unlock user account"""
+        self.locked_until = None
+        self.failed_login_attempts = 0
+        self.save(update_fields=['locked_until', 'failed_login_attempts'])
+
+    def record_failed_login(self):
+        """Record a failed login attempt"""
+        self.failed_login_attempts += 1
+        if self.failed_login_attempts >= 5:  # Lock after 5 failed attempts
+            self.lock_account()
+        self.save(update_fields=['failed_login_attempts', 'locked_until'])
+
+    def record_successful_login(self, ip_address=None):
+        """Record a successful login"""
+        self.failed_login_attempts = 0
+        self.locked_until = None
+        if ip_address:
+            self.last_login_ip = ip_address
+        self.save(update_fields=['failed_login_attempts', 'locked_until', 'last_login_ip'])
 
     def save(self, *args, **kwargs):
         if self.email:
@@ -1580,3 +1817,270 @@ class ResourceScanSummary(RowLevelSecurityProtectedModel):
 
 # Add this after the Invitation model definition
 TenantInvitation = Invitation  # Create an alias for backward compatibility
+
+
+class TenantOAuthConfig(models.Model):
+    """
+    Stores OAuth provider configuration for each tenant.
+    Each tenant can have multiple OAuth providers configured.
+    """
+    
+    OAUTH_PROVIDERS = [
+        ('azure', 'Azure AD (Microsoft Entra ID)'),
+        ('google', 'Google OAuth'),
+        ('github', 'GitHub OAuth'),
+        ('okta', 'Okta'),
+        ('auth0', 'Auth0'),
+    ]
+    
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    tenant = models.ForeignKey(
+        Tenant,
+        on_delete=models.CASCADE,
+        related_name='oauth_configs',
+        help_text="Tenant this OAuth config belongs to"
+    )
+    provider = models.CharField(
+        max_length=50,
+        choices=OAUTH_PROVIDERS,
+        help_text="OAuth provider type"
+    )
+    
+    # OAuth Configuration
+    client_id = models.CharField(max_length=255, help_text="OAuth Client ID")
+    _client_secret = models.BinaryField(
+        db_column="client_secret",
+        help_text="Encrypted OAuth Client Secret"
+    )
+    redirect_uri = models.URLField(help_text="OAuth Redirect URI")
+    
+    # Provider-specific configuration
+    provider_tenant_id = models.CharField(
+        max_length=255,
+        blank=True,
+        null=True,
+        help_text="Provider-specific tenant ID (e.g., Azure tenant ID)"
+    )
+    scopes = models.JSONField(
+        default=list,
+        help_text="OAuth scopes to request"
+    )
+    allowed_domains = models.JSONField(
+        default=list,
+        help_text="Allowed email domains for this provider"
+    )
+    
+    # Configuration settings
+    is_active = models.BooleanField(default=True, help_text="Whether this config is active")
+    auto_create_users = models.BooleanField(
+        default=True,
+        help_text="Automatically create users on first login"
+    )
+    require_email_verification = models.BooleanField(
+        default=False,
+        help_text="Require email verification for new users"
+    )
+    
+    # Advanced settings
+    additional_params = models.JSONField(
+        default=dict,
+        help_text="Additional OAuth parameters"
+    )
+    
+    # Audit fields
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    created_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name='created_oauth_configs'
+    )
+    last_used = models.DateTimeField(null=True, blank=True)
+    
+    class Meta:
+        db_table = 'tenant_oauth_configs'
+        unique_together = ['tenant', 'provider']
+        indexes = [
+            models.Index(fields=['tenant', 'provider']),
+            models.Index(fields=['tenant', 'is_active']),
+            models.Index(fields=['provider']),
+        ]
+    
+    def __str__(self):
+        return f"{self.tenant.name} - {self.get_provider_display()}"
+    
+    @property
+    def client_secret(self):
+        """Decrypt and return the OAuth client secret"""
+        if not self._client_secret:
+            return None
+        
+        try:
+            fernet = Fernet(settings.SECRETS_ENCRYPTION_KEY.encode())
+            decrypted_data = fernet.decrypt(self._client_secret)
+            return decrypted_data.decode()
+        except Exception as e:
+            raise ValidationError(f"Failed to decrypt client secret: {e}")
+    
+    @client_secret.setter
+    def client_secret(self, value):
+        """Encrypt and store the OAuth client secret"""
+        if not value:
+            self._client_secret = None
+            return
+        
+        try:
+            fernet = Fernet(settings.SECRETS_ENCRYPTION_KEY.encode())
+            encrypted_data = fernet.encrypt(value.encode())
+            self._client_secret = encrypted_data
+        except Exception as e:
+            raise ValidationError(f"Failed to encrypt client secret: {e}")
+
+
+class TenantOAuthUser(models.Model):
+    """
+    Links users to their OAuth provider accounts within a tenant.
+    This allows users to have different OAuth accounts for different tenants.
+    """
+    
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    tenant = models.ForeignKey(
+        Tenant,
+        on_delete=models.CASCADE,
+        related_name='oauth_users'
+    )
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='tenant_oauth_accounts'
+    )
+    oauth_config = models.ForeignKey(
+        TenantOAuthConfig,
+        on_delete=models.CASCADE,
+        related_name='oauth_users'
+    )
+    
+    # Provider-specific user identifiers
+    provider_user_id = models.CharField(
+        max_length=255,
+        help_text="User ID from the OAuth provider"
+    )
+    provider_email = models.EmailField(
+        help_text="Email from the OAuth provider"
+    )
+    
+    # OAuth token storage (encrypted)
+    _access_token = models.BinaryField(
+        db_column="access_token",
+        null=True,
+        blank=True,
+        help_text="Encrypted access token"
+    )
+    _refresh_token = models.BinaryField(
+        db_column="refresh_token",
+        null=True,
+        blank=True,
+        help_text="Encrypted refresh token"
+    )
+    token_expires_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="When the access token expires"
+    )
+    
+    # Status
+    is_active = models.BooleanField(default=True)
+    last_login = models.DateTimeField(null=True, blank=True)
+    
+    # Audit fields
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        db_table = 'tenant_oauth_users'
+        unique_together = ['tenant', 'oauth_config', 'provider_user_id']
+        indexes = [
+            models.Index(fields=['tenant', 'user']),
+            models.Index(fields=['tenant', 'oauth_config']),
+            models.Index(fields=['provider_user_id']),
+        ]
+    
+    def __str__(self):
+        return f"{self.user.email} - {self.tenant.name} - {self.oauth_config.provider}"
+    
+    @property
+    def access_token(self):
+        """Decrypt and return the access token"""
+        if not self._access_token:
+            return None
+        
+        try:
+            fernet = Fernet(settings.SECRETS_ENCRYPTION_KEY.encode())
+            decrypted_data = fernet.decrypt(self._access_token)
+            return decrypted_data.decode()
+        except Exception as e:
+            raise ValidationError(f"Failed to decrypt access token: {e}")
+    
+    @access_token.setter
+    def access_token(self, value):
+        """Encrypt and store the access token"""
+        if not value:
+            self._access_token = None
+            return
+        
+        try:
+            fernet = Fernet(settings.SECRETS_ENCRYPTION_KEY.encode())
+            encrypted_data = fernet.encrypt(value.encode())
+            self._access_token = encrypted_data
+        except Exception as e:
+            raise ValidationError(f"Failed to encrypt access token: {e}")
+    
+    @property
+    def refresh_token(self):
+        """Decrypt and return the refresh token"""
+        if not self._refresh_token:
+            return None
+        
+        try:
+            fernet = Fernet(settings.SECRETS_ENCRYPTION_KEY.encode())
+            decrypted_data = fernet.decrypt(self._refresh_token)
+            return decrypted_data.decode()
+        except Exception as e:
+            raise ValidationError(f"Failed to decrypt refresh token: {e}")
+    
+    @refresh_token.setter
+    def refresh_token(self, value):
+        """Encrypt and store the refresh token"""
+        if not value:
+            self._refresh_token = None
+            return
+        
+        try:
+            fernet = Fernet(settings.SECRETS_ENCRYPTION_KEY.encode())
+            encrypted_data = fernet.encrypt(value.encode())
+            self._refresh_token = encrypted_data
+        except Exception as e:
+            raise ValidationError(f"Failed to encrypt refresh token: {e}")
+    
+    def is_token_expired(self):
+        """Check if the access token is expired"""
+        if not self.token_expires_at:
+            return True
+        return timezone.now() >= self.token_expires_at
+    
+    def update_tokens(self, access_token: str, refresh_token: str = None, expires_in: int = None):
+        """Update stored OAuth tokens"""
+        self.access_token = access_token
+        if refresh_token:
+            self.refresh_token = refresh_token
+        
+        if expires_in:
+            self.token_expires_at = timezone.now() + timezone.timedelta(seconds=expires_in)
+        
+        self.save()
+    
+    def update_last_login(self):
+        """Update the last login timestamp"""
+        self.last_login = timezone.now()
+        self.save(update_fields=['last_login'])

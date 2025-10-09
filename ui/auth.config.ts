@@ -15,7 +15,7 @@ interface CustomJwtPayload extends JwtPayload {
 }
 
 const refreshAccessToken = async (token: JwtPayload) => {
-  const url = new URL(`${apiBaseUrl}/tokens/refresh`);
+  const url = new URL(`${apiBaseUrl}/tenant/refresh-token`);
 
   const bodyData = {
     data: {
@@ -78,10 +78,17 @@ export const authConfig = {
           .object({
             email: z.string().email(),
             password: z.string().min(12),
+            tenant_name: z.string().optional(),
           })
           .safeParse(credentials);
 
         if (!parsedCredentials.success) return null;
+
+        console.log("NextAuth authorize called with:", {
+          email: parsedCredentials.data.email,
+          password: "***",
+          tenant_name: parsedCredentials.data.tenant_name
+        });
 
         // Forward optional tenant_name to backend for enterprise multi-tenant login
         const tokenResponse = await getToken(parsedCredentials.data as any);

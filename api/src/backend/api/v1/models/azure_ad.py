@@ -35,7 +35,7 @@ class AzureADTenantMapping(models.Model):
     """Model for mapping Azure AD groups to tenants"""
     
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    tenant = models.ForeignKey('Tenant', on_delete=models.CASCADE, related_name='azure_tenant_mappings')
+    tenant = models.ForeignKey('api.Tenant', on_delete=models.CASCADE, related_name='azure_tenant_mappings')
     azure_group_id = models.CharField(max_length=255, unique=True, help_text="Azure AD group ID for tenant")
     azure_group_name = models.CharField(max_length=255, help_text="Azure AD group display name")
     is_active = models.BooleanField(default=True, help_text="Whether this mapping is active")

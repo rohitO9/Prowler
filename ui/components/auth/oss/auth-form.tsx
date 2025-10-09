@@ -5,6 +5,7 @@ import { Icon } from "@iconify/react";
 import { Button, Checkbox, Divider, Link, Tooltip } from "@nextui-org/react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
+import { useEffect } from "react";
 import { z } from "zod";
 
 import { authenticate, createNewUser } from "@/actions/auth";
@@ -70,17 +71,29 @@ export const AuthForm = ({
   const { toast } = useToast();
 
   // Prefill organization from localStorage on sign-in
-  if (typeof window !== "undefined" && type === "sign-in") {
-    try {
-      const saved = localStorage.getItem("company");
-      if (saved && !(form.getValues() as any).company) {
-        (form as any).setValue("company", saved);
+  useEffect(() => {
+    if (typeof window !== "undefined" && type === "sign-in") {
+      try {
+        const saved = localStorage.getItem("company");
+        console.log("Setting company from localStorage:", saved);
+        if (saved && !form.getValues("company")) {
+          form.setValue("company", saved);
+          console.log("Company field set to:", saved);
+        }
+      } catch (error) {
+        console.error("Error setting company field:", error);
       }
-    } catch {}
-  }
+    }
+  }, [type, form]);
 
   const onSubmit = async (data: z.infer<typeof formSchema>) => {
+    console.log("Form submitted with data:", data);
     if (type === "sign-in") {
+      console.log("Attempting sign-in with:", {
+        email: data.email?.toLowerCase() || "",
+        password: data.password ? "***" : "",
+        company: data.company || "none"
+      });
       const result = await authenticate(null, {
         email: data.email?.toLowerCase() || "",
         password: data.password || "",
@@ -338,6 +351,11 @@ export const AuthForm = ({
                           !!form.formState.errors.password ||
                           !!form.formState.errors.email
                         }
+                      />
+                      {/* Hidden company field for sign-in to pass tenant context */}
+                      <input
+                        type="hidden"
+                        {...form.register("company")}
                       />
                     </div>
                   ) : (

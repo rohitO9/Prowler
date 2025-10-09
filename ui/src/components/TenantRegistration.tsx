@@ -173,7 +173,7 @@ const TenantRegistration: React.FC<TenantRegistrationProps> = ({ onRegistrationC
     console.log('Sending registration payload:', JSON.stringify(payload, null, 2));
 
     try {
-        const response = await fetch('http://localhost:8080/api/v1/tenant/register', {
+        const response = await fetch('http://localhost:8080/api/v1/tenant/register-tenant', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/vnd.api+json',

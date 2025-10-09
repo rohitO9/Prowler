@@ -8,25 +8,36 @@ import TenantRegistration from './TenantRegistration';
 import TenantDashboard from './TenantDashboard';
 
 const LandingPage: React.FC = () => {
+  console.log('🔍 [LandingPage] Component rendering');
   const [showRegistration, setShowRegistration] = useState(false);
   const [showLogin, setShowLogin] = useState(false);
+  const [isClient, setIsClient] = useState(false);
   const router = useRouter();
   const { data: session, status } = useSession();
+  console.log('🔍 [LandingPage] Session status:', status);
+
+  // Ensure we're on the client side to avoid hydration issues
+  useEffect(() => {
+    console.log('🔍 [LandingPage] useEffect running, setting isClient to true');
+    setIsClient(true);
+  }, []);
+
+  // Handle redirect for authenticated users on subdomains
+  useEffect(() => {
+    if (isClient && isOnSubdomain() && status === 'authenticated' && session?.user) {
+      router.push('/home');
+    }
+  }, [isClient, status, session, router]);
+
+  // Show loading while checking authentication or during client-side hydration
+  if (!isClient || status === 'loading') {
+    return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
+  }
 
   // If we're on a subdomain, handle authentication and routing
   if (isOnSubdomain()) {
-    const subdomain = getSubdomain();
-    
-    // Show loading while checking authentication
-    if (status === 'loading') {
-      return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
-    }
-    
-    // If user is authenticated, redirect to /home
+    // If user is authenticated, show redirecting message (redirect handled by useEffect)
     if (status === 'authenticated' && session?.user) {
-      useEffect(() => {
-        router.push('/home');
-      }, [router]);
       return <div className="min-h-screen flex items-center justify-center">Redirecting to dashboard...</div>;
     }
     

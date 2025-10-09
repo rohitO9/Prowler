@@ -1,6 +1,7 @@
 from .compliance import ComplianceOverviewViewSet
 from .auth import CustomTokenObtainView
 from .azure_ad import AzureADSocialLoginView
+from . import tenant_registration
 from .CustomTokenObtainView import CustomTokenObtainView
 from .CustomTokenRefreshView import CustomTokenRefreshView
 from .CustomTokenSwitchTenantView import CustomTokenSwitchTenantView
