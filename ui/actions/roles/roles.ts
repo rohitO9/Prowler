@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 
 import {
   apiBaseUrl,
+  getApiBaseUrl,
   getAuthHeaders,
   getErrorMessage,
   parseStringify,
@@ -21,7 +22,7 @@ export const getRoles = async ({
 
   if (isNaN(Number(page)) || page < 1) redirect("/roles");
 
-  const url = new URL(`${apiBaseUrl}/roles`);
+  const url = new URL(`${getApiBaseUrl()}/roles`);
 
   if (page) url.searchParams.append("page[number]", page.toString());
   if (pageSize) url.searchParams.append("page[size]", pageSize.toString());
@@ -52,7 +53,7 @@ export const getRoles = async ({
 
 export const getRoleInfoById = async (roleId: string) => {
   const headers = await getAuthHeaders({ contentType: false });
-  const url = new URL(`${apiBaseUrl}/roles/${roleId}`);
+  const url = new URL(`${getApiBaseUrl()}/roles/${roleId}`);
 
   try {
     const response = await fetch(url.toString(), {
@@ -79,7 +80,7 @@ export const getRolesByIds = async (roleIds: string[]) => {
   }
 
   const headers = await getAuthHeaders({ contentType: false });
-  const url = new URL(`${apiBaseUrl}/roles`);
+  const url = new URL(`${getApiBaseUrl()}/roles`);
 
   // Add filter for role IDs
   url.searchParams.append("filter[id__in]", roleIds.join(","));
@@ -147,7 +148,7 @@ export const addRole = async (formData: FormData) => {
   const body = JSON.stringify(payload);
 
   try {
-    const url = new URL(`${apiBaseUrl}/roles`);
+    const url = new URL(`${getApiBaseUrl()}/roles`);
     const response = await fetch(url.toString(), {
       method: "POST",
       headers,
@@ -209,7 +210,7 @@ export const updateRole = async (formData: FormData, roleId: string) => {
   const body = JSON.stringify(payload);
 
   try {
-    const url = new URL(`${apiBaseUrl}/roles/${roleId}`);
+    const url = new URL(`${getApiBaseUrl()}/roles/${roleId}`);
     const response = await fetch(url.toString(), {
       method: "PATCH",
       headers,
@@ -231,7 +232,7 @@ export const updateRole = async (formData: FormData, roleId: string) => {
 export const deleteRole = async (roleId: string) => {
   const headers = await getAuthHeaders({ contentType: false });
 
-  const url = new URL(`${apiBaseUrl}/roles/${roleId}`);
+  const url = new URL(`${getApiBaseUrl()}/roles/${roleId}`);
   try {
     const response = await fetch(url.toString(), {
       method: "DELETE",

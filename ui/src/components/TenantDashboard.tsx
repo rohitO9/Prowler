@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { getSubdomain, isOnSubdomain } from '../utils/subdomain';
+import ErrorBoundary from './ErrorBoundary';
 
 interface TenantInfo {
   id: string;
@@ -176,7 +177,8 @@ const TenantDashboard: React.FC<TenantDashboardProps> = ({ tenant: propTenant })
   const currentSubdomain = getSubdomain();
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
+    <ErrorBoundary>
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
       {/* Hero Section */}
       <div className="relative overflow-hidden bg-white shadow-xl">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
@@ -429,6 +431,7 @@ const TenantDashboard: React.FC<TenantDashboardProps> = ({ tenant: propTenant })
         </div>
       </div>
     </div>
+    </ErrorBoundary>
   );
 };
 

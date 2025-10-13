@@ -27,6 +27,10 @@ import { UserProfileProps } from "@/types";
 import { UserNav } from "../user-nav/user-nav";
 
 export const Menu = ({ isOpen, user }: { isOpen: boolean; user: UserProfileProps }) => {
+  console.log('🔍 [Menu] Sidebar Menu rendering with user:', user);
+  console.log('🔍 [Menu] User type:', typeof user);
+  console.log('🔍 [Menu] User keys:', user ? Object.keys(user) : 'No user');
+  
   const pathname = usePathname();
   const menuList = getMenuList(pathname ?? "");
 

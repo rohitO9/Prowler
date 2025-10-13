@@ -3,11 +3,11 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
-import { apiBaseUrl, getAuthHeaders, parseStringify } from "@/lib/helper";
+import { apiBaseUrl, getApiBaseUrl, getAuthHeaders, parseStringify } from "@/lib/helper";
 
 export const getAllTenants = async () => {
   const headers = await getAuthHeaders({ contentType: false });
-  const url = new URL(`${apiBaseUrl}/tenants`);
+  const url = new URL(`${getApiBaseUrl()}/tenants`);
 
   try {
     const response = await fetch(url.toString(), {
@@ -25,7 +25,7 @@ export const getAllTenants = async () => {
     return parsedData;
   } catch (error) {
     // eslint-disable-next-line no-console
-    console.error("Error fetching tenants:", error);
+    console.log("🔍 [getAllTenants] Permission denied or error fetching tenants:", error);
     return undefined;
   }
 };

@@ -4,7 +4,7 @@ import { AuthError } from "next-auth";
 import { z } from "zod";
 
 import { signIn, signOut } from "@/auth.config";
-import { getApiBaseUrl } from "@/lib/helper";
+import { getApiBaseUrl, getServerApiBaseUrl } from "@/lib/helper";
 import { authFormSchema } from "@/types";
 
 const formSchemaSignIn = authFormSchema("sign-in");
@@ -69,10 +69,10 @@ export async function authenticate(
       switch (error.type) {
         case "CredentialsSignin":
           return {
-            message: "Credentials error",
+            message: "User not found",
             errors: {
               ...defaultValues,
-              credentials: "Incorrect email or password",
+              credentials: "User not found or invalid credentials",
             },
           };
         case "CallbackRouteError":
@@ -89,6 +89,29 @@ export async function authenticate(
           };
       }
     }
+    
+    // Handle specific error messages from backend
+    const errorMessage = (error as Error).message || "";
+    if (errorMessage.includes("Invalid credentials") || errorMessage.includes("User not found")) {
+      return {
+        message: "User not found",
+        errors: {
+          ...defaultValues,
+          credentials: "User not found or invalid credentials",
+        },
+      };
+    }
+    
+    if (errorMessage.includes("Access denied") || errorMessage.includes("tenant")) {
+      return {
+        message: "Access denied",
+        errors: {
+          ...defaultValues,
+          credentials: "Access denied to this tenant",
+        },
+      };
+    }
+    
     return {
       message: "Unexpected error",
       errors: {
@@ -110,7 +133,7 @@ export const createNewUser = async (
   }
 
   // Get company from localStorage if available (for subdomain-based registration)
-  let company = formData.company;
+  let company: string | null | undefined = formData.company;
   if (typeof window !== 'undefined' && !company) {
     company = localStorage.getItem('company');
   }
@@ -142,6 +165,32 @@ export const createNewUser = async (
 
     const parsedResponse = await safeJsonParse(response);
     if (!response.ok) {
+      // Handle specific error scenarios
+      if (response.status === 400) {
+        const errorDetail = parsedResponse?.errors?.[0]?.detail || "";
+        if (errorDetail.includes("already exists") || errorDetail.includes("duplicate")) {
+          return {
+            errors: [
+              {
+                source: { pointer: "/data/attributes/email" },
+                detail: "User with this email already exists",
+              },
+            ],
+          };
+        }
+      }
+      
+      if (response.status === 409) {
+        return {
+          errors: [
+            {
+              source: { pointer: "/data/attributes/email" },
+              detail: "User with this email already exists",
+            },
+          ],
+        };
+      }
+      
       return parsedResponse;
     }
 
@@ -161,8 +210,10 @@ export const createNewUser = async (
 
 // Replace the getToken function in your actions/auth/auth.ts file with this:
 
-export const getToken = async (formData: z.infer<typeof formSchemaSignIn>) => {
-  const url = new URL(`${getApiBaseUrl()}/tokens`);
+export const getToken = async (formData: z.infer<typeof formSchemaSignIn>, host?: string) => {
+  // Use server-side API URL if host is provided, otherwise use client-side
+  const apiUrl = host ? getServerApiBaseUrl(host) : getApiBaseUrl();
+  const url = new URL(`${apiUrl}/tokens`);
   
   // Get company from localStorage if available (for subdomain-based authentication)
   let company = (formData as any)?.company;
@@ -241,8 +292,10 @@ export const getToken = async (formData: z.infer<typeof formSchemaSignIn>) => {
   }
 };
 
-export const getUserByMe = async (accessToken: string) => {
-  const url = new URL(`${getApiBaseUrl()}/users/me`);
+export const getUserByMe = async (accessToken: string, host?: string) => {
+  // Use server-side API URL if host is provided, otherwise use client-side
+  const apiUrl = host ? getServerApiBaseUrl(host) : getApiBaseUrl();
+  const url = new URL(`${apiUrl}/users/me`);
   
   // Getting user info from backend
 
@@ -256,7 +309,6 @@ export const getUserByMe = async (accessToken: string) => {
     });
 
     const parsedResponse = await safeJsonParse(response);
-    
     console.log("🔍 [getUserByMe] Raw response:", parsedResponse);
     console.log("🔍 [getUserByMe] data:", parsedResponse?.data);
     console.log("🔍 [getUserByMe] attributes:", parsedResponse?.data?.attributes);

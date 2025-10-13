@@ -63,9 +63,22 @@ def register_tenant(request):
 
     logger.info(f"Normalized attributes: {attributes}")
 
-    # Accept alt field names (tenant_name or name)
-    tenant_name = attributes.get('tenant_name') or attributes.get('name')
+    # Extract subdomain from request host if not provided
     subdomain = attributes.get('subdomain')
+    if not subdomain:
+        # Try to extract from request host
+        host = request.META.get('HTTP_HOST', '')
+        if '.localhost' in host:
+            subdomain = host.split('.')[0]
+            logger.info(f"Auto-extracted subdomain from host: {subdomain}")
+    
+    # Auto-generate tenant name from subdomain if not provided
+    tenant_name = attributes.get('tenant_name') or attributes.get('name')
+    if not tenant_name and subdomain:
+        # Convert subdomain to proper company name
+        tenant_name = subdomain.replace('-', ' ').replace('_', ' ').title()
+        logger.info(f"Auto-generated tenant name from subdomain: {tenant_name}")
+    
     contact_email = attributes.get('contact_email') or attributes.get('contactEmail')
     admin_first_name = attributes.get('admin_first_name') or attributes.get('adminFirstName')
     admin_last_name = attributes.get('admin_last_name') or attributes.get('adminLastName')

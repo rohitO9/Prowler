@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 
 import {
   apiBaseUrl,
+  getApiBaseUrl,
   getAuthHeaders,
   getErrorMessage,
   parseStringify,
@@ -23,7 +24,7 @@ export const getAdminUsers = async ({
 
   if (isNaN(Number(page)) || page < 1) redirect("/users");
 
-  const url = new URL(`${apiBaseUrl}/admin/users/`);
+  const url = new URL(`${getApiBaseUrl()}/admin/users/`);
 
   if (page) url.searchParams.append("page", page.toString());
   if (pageSize) url.searchParams.append("page_size", pageSize.toString());
@@ -57,7 +58,7 @@ export const getAdminUsers = async ({
 
 export const getUserPermissions = async (userId: string) => {
   const headers = await getAuthHeaders({ contentType: false });
-  const url = new URL(`${apiBaseUrl}/admin/users/${userId}/permissions/`);
+  const url = new URL(`${getApiBaseUrl()}/admin/users/${userId}/permissions/`);
 
   try {
     const response = await fetch(url.toString(), {
@@ -87,7 +88,7 @@ export const assignRoleToUser = async (formData: FormData) => {
     return { error: "userId and roleId are required" };
   }
 
-  const url = new URL(`${apiBaseUrl}/admin/users/${userId}/assign_role/`);
+  const url = new URL(`${getApiBaseUrl()}/admin/users/${userId}/assign_role/`);
 
   try {
     const response = await fetch(url.toString(), {
@@ -123,7 +124,7 @@ export const removeRoleFromUser = async (formData: FormData) => {
     return { error: "userId and roleId are required" };
   }
 
-  const url = new URL(`${apiBaseUrl}/admin/users/${userId}/remove_role/`);
+  const url = new URL(`${getApiBaseUrl()}/admin/users/${userId}/remove_role/`);
 
   try {
     const response = await fetch(url.toString(), {
@@ -157,7 +158,7 @@ export const toggleUserActive = async (formData: FormData) => {
     return { error: "userId is required" };
   }
 
-  const url = new URL(`${apiBaseUrl}/admin/users/${userId}/toggle_active/`);
+  const url = new URL(`${getApiBaseUrl()}/admin/users/${userId}/toggle_active/`);
 
   try {
     const response = await fetch(url.toString(), {
@@ -189,7 +190,7 @@ export const updateUserPermissions = async (formData: FormData) => {
     return { error: "userId is required" };
   }
 
-  const url = new URL(`${apiBaseUrl}/admin/users/${userId}/update_permissions/`);
+  const url = new URL(`${getApiBaseUrl()}/admin/users/${userId}/update_permissions/`);
 
   try {
     const response = await fetch(url.toString(), {
@@ -218,7 +219,7 @@ export const updateUserPermissions = async (formData: FormData) => {
 
 export const getAdminRoles = async () => {
   const headers = await getAuthHeaders({ contentType: false });
-  const url = new URL(`${apiBaseUrl}/admin/roles/`);
+  const url = new URL(`${getApiBaseUrl()}/admin/roles/`);
 
   try {
     const response = await fetch(url.toString(), {
@@ -251,7 +252,7 @@ export const createRole = async (formData: FormData) => {
     return { error: "name and display_name are required" };
   }
 
-  const url = new URL(`${apiBaseUrl}/admin/roles/`);
+  const url = new URL(`${getApiBaseUrl()}/admin/roles/`);
 
   try {
     const response = await fetch(url.toString(), {
@@ -291,7 +292,7 @@ export const addPermissionToRole = async (formData: FormData) => {
     return { error: "roleId and permissionName are required" };
   }
 
-  const url = new URL(`${apiBaseUrl}/admin/roles/${roleId}/add_permission/`);
+  const url = new URL(`${getApiBaseUrl()}/admin/roles/${roleId}/add_permission/`);
 
   try {
     const response = await fetch(url.toString(), {
@@ -326,7 +327,7 @@ export const removePermissionFromRole = async (formData: FormData) => {
     return { error: "roleId and permissionName are required" };
   }
 
-  const url = new URL(`${apiBaseUrl}/admin/roles/${roleId}/remove_permission/`);
+  const url = new URL(`${getApiBaseUrl()}/admin/roles/${roleId}/remove_permission/`);
 
   try {
     const response = await fetch(url.toString(), {

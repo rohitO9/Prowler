@@ -28,9 +28,29 @@ interface FormData {
 
 const TenantRegistration: React.FC<TenantRegistrationProps> = ({ onRegistrationComplete }) => {
   const router = useRouter();
+  
+  // Auto-detect subdomain and company name from URL
+  const getAutoDetectedData = () => {
+    if (typeof window !== 'undefined') {
+      const hostname = window.location.hostname;
+      console.log('🔍 [TenantRegistration] Current hostname:', hostname);
+      
+      if (hostname.includes('.localhost')) {
+        const subdomain = hostname.split('.')[0];
+        const companyName = subdomain.replace('-', ' ').replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase());
+        console.log('🔍 [TenantRegistration] Auto-detected subdomain:', subdomain);
+        console.log('🔍 [TenantRegistration] Auto-generated company name:', companyName);
+        return { subdomain, companyName };
+      }
+    }
+    return { subdomain: '', companyName: '' };
+  };
+  
+  const { subdomain: autoSubdomain, companyName: autoCompanyName } = getAutoDetectedData();
+  
   const [formData, setFormData] = useState<FormData>({
-    tenantName: '',
-    subdomain: '',
+    tenantName: autoCompanyName,
+    subdomain: autoSubdomain,
     contactEmail: '',
     contactPhone: '',
     address: '',
@@ -234,6 +254,11 @@ const TenantRegistration: React.FC<TenantRegistrationProps> = ({ onRegistrationC
           placeholder="Enter your company name"
           required
         />
+        {autoCompanyName && (
+          <p className="mt-1 text-sm text-green-600">
+            ✅ Auto-detected from subdomain: <strong>{autoCompanyName}</strong>
+          </p>
+        )}
       </div>
       
       <div>
@@ -254,6 +279,11 @@ const TenantRegistration: React.FC<TenantRegistrationProps> = ({ onRegistrationC
         <div className="mt-1 text-sm text-gray-500">
           Your URL will be: <strong>{formData.subdomain}.localhost:3000</strong>
         </div>
+        {autoSubdomain && (
+          <p className="mt-1 text-sm text-green-600">
+            ✅ Auto-detected from current URL: <strong>{autoSubdomain}</strong>
+          </p>
+        )}
       </div>
       
       <div>

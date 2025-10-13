@@ -1,7 +1,7 @@
 "use server";
 import { revalidatePath } from "next/cache";
 
-import { apiBaseUrl, getAuthHeaders, parseStringify } from "@/lib";
+import { apiBaseUrl, getApiBaseUrl, getAuthHeaders, parseStringify } from "@/lib";
 
 export const getCompliancesOverview = async ({
   scanId,
@@ -14,7 +14,7 @@ export const getCompliancesOverview = async ({
 }) => {
   const headers = await getAuthHeaders({ contentType: false });
 
-  const url = new URL(`${apiBaseUrl}/compliance-overviews`);
+  const url = new URL(`${getApiBaseUrl()}/compliance-overviews`);
 
   if (scanId) url.searchParams.append("filter[scan_id]", scanId);
   if (query) url.searchParams.append("filter[search]", query);
@@ -46,7 +46,7 @@ export const getComplianceOverviewMetadataInfo = async ({
 }) => {
   const headers = await getAuthHeaders({ contentType: false });
 
-  const url = new URL(`${apiBaseUrl}/compliance-overviews/metadata`);
+  const url = new URL(`${getApiBaseUrl()}/compliance-overviews/metadata`);
 
   if (query) url.searchParams.append("filter[search]", query);
   if (sort) url.searchParams.append("sort", sort);
@@ -83,7 +83,7 @@ export const getComplianceAttributes = async (complianceId: string) => {
   const headers = await getAuthHeaders({ contentType: false });
 
   try {
-    const url = new URL(`${apiBaseUrl}/compliance-overviews/attributes`);
+    const url = new URL(`${getApiBaseUrl()}/compliance-overviews/attributes`);
     url.searchParams.append("filter[compliance_id]", complianceId);
 
     const response = await fetch(url.toString(), {
@@ -120,7 +120,7 @@ export const getComplianceRequirements = async ({
   const headers = await getAuthHeaders({ contentType: false });
 
   try {
-    const url = new URL(`${apiBaseUrl}/compliance-overviews/requirements`);
+    const url = new URL(`${getApiBaseUrl()}/compliance-overviews/requirements`);
     url.searchParams.append("filter[compliance_id]", complianceId);
     url.searchParams.append("filter[scan_id]", scanId);
 

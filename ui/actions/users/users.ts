@@ -5,6 +5,8 @@ import { redirect } from "next/navigation";
 
 import {
   apiBaseUrl,
+  getApiBaseUrl,
+  getServerApiBaseUrl,
   getAuthHeaders,
   getErrorMessage,
   parseStringify,
@@ -21,7 +23,7 @@ export const getUsers = async ({
 
   if (isNaN(Number(page)) || page < 1) redirect("/users?include=roles");
 
-  const url = new URL(`${apiBaseUrl}/users?include=roles`);
+  const url = new URL(`${getApiBaseUrl()}/users?include=roles`);
 
   if (page) url.searchParams.append("page[number]", page.toString());
   if (pageSize) url.searchParams.append("page[size]", pageSize.toString());
@@ -71,7 +73,7 @@ export const updateUser = async (formData: FormData) => {
   const userEmail = formData.get("email") as string | null;
   const userCompanyName = formData.get("company_name") as string | null;
 
-  const url = new URL(`${apiBaseUrl}/users/${userId}`);
+  const url = new URL(`${getApiBaseUrl()}/users/${userId}`);
 
   // Prepare attributes to send based on changes
   const attributes: Record<string, any> = {};
@@ -123,7 +125,7 @@ export const updateUserRole = async (formData: FormData) => {
     return { error: "userId and roleId are required" };
   }
 
-  const url = new URL(`${apiBaseUrl}/users/${userId}/relationships/roles`);
+  const url = new URL(`${getApiBaseUrl()}/users/${userId}/relationships/roles`);
 
   const requestBody = {
     data: [
@@ -166,7 +168,7 @@ export const deleteUser = async (formData: FormData) => {
     return { error: "User ID is required" };
   }
 
-  const url = new URL(`${apiBaseUrl}/users/${userId}`);
+  const url = new URL(`${getApiBaseUrl()}/users/${userId}`);
 
   try {
     const response = await fetch(url.toString(), {
@@ -196,10 +198,16 @@ export const deleteUser = async (formData: FormData) => {
   }
 };
 
-export const getUserInfo = async () => {
+export const getUserInfo = async (host?: string) => {
+  console.log('🔍 [getUserInfo] Starting getUserInfo function');
   const headers = await getAuthHeaders({ contentType: false });
-   console.log("API Base URL:", process.env.API_BASE_URL);
-  const url = new URL(`${apiBaseUrl}/users/me?include=roles`);
+  console.log('🔍 [getUserInfo] Headers:', headers);
+  console.log("🔍 [getUserInfo] API Base URL:", process.env.API_BASE_URL);
+  
+  // Use tenant-aware URL if host is provided, otherwise fallback
+  const apiUrl = host ? getServerApiBaseUrl(host) : getApiBaseUrl();
+  const url = new URL(`${apiUrl}/users/me?include=roles`);
+  console.log('🔍 [getUserInfo] Fetching from URL:', url.toString());
 
   try {
     const response = await fetch(url.toString(), {
@@ -207,24 +215,37 @@ export const getUserInfo = async () => {
       headers,
     });
 
+    console.log('🔍 [getUserInfo] Response status:', response.status, response.statusText);
+    console.log('🔍 [getUserInfo] Response headers:', Object.fromEntries(response.headers.entries()));
+
     if (!response.ok) {
       throw new Error(`Failed to fetch user data: ${response.statusText}`);
     }
 
     const data = await response.json();
+    console.log('🔍 [getUserInfo] Raw API response:', data);
+    console.log('🔍 [getUserInfo] Response structure:', {
+      hasData: !!data.data,
+      dataKeys: data.data ? Object.keys(data.data) : [],
+      hasNestedData: !!(data.data && data.data.data),
+      hasAttributes: !!(data.data && data.data.data && data.data.data.attributes),
+      attributesKeys: data.data?.data?.attributes ? Object.keys(data.data.data.attributes) : []
+    });
+    
     const parsedData = parseStringify(data);
+    console.log('🔍 [getUserInfo] Parsed data:', parsedData);
     revalidatePath("/profile");
     return parsedData;
   } catch (error) {
     // eslint-disable-next-line no-console
-    console.error("Error fetching profile:", error);
+    console.error("🔍 [getUserInfo] Error fetching profile:", error);
     return undefined;
   }
 };
 
 export const getTrialInfo = async () => {
   const headers = await getAuthHeaders({ contentType: false });
-  const url = new URL(`${apiBaseUrl}/trial/info`);
+  const url = new URL(`${getApiBaseUrl()}/trial/info`);
 
   try {
     console.log("Fetching trial info from:", url.toString());
@@ -256,7 +277,7 @@ export const getTrialInfo = async () => {
 
 export const startTrial = async (days: number = 7) => {
   const headers = await getAuthHeaders({ contentType: true });
-  const url = new URL(`${apiBaseUrl}/trial/start`);
+  const url = new URL(`${getApiBaseUrl()}/trial/start`);
 
   try {
     const response = await fetch(url.toString(), {
@@ -280,7 +301,7 @@ export const startTrial = async (days: number = 7) => {
 
 export const extendTrial = async (days: number = 7) => {
   const headers = await getAuthHeaders({ contentType: true });
-  const url = new URL(`${apiBaseUrl}/trial/extend`);
+  const url = new URL(`${getApiBaseUrl()}/trial/extend`);
 
   try {
     const response = await fetch(url.toString(), {
@@ -304,7 +325,7 @@ export const extendTrial = async (days: number = 7) => {
 
 export const endTrial = async () => {
   const headers = await getAuthHeaders({ contentType: false });
-  const url = new URL(`${apiBaseUrl}/trial/end`);
+  const url = new URL(`${getApiBaseUrl()}/trial/end`);
 
   try {
     const response = await fetch(url.toString(), {
@@ -331,7 +352,7 @@ export const getUserMemberships = async (userId: string) => {
   }
 
   const headers = await getAuthHeaders({ contentType: false });
-  const url = new URL(`${apiBaseUrl}/users/${userId}/memberships`);
+  const url = new URL(`${getApiBaseUrl()}/users/${userId}/memberships`);
   url.searchParams.append("page[size]", "100");
 
   try {

@@ -15,6 +15,14 @@ import { Menu } from "./menu";
 import { SidebarToggle } from "./sidebar-toggle";
 
 export function Sidebar({ user }: { user: UserProfileProps }) {
+  console.log('🔍 [Sidebar] Main Sidebar component rendering with user:', user);
+  console.log('🔍 [Sidebar] User data structure:', {
+    hasUser: !!user,
+    userType: typeof user,
+    userKeys: user ? Object.keys(user) : [],
+    userStringified: JSON.stringify(user, null, 2)
+  });
+  
   const sidebar = useStore(useSidebar, (x) => x);
   if (!sidebar) return null;
   const { isOpen, toggleOpen, getOpenState, setIsHover, settings } = sidebar;

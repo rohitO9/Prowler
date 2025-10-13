@@ -22,6 +22,11 @@ const LandingPage: React.FC = () => {
     setIsClient(true);
   }, []);
 
+  // Prevent hydration mismatches by ensuring consistent rendering
+  if (typeof window === 'undefined') {
+    return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
+  }
+
   // Handle redirect for authenticated users on subdomains
   useEffect(() => {
     if (isClient && isOnSubdomain() && status === 'authenticated' && session?.user) {

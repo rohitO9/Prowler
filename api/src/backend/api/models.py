@@ -438,12 +438,13 @@ class User(AbstractBaseUser):
 
     def is_member_of_tenant(self, tenant_id):
         """Check if user is a member of the specified tenant"""
-        return self.memberships.filter(tenant_id=tenant_id).exists()
+        # Use the correct related_name for TenantMembership
+        return self.tenant_memberships.filter(tenant_id=tenant_id, is_active=True).exists()
 
     def get_tenant_role(self, tenant_id):
         """Get user's role in a specific tenant"""
         try:
-            membership = self.memberships.get(tenant_id=tenant_id)
+            membership = self.tenant_memberships.get(tenant_id=tenant_id, is_active=True)
             return membership.role
         except TenantMembership.DoesNotExist:
             return None
@@ -453,6 +454,14 @@ class User(AbstractBaseUser):
         if not self.is_active:
             return False
         return self.is_member_of_tenant(tenant_id)
+    
+    def get_tenant_memberships(self):
+        """Get all active tenant memberships for this user"""
+        return self.tenant_memberships.filter(is_active=True)
+    
+    def get_tenant_ids(self):
+        """Get list of tenant IDs this user belongs to"""
+        return list(self.tenant_memberships.filter(is_active=True).values_list('tenant_id', flat=True))
 
     def is_locked(self):
         """Check if user account is locked"""

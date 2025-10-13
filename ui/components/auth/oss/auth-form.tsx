@@ -103,9 +103,32 @@ export const AuthForm = ({
       if (result?.message === "Success") {
         router.push("/home");
       } else if (result?.errors && "credentials" in result.errors) {
+        const errorMessage = result.errors.credentials ?? "Incorrect email or password";
+        
+        // Show specific error messages based on the error type
+        if (result.message === "User not found") {
+          toast({
+            variant: "destructive",
+            title: "User Not Found",
+            description: "No account found with this email address. Please check your email or sign up for a new account.",
+          });
+        } else if (result.message === "Access denied") {
+          toast({
+            variant: "destructive",
+            title: "Access Denied",
+            description: "You don't have access to this tenant. Please contact your administrator.",
+          });
+        } else {
+          toast({
+            variant: "destructive",
+            title: "Login Failed",
+            description: errorMessage,
+          });
+        }
+        
         form.setError("email", {
           type: "server",
-          message: result.errors.credentials ?? "Incorrect email or password",
+          message: errorMessage,
         });
       } else if (result?.message === "User email is not verified") {
         router.push("/email-verification");
@@ -137,6 +160,16 @@ export const AuthForm = ({
       } else {
         newUser.errors.forEach((error: ApiError) => {
           const errorMessage = error.detail;
+          
+          // Show specific toast notifications for common errors
+          if (errorMessage.includes("already exists") || errorMessage.includes("duplicate")) {
+            toast({
+              variant: "destructive",
+              title: "User Already Exists",
+              description: "An account with this email address already exists. Please try signing in instead.",
+            });
+          }
+          
           switch (error.source.pointer) {
             case "/data/attributes/name":
               form.setError("name", { type: "server", message: errorMessage });
@@ -165,7 +198,7 @@ export const AuthForm = ({
             default:
               toast({
                 variant: "destructive",
-                title: "Oops! Something went wrong",
+                title: "Registration Failed",
                 description: errorMessage,
               });
           }
@@ -437,9 +470,32 @@ export const AuthForm = ({
               )}
 
               {type === "sign-in" && form.formState.errors?.email && (
-                <div className="flex flex-row items-center text-system-error">
+                <div className="flex flex-row items-center text-system-error bg-red-50 dark:bg-red-900/20 p-3 rounded-lg border border-red-200 dark:border-red-800">
                   <NotificationIcon size={16} />
-                  <p className="text-small">Invalid email or password</p>
+                  <p className="text-small ml-2 font-medium">
+                    {form.formState.errors.email.message || "Invalid email or password"}
+                  </p>
+                </div>
+              )}
+              
+              {type === "sign-up" && (form.formState.errors?.email || form.formState.errors?.name) && (
+                <div className="flex flex-col gap-2">
+                  {form.formState.errors?.email && (
+                    <div className="flex flex-row items-center text-system-error bg-red-50 dark:bg-red-900/20 p-3 rounded-lg border border-red-200 dark:border-red-800">
+                      <NotificationIcon size={16} />
+                      <p className="text-small ml-2 font-medium">
+                        {form.formState.errors.email.message}
+                      </p>
+                    </div>
+                  )}
+                  {form.formState.errors?.name && (
+                    <div className="flex flex-row items-center text-system-error bg-red-50 dark:bg-red-900/20 p-3 rounded-lg border border-red-200 dark:border-red-800">
+                      <NotificationIcon size={16} />
+                      <p className="text-small ml-2 font-medium">
+                        {form.formState.errors.name.message}
+                      </p>
+                    </div>
+                  )}
                 </div>
               )}
 

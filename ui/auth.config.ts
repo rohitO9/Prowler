@@ -73,7 +73,7 @@ export const authConfig = {
         email: { label: "email", type: "text" },
         password: { label: "password", type: "password" },
       },
-      async authorize(credentials) {
+      async authorize(credentials, req) {
         const parsedCredentials = z
           .object({
             email: z.string().email(),
@@ -91,10 +91,12 @@ export const authConfig = {
         });
 
         // Forward optional tenant_name to backend for enterprise multi-tenant login
-        const tokenResponse = await getToken(parsedCredentials.data as any);
+        // Try to get host from request context if available
+        const host = req?.headers?.get?.('host') || req?.headers?.host;
+        const tokenResponse = await getToken(parsedCredentials.data as any, host);
         if (!tokenResponse) return null;
 
-        const userMeResponse = await getUserByMe(tokenResponse.accessToken);
+        const userMeResponse = await getUserByMe(tokenResponse.accessToken, host);
 
         const user = {
           name: userMeResponse.name,

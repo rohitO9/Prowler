@@ -2,6 +2,7 @@
 
 import {
   apiBaseUrl,
+  getApiBaseUrl,
   getAuthHeaders,
   getErrorMessage,
   parseStringify,
@@ -10,7 +11,7 @@ import {
 export const getTask = async (taskId: string) => {
   const headers = await getAuthHeaders({ contentType: false });
 
-  const url = new URL(`${apiBaseUrl}/tasks/${taskId}`);
+  const url = new URL(`${getApiBaseUrl()}/tasks/${taskId}`);
 
   try {
     const response = await fetch(url.toString(), {

@@ -19,9 +19,24 @@ export const UserBasicInfoCard = ({
   tenantId,
 }: {
   user: UserDataWithRoles;
-  tenantId: string;
+  tenantId?: string;
 }) => {
-  const { name, email, company_name, date_joined } = user.attributes;
+  // Handle double-nested data structure
+  const attributes = user?.data?.data?.attributes || user?.data?.attributes || user?.attributes;
+  
+  if (!attributes) {
+    return (
+      <Card className="shadow-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-vulneraiq-blue-400 w-full">
+        <CardBody>
+          <div className="flex items-center justify-center min-h-32">
+            <p className="text-muted-foreground">Unable to load user information</p>
+          </div>
+        </CardBody>
+      </Card>
+    );
+  }
+
+  const { name, email, company_name, date_joined } = attributes;
 
   return (
     <Card className="shadow-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-vulneraiq-blue-400 w-full">
@@ -51,7 +66,11 @@ export const UserBasicInfoCard = ({
             <span className="text-xs font-semibold text-gray-500 dark:text-gray-300 text-center">Organization ID</span>
             <div className="flex items-center gap-2">
               <Building2 size={18} className="text-gray-400" />
-              <TenantIdCopy id={tenantId} />
+              {tenantId ? (
+                <TenantIdCopy id={tenantId} />
+              ) : (
+                <span className="text-xs text-gray-400">Not available</span>
+              )}
             </div>
           </div>
 

@@ -1,6 +1,7 @@
 import "@/styles/globals.css";
 
 import { Metadata, Viewport } from "next";
+import { headers } from "next/headers";
 import React from "react";
 
 import MainLayout from "@/components/ui/main-layout/main-layout";
@@ -36,7 +37,9 @@ export default async function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const user = await getUserInfo();
+  const headersList = await headers();
+  const host = headersList.get('host');
+  const user = await getUserInfo(host || undefined);
   return (
     <html suppressHydrationWarning lang="en">
       <head />

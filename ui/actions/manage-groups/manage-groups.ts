@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 
 import {
   apiBaseUrl,
+  getApiBaseUrl,
   getAuthHeaders,
   getErrorMessage,
   parseStringify,
@@ -28,7 +29,7 @@ export const getProviderGroups = async ({
 
   if (isNaN(Number(page)) || page < 1) redirect("/manage-groups");
 
-  const url = new URL(`${apiBaseUrl}/provider-groups`);
+  const url = new URL(`${getApiBaseUrl()}/provider-groups`);
 
   if (page) url.searchParams.append("page[number]", page.toString());
   if (pageSize) url.searchParams.append("page[size]", pageSize.toString());
@@ -64,7 +65,7 @@ export const getProviderGroups = async ({
 
 export const getProviderGroupInfoById = async (providerGroupId: string) => {
   const headers = await getAuthHeaders({ contentType: false });
-  const url = new URL(`${apiBaseUrl}/provider-groups/${providerGroupId}`);
+  const url = new URL(`${getApiBaseUrl()}/provider-groups/${providerGroupId}`);
 
   try {
     const response = await fetch(url.toString(), {
@@ -125,7 +126,7 @@ export const createProviderGroup = async (formData: FormData) => {
   const body = JSON.stringify(payload);
 
   try {
-    const url = new URL(`${apiBaseUrl}/provider-groups`);
+    const url = new URL(`${getApiBaseUrl()}/provider-groups`);
     const response = await fetch(url.toString(), {
       method: "POST",
       headers,
@@ -173,7 +174,7 @@ export const updateProviderGroup = async (
   }
 
   try {
-    const url = `${apiBaseUrl}/provider-groups/${providerGroupId}`;
+    const url = `${getApiBaseUrl()}/provider-groups/${providerGroupId}`;
     const response = await fetch(url, {
       method: "PATCH",
       headers,
@@ -204,7 +205,7 @@ export const deleteProviderGroup = async (formData: FormData) => {
     return { error: "Provider Group ID is required" };
   }
 
-  const url = new URL(`${apiBaseUrl}/provider-groups/${providerGroupId}`);
+  const url = new URL(`${getApiBaseUrl()}/provider-groups/${providerGroupId}`);
 
   try {
     const response = await fetch(url.toString(), {

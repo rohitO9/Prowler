@@ -2,7 +2,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
-import { apiBaseUrl, getAuthHeaders, parseStringify } from "@/lib";
+import { apiBaseUrl, getApiBaseUrl, getAuthHeaders, parseStringify } from "@/lib";
 
 export const getProvidersOverview = async ({
   page = 1,
@@ -14,7 +14,7 @@ export const getProvidersOverview = async ({
 
   if (isNaN(Number(page)) || page < 1) redirect("/providers-overview");
 
-  const url = new URL(`${apiBaseUrl}/overviews/providers`);
+  const url = new URL(`${getApiBaseUrl()}/overviews/providers`);
 
   if (page) url.searchParams.append("page[number]", page.toString());
   if (query) url.searchParams.append("filter[search]", query);
@@ -62,7 +62,7 @@ export const getFindingsByStatus = async ({
 
   if (isNaN(Number(page)) || page < 1) redirect("/");
 
-  const url = new URL(`${apiBaseUrl}/overviews/findings`);
+  const url = new URL(`${getApiBaseUrl()}/overviews/findings`);
 
   if (page) url.searchParams.append("page[number]", page.toString());
   if (query) url.searchParams.append("filter[search]", query);
@@ -105,7 +105,7 @@ export const getFindingsBySeverity = async ({
 
   if (isNaN(Number(page)) || page < 1) redirect("/");
 
-  const url = new URL(`${apiBaseUrl}/overviews/findings_severity`);
+  const url = new URL(`${getApiBaseUrl()}/overviews/findings_severity`);
 
   if (page) url.searchParams.append("page[number]", page.toString());
   if (query) url.searchParams.append("filter[search]", query);

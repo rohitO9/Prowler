@@ -29,11 +29,33 @@ import { UserProfileProps } from "@/types";
 // Removed Button wrapper to avoid extra containers
 
 export const UserNav = ({ user }: { user?: UserProfileProps }) => {
-  if (!user || !user.data) return null;
+  console.log('🔍 [UserNav] Component rendering with user:', user);
+  console.log('🔍 [UserNav] User data structure:', {
+    hasUser: !!user,
+    hasData: !!(user && user.data),
+    hasAttributes: !!(user && user.data && user.data.attributes),
+    userKeys: user ? Object.keys(user) : [],
+    dataKeys: user?.data ? Object.keys(user.data) : [],
+    attributesKeys: user?.data?.attributes ? Object.keys(user.data.attributes) : []
+  });
 
-  const { name, email, company_name } = user.data.attributes;
-  const firstName = name.split(" ")[0];
-  const attrs = user.data.attributes as unknown as {
+  const attributes = user?.data?.data?.attributes || user?.data?.attributes;
+
+  if (!user || !attributes) {
+    console.log('🔍 [UserNav] Returning null - missing user data');
+    console.log('🔍 [UserNav] Available paths:', {
+      'user.data': !!user?.data,
+      // 'user.data.data': !!user?.data?.data,
+      'user.data.attributes': !!user?.data?.attributes, 
+      'user.data.data.attributes': !!user?.data?.data?.attributes
+    });
+    return null;
+  }
+
+  const { name, email, company_name } = attributes;
+  console.log('🔍 [UserNav] Extracted attributes:', { name, email, company_name });
+  const firstName = (name && typeof name === 'string') ? name.split(" ")[0] : "User";
+  const attrs = attributes as unknown as {
     avatar_url?: string;
     image_url?: string;
     profile_image?: string;
@@ -75,13 +97,13 @@ export const UserNav = ({ user }: { user?: UserProfileProps }) => {
         <DropdownMenuLabel className="font-normal">
           <div className="flex flex-col space-y-1">
             <p className="text-small font-medium leading-none">
-              {name}
-              {company_name && (
+              {name && typeof name === 'string' ? name : "User"}
+              {company_name && typeof company_name === 'string' && (
                 <span className="text-xs">{` | ${company_name}`}</span>
               )}
             </p>
             <p className="text-muted-foreground text-xs leading-none">
-              {email}
+              {email && typeof email === 'string' ? email : "No email"}
             </p>
           </div>
         </DropdownMenuLabel>

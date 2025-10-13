@@ -9,6 +9,7 @@ from drf_spectacular.utils import extend_schema_field
 from jwt.exceptions import InvalidKeyError
 from rest_framework_json_api import serializers as json_api_serializers
 from rest_framework import serializers
+from rest_framework.exceptions import ValidationError  # Add ValidationError import
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer  # Add this import
 from rest_framework_simplejwt.tokens import RefreshToken  # Add this import too
 from rest_framework_simplejwt.exceptions import TokenError  # And this one

@@ -11,17 +11,42 @@ export const getApiBaseUrl = () => {
     const hostname = window.location.hostname;
     const port = '8080'; // Backend API port
     
+    console.log('🔍 [getApiBaseUrl] Current hostname:', hostname);
+    console.log('🔍 [getApiBaseUrl] Current URL:', window.location.href);
+    
     // Handle localhost development with subdomains
     if (hostname.includes('localhost')) {
-      return `http://${hostname}:${port}/api/v1`;
+      const apiUrl = `http://${hostname}:${port}/api/v1`;
+      console.log('🔍 [getApiBaseUrl] Generated API URL:', apiUrl);
+      return apiUrl;
     }
     
     // Handle production - assume API is on same domain but different port
-    return `https://${hostname}:${port}/api/v1`;
+    const apiUrl = `https://${hostname}:${port}/api/v1`;
+    console.log('🔍 [getApiBaseUrl] Generated production API URL:', apiUrl);
+    return apiUrl;
   }
   
-  // Server-side fallback
-  return process.env.API_BASE_URL || "http://127.0.0.1:8080/api/v1";
+  // Server-side fallback - try to detect tenant from headers
+  const fallbackUrl = process.env.API_BASE_URL || "http://127.0.0.1:8080/api/v1";
+  console.log('🔍 [getApiBaseUrl] Server-side fallback URL:', fallbackUrl);
+  return fallbackUrl;
+};
+
+// Server-side function to get API URL with tenant context
+export const getServerApiBaseUrl = (host?: string) => {
+  if (host && host.includes('localhost')) {
+    // Extract hostname from host header (remove port if present)
+    const hostname = host.split(':')[0];
+    const port = '8080';
+    const apiUrl = `http://${hostname}:${port}/api/v1`;
+    console.log('🔍 [getServerApiBaseUrl] Generated server API URL:', apiUrl);
+    return apiUrl;
+  }
+  
+  const fallbackUrl = process.env.API_BASE_URL || "http://127.0.0.1:8080/api/v1";
+  console.log('🔍 [getServerApiBaseUrl] Server-side fallback URL:', fallbackUrl);
+  return fallbackUrl;
 };
 
 export const apiBaseUrl = process.env.API_BASE_URL || "http://127.0.0.1:8080/api/v1";

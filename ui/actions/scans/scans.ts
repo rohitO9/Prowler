@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 
 import {
   apiBaseUrl,
+  getApiBaseUrl,
   getAuthHeaders,
   getErrorMessage,
   parseStringify,
@@ -21,7 +22,7 @@ export const getScans = async ({
 
   if (isNaN(Number(page)) || page < 1) redirect("/scans");
 
-  const url = new URL(`${apiBaseUrl}/scans`);
+  const url = new URL(`${getApiBaseUrl()}/scans`);
 
   if (page) url.searchParams.append("page[number]", page.toString());
   if (pageSize) url.searchParams.append("page[size]", pageSize.toString());
@@ -53,7 +54,7 @@ export const getScans = async ({
 export const getScansByState = async () => {
   const headers = await getAuthHeaders({ contentType: false });
 
-  const url = new URL(`${apiBaseUrl}/scans`);
+  const url = new URL(`${getApiBaseUrl()}/scans`);
 
   // Request only the necessary fields to optimize the response
   url.searchParams.append("fields[scans]", "state");
@@ -85,7 +86,7 @@ export const getScansByState = async () => {
 export const getScan = async (scanId: string) => {
   const headers = await getAuthHeaders({ contentType: false });
 
-  const url = new URL(`${apiBaseUrl}/scans/${scanId}`);
+  const url = new URL(`${getApiBaseUrl()}/scans/${scanId}`);
 
   try {
     const scan = await fetch(url.toString(), {
@@ -111,7 +112,7 @@ export const scanOnDemand = async (formData: FormData) => {
     return { error: "Provider ID is required" };
   }
 
-  const url = new URL(`${apiBaseUrl}/scans`);
+  const url = new URL(`${getApiBaseUrl()}/scans`);
 
   try {
     const requestBody = {
@@ -160,7 +161,7 @@ export const scheduleDaily = async (formData: FormData) => {
 
   const providerId = formData.get("providerId");
 
-  const url = new URL(`${apiBaseUrl}/schedules/daily`);
+  const url = new URL(`${getApiBaseUrl()}/schedules/daily`);
 
   try {
     const response = await fetch(url.toString(), {
@@ -198,7 +199,7 @@ export const updateScan = async (formData: FormData) => {
   const scanId = formData.get("scanId");
   const scanName = formData.get("scanName");
 
-  const url = new URL(`${apiBaseUrl}/scans/${scanId}`);
+  const url = new URL(`${getApiBaseUrl()}/scans/${scanId}`);
 
   try {
     const response = await fetch(url.toString(), {
@@ -229,7 +230,7 @@ export const updateScan = async (formData: FormData) => {
 export const getExportsZip = async (scanId: string) => {
   const headers = await getAuthHeaders({ contentType: false });
 
-  const url = new URL(`${apiBaseUrl}/scans/${scanId}/report`);
+  const url = new URL(`${getApiBaseUrl()}/scans/${scanId}/report`);
 
   try {
     const response = await fetch(url.toString(), {
@@ -280,7 +281,7 @@ export const getComplianceCsv = async (
   const headers = await getAuthHeaders({ contentType: false });
 
   const url = new URL(
-    `${apiBaseUrl}/scans/${scanId}/compliance/${complianceId}`,
+    `${getApiBaseUrl()}/scans/${scanId}/compliance/${complianceId}`,
   );
 
   try {

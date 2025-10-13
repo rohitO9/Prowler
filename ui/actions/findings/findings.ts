@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
-import { apiBaseUrl, getAuthHeaders, parseStringify } from "@/lib";
+import { apiBaseUrl, getApiBaseUrl, getAuthHeaders, parseStringify } from "@/lib";
 
 export const getFindings = async ({
   page = 1,
@@ -17,7 +17,7 @@ export const getFindings = async ({
   if (isNaN(Number(page)) || page < 1)
     redirect("findings?include=resources,scan.provider");
 
-  const url = new URL(`${apiBaseUrl}/findings?include=resources,scan.provider`);
+  const url = new URL(`${getApiBaseUrl()}/findings?include=resources,scan.provider`);
 
   if (page) url.searchParams.append("page[number]", page.toString());
   if (pageSize) url.searchParams.append("page[size]", pageSize.toString());
@@ -57,7 +57,7 @@ export const getLatestFindings = async ({
     redirect("findings?include=resources,scan.provider");
 
   const url = new URL(
-    `${apiBaseUrl}/findings/latest?include=resources,scan.provider`,
+    `${getApiBaseUrl()}/findings/latest?include=resources,scan.provider`,
   );
 
   if (page) url.searchParams.append("page[number]", page.toString());
@@ -92,7 +92,7 @@ export const getMetadataInfo = async ({
 }) => {
   const headers = await getAuthHeaders({ contentType: false });
 
-  const url = new URL(`${apiBaseUrl}/findings/metadata`);
+  const url = new URL(`${getApiBaseUrl()}/findings/metadata`);
 
   if (query) url.searchParams.append("filter[search]", query);
   if (sort) url.searchParams.append("sort", sort);
@@ -134,7 +134,7 @@ export const getLatestMetadataInfo = async ({
 }) => {
   const headers = await getAuthHeaders({ contentType: false });
 
-  const url = new URL(`${apiBaseUrl}/findings/metadata/latest`);
+  const url = new URL(`${getApiBaseUrl()}/findings/metadata/latest`);
 
   if (query) url.searchParams.append("filter[search]", query);
   if (sort) url.searchParams.append("sort", sort);

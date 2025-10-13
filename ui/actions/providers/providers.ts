@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 
 import {
   apiBaseUrl,
+  getApiBaseUrl,
   getAuthHeaders,
   getErrorMessage,
   parseStringify,
@@ -23,7 +24,7 @@ export const getProviders = async ({
 
   if (isNaN(Number(page)) || page < 1) redirect("/providers");
 
-  const url = new URL(`${apiBaseUrl}/providers?include=provider_groups`);
+  const url = new URL(`${getApiBaseUrl()}/providers?include=provider_groups`);
 
   if (page) url.searchParams.append("page[number]", page.toString());
   if (pageSize) url.searchParams.append("page[size]", pageSize.toString());
@@ -56,7 +57,7 @@ export const getProvider = async (formData: FormData) => {
   const headers = await getAuthHeaders({ contentType: false });
   const providerId = formData.get("id");
 
-  const url = new URL(`${apiBaseUrl}/providers/${providerId}`);
+  const url = new URL(`${getApiBaseUrl()}/providers/${providerId}`);
 
   try {
     const providers = await fetch(url.toString(), {
@@ -78,7 +79,7 @@ export const updateProvider = async (formData: FormData) => {
   const providerId = formData.get("providerId");
   const providerAlias = formData.get("alias");
 
-  const url = new URL(`${apiBaseUrl}/providers/${providerId}`);
+  const url = new URL(`${getApiBaseUrl()}/providers/${providerId}`);
 
   try {
     const response = await fetch(url.toString(), {
@@ -114,7 +115,7 @@ export const addProvider = async (formData: FormData) => {
   const providerUid = formData.get("providerUid") as string;
   const providerAlias = formData.get("providerAlias") as string;
 
-  const url = new URL(`${apiBaseUrl}/providers`);
+  const url = new URL(`${getApiBaseUrl()}/providers`);
 
   try {
     const bodyData = {
@@ -148,7 +149,7 @@ export const addProvider = async (formData: FormData) => {
 
 export const addCredentialsProvider = async (formData: FormData) => {
   const headers = await getAuthHeaders({ contentType: true });
-  const url = new URL(`${apiBaseUrl}/providers/secrets`);
+  const url = new URL(`${getApiBaseUrl()}/providers/secrets`);
 
   const secretName = formData.get("secretName");
   const providerId = formData.get("providerId");
@@ -272,7 +273,7 @@ export const updateCredentialsProvider = async (
   formData: FormData,
 ) => {
   const headers = await getAuthHeaders({ contentType: true });
-  const url = new URL(`${apiBaseUrl}/providers/secrets/${credentialsId}`);
+  const url = new URL(`${getApiBaseUrl()}/providers/secrets/${credentialsId}`);
 
   const secretName = formData.get("secretName");
   const providerType = formData.get("providerType") as ProviderType;
@@ -391,7 +392,7 @@ export const checkConnectionProvider = async (formData: FormData) => {
 
   const providerId = formData.get("providerId");
 
-  const url = new URL(`${apiBaseUrl}/providers/${providerId}/connection`);
+  const url = new URL(`${getApiBaseUrl()}/providers/${providerId}/connection`);
 
   try {
     const response = await fetch(url.toString(), {
@@ -416,7 +417,7 @@ export const deleteCredentials = async (secretId: string) => {
     return { error: "Secret ID is required" };
   }
 
-  const url = new URL(`${apiBaseUrl}/providers/secrets/${secretId}`);
+  const url = new URL(`${getApiBaseUrl()}/providers/secrets/${secretId}`);
 
   try {
     const response = await fetch(url.toString(), {
@@ -457,7 +458,7 @@ export const deleteProvider = async (formData: FormData) => {
     return { error: "Provider ID is required" };
   }
 
-  const url = new URL(`${apiBaseUrl}/providers/${providerId}`);
+  const url = new URL(`${getApiBaseUrl()}/providers/${providerId}`);
 
   try {
     const response = await fetch(url.toString(), {

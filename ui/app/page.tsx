@@ -1,6 +1,10 @@
 import LandingPage from '@/src/components/LandingPage';
+import ErrorBoundary from '@/src/components/ErrorBoundary';
 
 export default function Home() {
-  console.log('🔍 [Home] Page component rendering');
-  return <LandingPage />;
+  return (
+    <ErrorBoundary>
+      <LandingPage />
+    </ErrorBoundary>
+  );
 }

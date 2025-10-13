@@ -96,6 +96,10 @@ MIDDLEWARE = [
     "api.middleware.tenant_security.TenantSecurityMiddleware",
     "api.middleware.tenant_security.TenantContextMiddleware",
     "api.middleware.subdomain.TenantMiddleware",
+    # CRITICAL: Tenant isolation middleware (must be after tenant detection)
+    "api.middleware.tenant_isolation.TenantIsolationMiddleware",
+    "api.middleware.tenant_isolation.TenantQueryScopingMiddleware",
+    "api.middleware.tenant_isolation.TenantSecurityAuditMiddleware",
     "api.middleware.APILoggingMiddleware",
     "allauth.account.middleware.AccountMiddleware",
 ]
