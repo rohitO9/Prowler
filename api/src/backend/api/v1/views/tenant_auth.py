@@ -5,7 +5,7 @@ from rest_framework import status
 from django.contrib.auth import authenticate
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.db import transaction
-from api.models import Tenant, User
+from api.models import Tenant, User, TenantMembership
 import logging
 
 logger = logging.getLogger(__name__)
@@ -198,25 +198,47 @@ def tenant_register(request):
     Creates both tenant and user in atomic transaction
     """
     try:
-        data = request.data.get('data', {})
-        attributes = data.get('attributes', {})
+        # Debug: Log the raw request data
+        logger.info(f"Raw request data: {request.data}")
+        
+        # Handle both nested and flat data formats
+        if 'data' in request.data and isinstance(request.data.get('data'), dict):
+            # Nested format: {data: {attributes: {...}}}
+            data = request.data.get('data', {})
+            attributes = data.get('attributes', {})
+        else:
+            # Flat format: {company_name: ..., email: ..., etc.}
+            attributes = request.data
+        
+        # Debug: Log parsed data
+        logger.info(f"Parsed attributes: {attributes}")
         
         # Extract registration data
-        company_name = attributes.get('company_name', '').strip()
-        subdomain = attributes.get('subdomain', '').strip().lower()
         email = attributes.get('email', '').strip()
         password = attributes.get('password')
         first_name = attributes.get('first_name', '').strip()
         last_name = attributes.get('last_name', '').strip()
         
+        # Get subdomain from request payload (sent by frontend)
+        subdomain = attributes.get('subdomain', '').strip().lower()
+        logger.info(f"🔍 [TENANT_REGISTER] Subdomain from payload: {subdomain}")
+        
+        # Fallback: try to auto-detect from request host if not provided
+        if not subdomain:
+            host = request.META.get('HTTP_HOST', '')
+            logger.info(f"🔍 [TENANT_REGISTER] HTTP_HOST fallback: {host}")
+            if '.localhost' in host:
+                subdomain = host.split('.')[0].lower()
+                logger.info(f"✅ Auto-detected subdomain from host: {subdomain}")
+        
+        # Debug: Log extracted values
+        logger.info(f"Extracted values: subdomain={subdomain}, email={email}, password={'***' if password else None}, first_name={first_name}, last_name={last_name}")
+        
         # Validation
         errors = []
         
-        if not company_name:
-            errors.append({'field': 'company_name', 'message': 'Company name is required'})
-        
         if not subdomain:
-            errors.append({'field': 'subdomain', 'message': 'Subdomain is required'})
+            errors.append({'field': 'subdomain', 'message': 'Subdomain is required - please access via tenant subdomain (e.g., company1.localhost:3000)'})
         elif not subdomain.replace('-', '').isalnum():
             errors.append({'field': 'subdomain', 'message': 'Subdomain can only contain letters, numbers, and hyphens'})
         
@@ -225,6 +247,12 @@ def tenant_register(request):
         
         if not password or len(password) < 8:
             errors.append({'field': 'password', 'message': 'Password must be at least 8 characters'})
+        
+        if not first_name:
+            errors.append({'field': 'first_name', 'message': 'First name is required'})
+        
+        if not last_name:
+            errors.append({'field': 'last_name', 'message': 'Last name is required'})
         
         if errors:
             return Response({
@@ -237,16 +265,72 @@ def tenant_register(request):
                 }]
             }, status=status.HTTP_400_BAD_REQUEST)
         
-        # ✅ Check for duplicate tenant
-        if Tenant.objects.filter(subdomain=subdomain).exists():
-            return Response({
-                'errors': [{
-                    'status': '409',
-                    'code': 'subdomain_exists',
-                    'title': 'Subdomain Already Exists',
-                    'detail': f'The subdomain "{subdomain}" is already taken',
-                }]
-            }, status=status.HTTP_409_CONFLICT)
+        # Check if tenant already exists
+        existing_tenant = Tenant.objects.filter(subdomain=subdomain).first()
+        
+        if existing_tenant:
+            # CASE 1: Tenant exists - register user to existing tenant
+            logger.info(f"Tenant exists: {existing_tenant.name} ({subdomain}) - registering user")
+            
+            # Check if user already exists
+            if User.objects.filter(email=email).exists():
+                return Response({
+                    'errors': [{
+                        'status': '409',
+                        'code': 'user_exists',
+                        'title': 'User Already Exists',
+                        'detail': 'A user with this email already exists',
+                    }]
+                }, status=status.HTTP_409_CONFLICT)
+            
+            # Create user and assign to existing tenant
+            with transaction.atomic():
+                user = User.objects.create_user(
+                    username=email,
+                    email=email,
+                    password=password,
+                    first_name=first_name,
+                    last_name=last_name,
+                    primary_tenant=existing_tenant,
+                    is_active=True
+                )
+                
+                # Create tenant membership
+                try:
+                    membership = TenantMembership.objects.create(
+                        user=user,
+                        tenant=existing_tenant,
+                        role='member'
+                    )
+                    logger.info(f"Created TenantMembership: {membership.id} for user {user.email} in tenant {existing_tenant.subdomain}")
+                except Exception as e:
+                    logger.error(f"Failed to create TenantMembership: {e}")
+                    raise e
+                
+                logger.info(f"Created user: {user.email} for existing tenant {existing_tenant.subdomain}")
+                
+                # Generate JWT tokens
+                tokens = get_tokens_for_user(user, existing_tenant)
+                
+                return Response({
+                    'data': {
+                        'type': 'user_registration',
+                        'id': str(user.id),
+                        'attributes': {
+                            'access_token': tokens['access'],
+                            'refresh_token': tokens['refresh'],
+                            'tenant_subdomain': existing_tenant.subdomain,
+                            'redirect_url': f'http://{existing_tenant.subdomain}.localhost:3000/dashboard',
+                        }
+                    }
+                }, status=status.HTTP_201_CREATED)
+        else:
+            # CASE 2: Tenant doesn't exist - create new tenant with user
+            logger.info(f"Creating new tenant: {subdomain}")
+            
+            # Auto-generate company name from subdomain
+            company_name = subdomain.replace('-', ' ').replace('_', ' ').title()
+            logger.info(f"Auto-generated company name from subdomain: {company_name}")
         
         # ✅ Check for duplicate user email
         if User.objects.filter(email=email).exists():

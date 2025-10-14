@@ -82,7 +82,7 @@ class TenantMiddleware:
                     logger.debug(f"Tenant not found: {tenant_id}")
             else:
                 # If no tenant specified, try to get user's default tenant
-                default_tenant = request.user.memberships.first()
+                default_tenant = request.user.tenant_memberships.filter(is_active=True).first()
                 if default_tenant:
                     request.tenant = default_tenant.tenant
                     logger.debug(f"Set default tenant: {default_tenant.tenant.id}")

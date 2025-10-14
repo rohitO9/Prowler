@@ -117,6 +117,9 @@ CORS_ALLOWED_ORIGINS = [
     "http://company1.localhost:3000",
     "http://company2.localhost:3000", 
     "http://test.localhost:3000",
+    "http://google.localhost:3000",
+    "http://companynew.localhost:3000",
+    "http://testcompany.localhost:3000",
     "http://*.localhost:3000",  # Allow all subdomains
 ]
 

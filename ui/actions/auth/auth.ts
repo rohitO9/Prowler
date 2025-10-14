@@ -123,29 +123,57 @@ export async function authenticate(
 }
 
 export const createNewUser = async (
-  formData: z.infer<typeof formSchemaSignUp>
+  formData: z.infer<typeof formSchemaSignUp>,
+  host?: string
 ) => {
-  // Use tenant-aware registration endpoint
-  const url = new URL(`${getApiBaseUrl()}/tenant/register`);
+  // Ensure we're using the subdomain for API calls
+  let apiBaseUrl = getApiBaseUrl();
+  
+  // Get subdomain from form data (passed from client-side)
+  let subdomain = (formData as any).subdomain || '';
+  
+  // Fallback: Try client-side detection if not provided
+  if (!subdomain && typeof window !== 'undefined') {
+    const hostname = window.location.hostname;
+    if (hostname.includes('localhost') && hostname !== 'localhost') {
+      subdomain = hostname.split('.')[0];
+      apiBaseUrl = `http://${hostname}:8080/api/v1`;
+      console.log('🔍 [createNewUser] Client-side fallback detected subdomain:', subdomain);
+    }
+  }
+  
+  // Fallback: Try server-side detection from host header
+  if (!subdomain && host) {
+    if (host.includes('localhost') && host !== 'localhost') {
+      subdomain = host.split('.')[0];
+      apiBaseUrl = `http://${host}:8080/api/v1`;
+      console.log('🔍 [createNewUser] Server-side fallback detected subdomain:', subdomain);
+    }
+  }
+  
+  console.log('🔍 [createNewUser] Final subdomain:', subdomain);
+  
+  const url = new URL(`${apiBaseUrl}/tenant/register`);
 
   if (formData.invitationToken) {
     url.searchParams.append("invitation_token", formData.invitationToken);
   }
 
-  // Get company from localStorage if available (for subdomain-based registration)
-  let company: string | null | undefined = formData.company;
-  if (typeof window !== 'undefined' && !company) {
-    company = localStorage.getItem('company');
-  }
-
+  // Extract first and last name from full name
+  const nameParts = formData.name.split(' ');
+  const first_name = nameParts[0] || '';
+  const last_name = nameParts.slice(1).join(' ') || '';
+  
   const bodyData = {
     data: {
       type: "tenant_register",
       attributes: {
-        name: formData.name,
+        // Send subdomain explicitly from frontend
+        subdomain: subdomain,
         email: formData.email,
         password: formData.password,
-        ...(company && { company_name: company }),
+        first_name: first_name,
+        last_name: last_name,
       },
     },
   };
@@ -212,13 +240,29 @@ export const createNewUser = async (
 
 export const getToken = async (formData: z.infer<typeof formSchemaSignIn>, host?: string) => {
   // Use server-side API URL if host is provided, otherwise use client-side
-  const apiUrl = host ? getServerApiBaseUrl(host) : getApiBaseUrl();
+  let apiUrl = host ? getServerApiBaseUrl(host) : getApiBaseUrl();
+  
+  // If we're on client-side and have a subdomain, use it
+  if (typeof window !== 'undefined' && !host) {
+    const hostname = window.location.hostname;
+    if (hostname.includes('localhost') && hostname !== 'localhost') {
+      // We're on a subdomain like company1.localhost
+      apiUrl = `http://${hostname}:8080/api/v1`;
+      console.log('🔍 [getToken] Using subdomain API URL:', apiUrl);
+    }
+  }
+  
   const url = new URL(`${apiUrl}/tokens`);
   
-  // Get company from localStorage if available (for subdomain-based authentication)
-  let company = (formData as any)?.company;
-  if (typeof window !== 'undefined' && !company) {
-    company = localStorage.getItem('company');
+  // Auto-detect tenant from current subdomain and send it explicitly
+  let subdomain = '';
+  if (typeof window !== 'undefined') {
+    const hostname = window.location.hostname;
+    if (hostname.includes('localhost') && hostname !== 'localhost') {
+      // Extract subdomain from company1.localhost
+      subdomain = hostname.split('.')[0];
+      console.log('🔍 [getToken] Detected subdomain:', subdomain);
+    }
   }
   
   // Getting token from backend
@@ -228,8 +272,8 @@ export const getToken = async (formData: z.infer<typeof formSchemaSignIn>, host?
       attributes: {
         email: formData.email,
         password: formData.password,
-        // enterprise: optionally send tenant_name to select organization context
-        ...(company ? { tenant_name: company } : {}),
+        // Send subdomain explicitly for tenant context
+        ...(subdomain ? { tenant_name: subdomain } : {}),
       },
     },
   };

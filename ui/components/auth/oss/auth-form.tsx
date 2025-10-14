@@ -33,6 +33,7 @@ export const AuthForm = ({
   isGoogleOAuthEnabled,
   isGithubOAuthEnabled,
   azureAuthUrl,
+  host,
 }: {
   type: string;
   invitationToken?: string | null;
@@ -42,6 +43,7 @@ export const AuthForm = ({
   isGoogleOAuthEnabled?: boolean;
   isGithubOAuthEnabled?: boolean;
   azureAuthUrl?: string;
+  host?: string;
 }) => {
   const formSchema = authFormSchema(type);
   const router = useRouter();
@@ -142,8 +144,24 @@ export const AuthForm = ({
     }
 
     if (type === "sign-up") {
+      // Auto-detect subdomain on client-side and add to form data
+      let subdomain = '';
+      if (typeof window !== 'undefined') {
+        const hostname = window.location.hostname;
+        if (hostname.includes('localhost') && hostname !== 'localhost') {
+          subdomain = hostname.split('.')[0];
+          console.log('🔍 [AuthForm] Client-side detected subdomain:', subdomain);
+        }
+      }
+      
+      // Add subdomain to form data
+      const formDataWithSubdomain = {
+        ...data,
+        subdomain: subdomain
+      };
+      
       // Ensure company is collected on sign-up and stored in DB via company_name
-      const newUser = await createNewUser(data);
+      const newUser = await createNewUser(formDataWithSubdomain, host);
 
       if (!newUser.errors) {
         toast({

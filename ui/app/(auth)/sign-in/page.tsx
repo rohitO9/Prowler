@@ -55,6 +55,12 @@ const SignIn = () => {
         description: "Your account has been locked due to multiple failed login attempts. Please contact support.",
         variant: "destructive",
       });
+    } else if (error === 'cross_tenant_access') {
+      toast({
+        title: "🚫 Cross-Tenant Access Denied",
+        description: "You don't have access to this organization. You've been redirected to your correct organization.",
+        variant: "destructive",
+      });
     } else if (message === 'registration_success') {
       toast({
         title: "✅ Registration Successful",

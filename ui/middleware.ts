@@ -54,11 +54,11 @@ export async function middleware(request: NextRequest) {
         `User tenant: ${userTenant}, URL tenant: ${tenant}`
       );
       
-      // Redirect to correct tenant or logout
-      const correctUrl = new URL(request.nextUrl.pathname, request.url);
-      correctUrl.hostname = `${userTenant.toLowerCase()}.localhost`;
+      // Redirect to sign-in with cross-tenant error message
+      const signInUrl = new URL('/sign-in?error=cross_tenant_access', request.url);
+      signInUrl.hostname = `${userTenant.toLowerCase()}.localhost`;
       
-      return NextResponse.redirect(correctUrl);
+      return NextResponse.redirect(signInUrl);
     }
     
     // If user has no tenant info, they shouldn't access tenant-specific pages
@@ -80,7 +80,7 @@ export async function middleware(request: NextRequest) {
       );
       
       // Show error page or redirect to user's correct tenant
-      const errorUrl = new URL('/sign-in?error=tenant_mismatch', request.url);
+      const errorUrl = new URL('/sign-in?error=cross_tenant_access', request.url);
       errorUrl.hostname = `${userTenant.toLowerCase()}.localhost`;
       
       return NextResponse.redirect(errorUrl);

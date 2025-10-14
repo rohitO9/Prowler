@@ -52,6 +52,11 @@ export const Menu = ({ isOpen, user }: { isOpen: boolean; user: UserProfileProps
         // Redirect to home page after successful logout
         router.push('/');
         router.refresh(); // Force refresh to clear any cached data
+        
+        // Force hard page refresh to clear all cached data
+        setTimeout(() => {
+          window.location.reload();
+        }, 100);
       } else {
         toast({
           title: "❌ Logout Failed",

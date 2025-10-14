@@ -128,14 +128,14 @@ class BaseTokenSerializer(TokenObtainPairSerializer):
                 raise ValidationError("Tenant does not exist or user is not a member.")
         elif tenant_name:
             # Try resolving by tenant_name if provided
-            membership = user.memberships.select_related("tenant").filter(
+            membership = user.tenant_memberships.filter(is_active=True).select_related("tenant").filter(
                 tenant__name__iexact=tenant_name.strip()
             ).first()
             if membership is None:
                 raise ValidationError("Tenant does not exist or user is not a member.")
             tenant_id = str(membership.tenant_id)
         else:
-            first_membership = user.memberships.order_by("date_joined").first()
+            first_membership = user.tenant_memberships.filter(is_active=True).order_by("joined_at").first()
             if first_membership is None:
                 raise ValidationError("User has no memberships.")
             tenant_id = str(first_membership.tenant_id)
@@ -350,7 +350,7 @@ class UserCreateSerializer(BaseWriteSerializer):
         try:
             from api.models import Membership  # local import to avoid cycles
 
-            if not user.memberships.exists():
+            if not user.tenant_memberships.filter(is_active=True).exists():
                 org_name = (validated_data.get("company_name") or "").strip()
                 if not org_name:
                     # Fallback: derive from email domain

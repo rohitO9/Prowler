@@ -2,12 +2,15 @@ import json
 import re
 import base64
 import uuid
+import logging
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 from uuid import UUID, uuid4
 import os
 from dotenv import load_dotenv
 from cryptography.fernet import Fernet
+
+logger = logging.getLogger(__name__)
 from django.conf import settings
 from django.contrib.auth.models import AbstractBaseUser, AbstractUser
 from django.contrib.postgres.fields import ArrayField
@@ -713,7 +716,14 @@ class User(AbstractUser):
 
     def is_member_of_tenant(self, tenant_id):
         """Check if user is a member of the specified tenant"""
-        return self.tenant_memberships.filter(tenant_id=tenant_id, is_active=True).exists()
+        # Debug: Log the check
+        memberships = self.tenant_memberships.filter(tenant_id=tenant_id, is_active=True)
+        logger.info(f"🔍 [USER] Checking membership for user {self.email} in tenant {tenant_id}")
+        logger.info(f"🔍 [USER] Found {memberships.count()} active memberships")
+        for membership in memberships:
+            logger.info(f"🔍 [USER] Membership: {membership.id}, tenant: {membership.tenant_id}, active: {membership.is_active}")
+        
+        return memberships.exists()
 
     def get_tenant_role(self, tenant_id):
         """Get user's role in a specific tenant"""
