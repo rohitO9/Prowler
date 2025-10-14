@@ -9,15 +9,33 @@ import os
 from dotenv import load_dotenv
 from cryptography.fernet import Fernet
 from django.conf import settings
-from django.contrib.auth.models import AbstractBaseUser
+from django.contrib.auth.models import AbstractBaseUser, AbstractUser
 from django.contrib.postgres.fields import ArrayField
 from django.contrib.postgres.indexes import GinIndex
 from django.contrib.postgres.search import SearchVector, SearchVectorField
-from django.core.validators import MinLengthValidator
+from django.core.validators import MinLengthValidator, RegexValidator
+from django.core.exceptions import ValidationError
 from django.db import models
 from django.db.models import Q
 from django.utils.translation import gettext_lazy as _
 from django.utils import timezone
+import threading
+
+# Thread-local storage for current tenant
+_thread_locals = threading.local()
+
+def set_current_tenant(tenant):
+    """Set current tenant in thread-local storage"""
+    _thread_locals.tenant = tenant
+
+def get_current_tenant():
+    """Get current tenant from thread-local storage"""
+    return getattr(_thread_locals, 'tenant', None)
+
+def clear_current_tenant():
+    """Clear current tenant from thread-local storage"""
+    if hasattr(_thread_locals, 'tenant'):
+        del _thread_locals.tenant
 from django_celery_beat.models import PeriodicTask
 from django_celery_results.models import TaskResult
 from psqlextra.manager import PostgresManager
@@ -196,43 +214,83 @@ def get_base_security_constraint():
 
 class Tenant(models.Model):
     """
-    Enhanced Tenant model with full multi-tenant isolation.
-    Each tenant represents a completely isolated organization.
+    Enhanced Tenant model with comprehensive multi-tenant isolation.
+    Each tenant represents a completely isolated organization with strict security constraints.
     """
     id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
     inserted_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
     
-    # Core tenant identification
-    name = models.CharField(max_length=100, help_text="Organization name")
+    # Core tenant identification with strict validation
+    name = models.CharField(
+        max_length=100, 
+        unique=True,
+        db_index=True,
+        help_text="Organization name (must be unique)",
+        validators=[MinLengthValidator(2)]
+    )
     subdomain = models.CharField(
         max_length=63, 
-        unique=True, 
-        default="default",
-        help_text="Subdomain for tenant isolation (e.g., 'company1')"
+        unique=True,
+        db_index=True,
+        help_text="Subdomain for tenant isolation (e.g., 'company1')",
+        validators=[
+            RegexValidator(
+                regex=r'^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?$',
+                message='Subdomain must be lowercase alphanumeric with hyphens, no spaces',
+                code='invalid_subdomain'
+            )
+        ]
     )
     domain = models.CharField(
-        max_length=255, 
+        max_length=253, 
         blank=True, 
         null=True,
-        help_text="Custom domain (optional)"
+        unique=True,
+        help_text="Custom domain (optional, must be unique if provided)"
     )
     
-    # Tenant configuration
-    is_active = models.BooleanField(default=True, help_text="Whether tenant is active")
-    is_verified = models.BooleanField(default=False, help_text="Whether tenant is verified")
+    # Tenant configuration with security defaults
+    is_active = models.BooleanField(
+        default=True, 
+        db_index=True,
+        help_text="Whether tenant is active - inactive tenants cannot login"
+    )
+    is_verified = models.BooleanField(
+        default=False, 
+        db_index=True,
+        help_text="Whether tenant is verified by admin"
+    )
     
     # Contact information
-    contact_email = models.EmailField(default="admin@example.com", help_text="Primary contact email")
+    contact_email = models.EmailField(
+        help_text="Primary contact email for tenant"
+    )
     contact_phone = models.CharField(max_length=20, blank=True, null=True)
     address = models.TextField(blank=True, null=True)
     
     # Branding
     logo_url = models.URLField(blank=True, null=True)
-    theme_color = models.CharField(max_length=7, default="#3B82F6", help_text="Primary theme color")
-    secondary_color = models.CharField(max_length=7, default="#1E40AF", help_text="Secondary theme color")
+    theme_color = models.CharField(
+        max_length=7, 
+        default="#3B82F6", 
+        validators=[RegexValidator(
+            regex=r'^#[0-9A-Fa-f]{6}$',
+            message='Theme color must be a valid hex color code'
+        )],
+        help_text="Primary theme color"
+    )
+    secondary_color = models.CharField(
+        max_length=7, 
+        default="#1E40AF",
+        validators=[RegexValidator(
+            regex=r'^#[0-9A-Fa-f]{6}$',
+            message='Secondary color must be a valid hex color code'
+        )],
+        help_text="Secondary theme color"
+    )
     
-    # Subscription & billing
+    # Subscription & billing with limits
     trial_ends_at = models.DateTimeField(null=True, blank=True)
     subscription_status = models.CharField(
         max_length=20, 
@@ -242,13 +300,43 @@ class Tenant(models.Model):
             ('suspended', 'Suspended'),
             ('cancelled', 'Cancelled'),
         ],
-        default='trial'
+        default='trial',
+        db_index=True
+    )
+    max_users = models.PositiveIntegerField(
+        default=5,
+        help_text="Maximum users allowed for this tenant"
+    )
+    max_providers = models.PositiveIntegerField(
+        default=3,
+        help_text="Maximum cloud providers allowed"
     )
     
-    # Security settings
-    allow_registration = models.BooleanField(default=True, help_text="Allow new user registration")
-    require_email_verification = models.BooleanField(default=True)
-    session_timeout_minutes = models.IntegerField(default=480, help_text="Session timeout in minutes")
+    # Security settings with strict defaults
+    allow_registration = models.BooleanField(
+        default=True, 
+        help_text="Allow new user registration"
+    )
+    
+    # Timestamps
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    require_email_verification = models.BooleanField(
+        default=True,
+        help_text="Require email verification for new users"
+    )
+    session_timeout_minutes = models.PositiveIntegerField(
+        default=480,
+        help_text="Session timeout in minutes"
+    )
+    max_failed_login_attempts = models.PositiveIntegerField(
+        default=5,
+        help_text="Maximum failed login attempts before account lockout"
+    )
+    lockout_duration_minutes = models.PositiveIntegerField(
+        default=30,
+        help_text="Account lockout duration in minutes"
+    )
     
     # Audit fields
     created_by = models.ForeignKey(
@@ -259,27 +347,83 @@ class Tenant(models.Model):
         related_name='created_tenants'
     )
     last_activity = models.DateTimeField(auto_now=True)
+    last_security_scan = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         db_table = "tenants"
         constraints = [
             models.UniqueConstraint(
                 fields=['subdomain'], 
-                name='unique_tenant_subdomain'
+                name='unique_tenant_subdomain',
+                violation_error_message='A tenant with this subdomain already exists'
+            ),
+            models.UniqueConstraint(
+                fields=['name'], 
+                name='unique_tenant_name',
+                violation_error_message='A tenant with this name already exists'
+            ),
+            models.UniqueConstraint(
+                fields=['domain'], 
+                name='unique_tenant_domain',
+                violation_error_message='A tenant with this domain already exists'
             ),
             models.CheckConstraint(
                 check=models.Q(subdomain__regex=r'^[a-z0-9]([a-z0-9-]*[a-z0-9])?$'),
                 name='valid_subdomain_format'
+            ),
+            models.CheckConstraint(
+                check=models.Q(max_users__gte=1),
+                name='tenant_max_users_positive'
+            ),
+            models.CheckConstraint(
+                check=models.Q(session_timeout_minutes__gte=15),
+                name='tenant_session_timeout_minimum'
             )
         ]
         indexes = [
-            models.Index(fields=['subdomain']),
-            models.Index(fields=['is_active']),
-            models.Index(fields=['subscription_status']),
+            models.Index(fields=['subdomain'], name='idx_tenant_subdomain'),
+            models.Index(fields=['is_active'], name='idx_tenant_active'),
+            models.Index(fields=['subscription_status'], name='idx_tenant_subscription'),
+            models.Index(fields=['created_at'], name='idx_tenant_created'),
+            models.Index(fields=['last_activity'], name='idx_tenant_activity'),
         ]
+        ordering = ['name']
 
     class JSONAPIMeta:
         resource_name = "tenants"
+
+    def save(self, *args, **kwargs):
+        # Always force subdomain to lowercase
+        if self.subdomain:
+            self.subdomain = self.subdomain.lower().strip()
+        
+        # Auto-generate subdomain from name if not provided
+        if not self.subdomain and self.name:
+            import re
+            self.subdomain = re.sub(r'[^a-z0-9-]', '', self.name.lower().replace(' ', '-'))
+        
+        super().save(*args, **kwargs)
+
+    def clean(self):
+        """Validate tenant data"""
+        from django.core.exceptions import ValidationError
+        
+        if self.subdomain:
+            # Reserved subdomains
+            reserved = ['www', 'api', 'admin', 'app', 'mail', 'smtp', 'ftp', 'localhost', 'test', 'staging']
+            if self.subdomain.lower() in reserved:
+                raise ValidationError({
+                    'subdomain': f'Subdomain "{self.subdomain}" is reserved and cannot be used'
+                })
+        
+        # Validate domain format if provided
+        if self.domain:
+            import re
+            domain_pattern = r'^[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$'
+            if not re.match(domain_pattern, self.domain):
+                raise ValidationError({
+                    'domain': 'Invalid domain format'
+                })
 
     def __str__(self):
         return f"{self.name} ({self.subdomain})"
@@ -304,32 +448,50 @@ class Tenant(models.Model):
             return True
         return False
 
+    @property
+    def user_count(self):
+        """Get number of users in this tenant"""
+        return self.members.filter(is_active=True).count()
+
+    @property
+    def is_at_user_limit(self):
+        """Check if tenant has reached user limit"""
+        return self.user_count >= self.max_users
+
+    def can_add_user(self):
+        """Check if tenant can add another user"""
+        return self.is_active and not self.is_at_user_limit
+
+    def get_security_summary(self):
+        """Get security summary for the tenant"""
+        return {
+            'total_users': self.user_count,
+            'max_users': self.max_users,
+            'is_active': self.is_active,
+            'is_verified': self.is_verified,
+            'last_activity': self.last_activity,
+            'session_timeout': self.session_timeout_minutes,
+            'max_failed_attempts': self.max_failed_login_attempts
+        }
+
 
 class TenantMembership(models.Model):
     """
-    Represents a user's membership in a tenant with a specific role.
-    This is the core of multi-tenant user management.
+    Many-to-many relationship for users who belong to multiple tenants.
+    Enhanced with comprehensive permissions and security features.
     """
     id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
-    user = models.ForeignKey(
-        'User',
-        on_delete=models.CASCADE,
-        related_name='tenant_memberships'
-    )
-    tenant = models.ForeignKey(
-        'Tenant',
-        on_delete=models.CASCADE,
-        related_name='members'
-    )
+    user = models.ForeignKey('User', on_delete=models.CASCADE, related_name='tenant_memberships')
+    tenant = models.ForeignKey('Tenant', on_delete=models.CASCADE, related_name='tenant_memberships')
     role = models.CharField(
         max_length=50,
+        default='member',
         choices=[
             ('owner', 'Owner'),
             ('admin', 'Administrator'),
             ('member', 'Member'),
-            ('viewer', 'Viewer'),
-        ],
-        default='member'
+            ('guest', 'Guest'),
+        ]
     )
     is_active = models.BooleanField(default=True)
     joined_at = models.DateTimeField(auto_now_add=True)
@@ -341,27 +503,28 @@ class TenantMembership(models.Model):
         related_name='invited_memberships'
     )
     
-    # Permissions (can be extended)
+    # Enhanced permissions
     can_invite_users = models.BooleanField(default=False)
     can_manage_settings = models.BooleanField(default=False)
     can_view_analytics = models.BooleanField(default=True)
+    can_manage_users = models.BooleanField(default=False)
+    can_manage_billing = models.BooleanField(default=False)
+    can_manage_providers = models.BooleanField(default=False)
+    can_manage_integrations = models.BooleanField(default=False)
+    can_manage_scans = models.BooleanField(default=False)
+    unlimited_visibility = models.BooleanField(default=False)
 
     class Meta:
-        db_table = "memberships"
-        constraints = [
-            models.UniqueConstraint(
-                fields=['user', 'tenant'],
-                name='unique_user_tenant_membership'
-            )
-        ]
+        db_table = 'tenant_memberships'
+        unique_together = [['user', 'tenant']]
         indexes = [
-            models.Index(fields=['user', 'tenant']),
+            models.Index(fields=['user', 'tenant'], name='idx_membership_user_tenant'),
             models.Index(fields=['tenant', 'is_active']),
             models.Index(fields=['role']),
         ]
 
     def __str__(self):
-        return f"{self.user.name} - {self.tenant.name} ({self.role})"
+        return f"{self.user.email} - {self.tenant.name} ({self.role})"
 
     def has_permission(self, permission):
         """Check if membership has a specific permission"""
@@ -369,12 +532,38 @@ class TenantMembership(models.Model):
             'invite_users': self.can_invite_users,
             'manage_settings': self.can_manage_settings,
             'view_analytics': self.can_view_analytics,
+            'manage_users': self.can_manage_users,
+            'manage_billing': self.can_manage_billing,
+            'manage_providers': self.can_manage_providers,
+            'manage_integrations': self.can_manage_integrations,
+            'manage_scans': self.can_manage_scans,
+            'unlimited_visibility': self.unlimited_visibility,
         }
         return permission_map.get(permission, False)
 
     def is_owner_or_admin(self):
         """Check if user is owner or admin of the tenant"""
         return self.role in ['owner', 'admin']
+
+    def get_permission_state(self):
+        """Get permission state for this membership"""
+        permissions = [
+            self.can_invite_users,
+            self.can_manage_settings,
+            self.can_view_analytics,
+            self.can_manage_users,
+            self.can_manage_billing,
+            self.can_manage_providers,
+            self.can_manage_integrations,
+            self.can_manage_scans,
+        ]
+        
+        if all(permissions):
+            return 'unlimited'
+        elif not any(permissions):
+            return 'none'
+        else:
+            return 'limited'
 
 
 def apply_constraints_to_model(model_class):
@@ -393,52 +582,137 @@ apply_constraints_to_model(Tenant)
 
 
 
-class User(AbstractBaseUser):
+class User(AbstractUser):
     """
-    Enhanced User model with multi-tenant support.
-    Users can belong to multiple tenants with different roles.
+    Custom user model with tenant association.
+    Email is globally unique - one user account across all tenants.
+    Enhanced with comprehensive multi-tenant support and security.
     """
-    id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
-    name = models.CharField(max_length=150, validators=[MinLengthValidator(3)])
-    email = models.EmailField(
-        max_length=254,
-        unique=True,
-        help_text="Case insensitive",
-        error_messages={"unique": "Please check the email address and try again."},
-    )
-    company_name = models.CharField(max_length=150, blank=True)
-    is_active = models.BooleanField(default=True)
-    date_joined = models.DateTimeField(auto_now_add=True, editable=False)
-
-    # Multi-tenant fields
-    primary_tenant = models.ForeignKey(
-        'Tenant',
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name='primary_users',
-        help_text="User's primary tenant"
+    id = models.UUIDField(
+        primary_key=True,
+        default=uuid4,
+        editable=False
     )
     
-    # Security fields
-    is_verified = models.BooleanField(default=False, help_text="Email verification status")
+    email = models.EmailField(
+        unique=True,  # One email = one account globally
+        db_index=True,
+        help_text="Email address (case insensitive)"
+    )
+    
+    username = models.CharField(
+        max_length=150,
+        unique=True,  # Keep username unique
+        blank=True,
+        null=True,
+        help_text="Username (auto-generated from email if not provided)"
+    )
+    
+    name = models.CharField(
+        max_length=255,
+        blank=True,
+        null=True,
+        help_text="Full name of the user"
+    )
+    
+    primary_tenant = models.ForeignKey(
+        'Tenant',
+        on_delete=models.PROTECT,  # Don't delete tenant if users exist
+        related_name='users',
+        help_text='Primary tenant this user belongs to'
+    )
+    
+    # For future: multi-tenant membership
+    tenants = models.ManyToManyField(
+        'Tenant',
+        through='TenantMembership',
+        through_fields=('user', 'tenant'),
+        related_name='members',
+        blank=True,
+        help_text='All tenants this user has access to'
+    )
+    
+    # Enhanced security fields
+    is_verified = models.BooleanField(
+        default=False, 
+        db_index=True,
+        help_text="Email verification status"
+    )
     last_login_ip = models.GenericIPAddressField(null=True, blank=True)
-    failed_login_attempts = models.IntegerField(default=0)
+    failed_login_attempts = models.PositiveIntegerField(
+        default=0,
+        help_text="Number of consecutive failed login attempts"
+    )
     locked_until = models.DateTimeField(null=True, blank=True)
+    password_changed_at = models.DateTimeField(null=True, blank=True)
+    two_factor_enabled = models.BooleanField(
+        default=False,
+        help_text="Whether two-factor authentication is enabled"
+    )
+    two_factor_secret = models.CharField(
+        max_length=32,
+        blank=True,
+        null=True,
+        help_text="TOTP secret for 2FA"
+    )
+    
+    # Security audit fields
+    last_security_scan = models.DateTimeField(null=True, blank=True)
+    security_notes = models.TextField(blank=True, null=True)
     
     # Free trial fields (deprecated - moved to tenant level)
     trial_start = models.DateTimeField(null=True, blank=True)
     trial_end = models.DateTimeField(null=True, blank=True)
     is_trial_active = models.BooleanField(default=False)
 
-    USERNAME_FIELD = "email"
-    REQUIRED_FIELDS = ["name"]
+    class Meta:
+        db_table = 'users'
+        constraints = [
+            models.CheckConstraint(
+                check=models.Q(failed_login_attempts__gte=0),
+                name='user_failed_attempts_positive'
+            )
+        ]
+        indexes = [
+            models.Index(fields=['email'], name='idx_user_email'),
+            models.Index(fields=['primary_tenant'], name='idx_user_tenant'),
+            models.Index(fields=['is_active'], name='idx_user_active'),
+            models.Index(fields=['is_verified'], name='idx_user_verified'),
+            models.Index(fields=['last_login'], name='idx_user_last_login'),
+        ]
 
-    objects = CustomUserManager()
+    class JSONAPIMeta:
+        resource_name = "users"
+
+    def save(self, *args, **kwargs):
+        # Auto-generate username from email if not provided
+        if not self.username:
+            self.username = self.email
+        
+        # Auto-generate name from first_name and last_name if not provided
+        if not self.name and (self.first_name or self.last_name):
+            self.name = f"{self.first_name or ''} {self.last_name or ''}".strip()
+        
+        # Normalize email
+        if self.email:
+            self.email = self.email.strip().lower()
+        
+        # Disabled: Membership is created AFTER user save, causing chicken-egg problem
+        # TODO: Re-enable after refactoring registration flow
+        # if self.pk and self.primary_tenant_id and not self.is_superuser:
+        #     if not self.is_member_of_tenant(self.primary_tenant_id):
+        #         raise ValidationError("User must be a member of their primary tenant")
+        
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"{self.email} ({self.primary_tenant.name if self.primary_tenant else 'No Tenant'})"
+
+    USERNAME_FIELD = 'email'
+    REQUIRED_FIELDS = ['username']
 
     def is_member_of_tenant(self, tenant_id):
         """Check if user is a member of the specified tenant"""
-        # Use the correct related_name for TenantMembership
         return self.tenant_memberships.filter(tenant_id=tenant_id, is_active=True).exists()
 
     def get_tenant_role(self, tenant_id):
@@ -450,9 +724,18 @@ class User(AbstractBaseUser):
             return None
 
     def can_access_tenant(self, tenant_id):
-        """Check if user can access a specific tenant"""
+        """Check if user can access a specific tenant with enhanced security"""
         if not self.is_active:
             return False
+        
+        # Superusers can access any tenant
+        if self.is_superuser:
+            return True
+            
+        # Check if user is locked
+        if self.is_locked():
+            return False
+            
         return self.is_member_of_tenant(tenant_id)
     
     def get_tenant_memberships(self):
@@ -469,60 +752,73 @@ class User(AbstractBaseUser):
             return False
         return timezone.now() < self.locked_until
 
-    def lock_account(self, duration_minutes=30):
-        """Lock user account for specified duration"""
+    def lock_account(self, duration_minutes=30, reason="Too many failed login attempts"):
+        """Lock user account for specified duration with reason"""
         self.locked_until = timezone.now() + timezone.timedelta(minutes=duration_minutes)
-        self.save(update_fields=['locked_until'])
+        self.security_notes = f"{self.security_notes or ''}\n{timezone.now()}: Account locked - {reason}".strip()
+        self.save(update_fields=['locked_until', 'security_notes'])
 
     def unlock_account(self):
         """Unlock user account"""
         self.locked_until = None
         self.failed_login_attempts = 0
-        self.save(update_fields=['locked_until', 'failed_login_attempts'])
+        self.security_notes = f"{self.security_notes or ''}\n{timezone.now()}: Account unlocked".strip()
+        self.save(update_fields=['locked_until', 'failed_login_attempts', 'security_notes'])
 
-    def record_failed_login(self):
-        """Record a failed login attempt"""
+    def record_failed_login(self, ip_address=None):
+        """Record a failed login attempt with IP tracking"""
         self.failed_login_attempts += 1
-        if self.failed_login_attempts >= 5:  # Lock after 5 failed attempts
-            self.lock_account()
-        self.save(update_fields=['failed_login_attempts', 'locked_until'])
+        
+        # Get tenant-specific lockout settings
+        if self.primary_tenant:
+            max_attempts = self.primary_tenant.max_failed_login_attempts
+            lockout_duration = self.primary_tenant.lockout_duration_minutes
+        else:
+            max_attempts = 5
+            lockout_duration = 30
+            
+        if self.failed_login_attempts >= max_attempts:
+            self.lock_account(duration_minutes=lockout_duration)
+        else:
+            self.save(update_fields=['failed_login_attempts'])
 
     def record_successful_login(self, ip_address=None):
-        """Record a successful login"""
+        """Record a successful login with security tracking"""
         self.failed_login_attempts = 0
         self.locked_until = None
+        self.last_login = timezone.now()
         if ip_address:
             self.last_login_ip = ip_address
-        self.save(update_fields=['failed_login_attempts', 'locked_until', 'last_login_ip'])
+        self.save(update_fields=['failed_login_attempts', 'locked_until', 'last_login', 'last_login_ip'])
 
-    def save(self, *args, **kwargs):
-        if self.email:
-            self.email = self.email.strip().lower()
-        super().save(*args, **kwargs)
+    def get_security_summary(self):
+        """Get comprehensive security summary for the user"""
+        return {
+            'is_active': self.is_active,
+            'is_verified': self.is_verified,
+            'is_locked': self.is_locked(),
+            'failed_attempts': self.failed_login_attempts,
+            'last_login': self.last_login,
+            'last_login_ip': self.last_login_ip,
+            'two_factor_enabled': self.two_factor_enabled,
+            'tenant_count': self.get_tenant_memberships().count(),
+            'primary_tenant': self.primary_tenant.name if self.primary_tenant else None
+        }
 
-    def start_trial(self, days=7):
-        from django.utils import timezone
-        from datetime import timedelta
-        self.trial_start = timezone.now()
-        self.trial_end = self.trial_start + timedelta(days=days)
-        self.is_trial_active = True
-        self.save(update_fields=["trial_start", "trial_end", "is_trial_active"])
-
-    def check_trial_status(self):
-        from django.utils import timezone
-        if self.trial_end and timezone.now() > self.trial_end:
-            if self.is_trial_active:
-                self.is_trial_active = False
-                self.save(update_fields=["is_trial_active"])
-        return self.is_trial_active
-
-    class Meta:
-        db_table = "users"
-
-        constraints = []
-
-    class JSONAPIMeta:
-        resource_name = "users"
+    def has_permission_in_tenant(self, permission, tenant_id):
+        """Check if user has specific permission in a tenant"""
+        if not self.can_access_tenant(tenant_id):
+            return False
+            
+        membership = self.tenant_memberships.filter(
+            tenant_id=tenant_id, 
+            is_active=True
+        ).first()
+        
+        if not membership:
+            return False
+            
+        return membership.has_permission(permission)
 
 
 class Membership(models.Model):
@@ -2093,3 +2389,297 @@ class TenantOAuthUser(models.Model):
         """Update the last login timestamp"""
         self.last_login = timezone.now()
         self.save(update_fields=['last_login'])
+
+
+class SecurityAuditLog(models.Model):
+    """
+    Comprehensive audit logging for security violations and important events.
+    This model tracks all security-related activities across the multi-tenant system.
+    """
+    
+    # Event types for categorization
+    EVENT_TYPES = [
+        ('login_success', 'Successful Login'),
+        ('login_failed', 'Failed Login'),
+        ('login_blocked', 'Login Blocked'),
+        ('account_locked', 'Account Locked'),
+        ('account_unlocked', 'Account Unlocked'),
+        ('password_changed', 'Password Changed'),
+        ('tenant_access_denied', 'Tenant Access Denied'),
+        ('tenant_switched', 'Tenant Switched'),
+        ('permission_denied', 'Permission Denied'),
+        ('data_access_violation', 'Data Access Violation'),
+        ('api_rate_limit', 'API Rate Limit Exceeded'),
+        ('suspicious_activity', 'Suspicious Activity'),
+        ('security_scan', 'Security Scan'),
+        ('user_created', 'User Created'),
+        ('user_deleted', 'User Deleted'),
+        ('tenant_created', 'Tenant Created'),
+        ('tenant_modified', 'Tenant Modified'),
+        ('tenant_deleted', 'Tenant Deleted'),
+        ('oauth_login', 'OAuth Login'),
+        ('oauth_failed', 'OAuth Failed'),
+        ('two_factor_enabled', '2FA Enabled'),
+        ('two_factor_disabled', '2FA Disabled'),
+        ('admin_action', 'Admin Action'),
+        ('system_error', 'System Error'),
+    ]
+    
+    # Severity levels
+    SEVERITY_LEVELS = [
+        ('low', 'Low'),
+        ('medium', 'Medium'),
+        ('high', 'High'),
+        ('critical', 'Critical'),
+    ]
+    
+    id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
+    timestamp = models.DateTimeField(auto_now_add=True, db_index=True)
+    
+    # Event details
+    event_type = models.CharField(
+        max_length=50,
+        choices=EVENT_TYPES,
+        db_index=True,
+        help_text="Type of security event"
+    )
+    severity = models.CharField(
+        max_length=20,
+        choices=SEVERITY_LEVELS,
+        default='medium',
+        db_index=True,
+        help_text="Severity level of the event"
+    )
+    
+    # User and tenant context
+    user = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='security_audit_logs',
+        help_text="User involved in the event (if applicable)"
+    )
+    tenant = models.ForeignKey(
+        Tenant,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='security_audit_logs',
+        help_text="Tenant context of the event"
+    )
+    
+    # Request context
+    ip_address = models.GenericIPAddressField(
+        null=True,
+        blank=True,
+        help_text="IP address of the request"
+    )
+    user_agent = models.TextField(
+        blank=True,
+        null=True,
+        help_text="User agent string from the request"
+    )
+    request_path = models.CharField(
+        max_length=500,
+        blank=True,
+        null=True,
+        help_text="Request path that triggered the event"
+    )
+    request_method = models.CharField(
+        max_length=10,
+        blank=True,
+        null=True,
+        help_text="HTTP method of the request"
+    )
+    
+    # Event details
+    message = models.TextField(
+        help_text="Human-readable description of the event"
+    )
+    details = models.JSONField(
+        default=dict,
+        blank=True,
+        help_text="Additional structured data about the event"
+    )
+    
+    # Security context
+    is_security_violation = models.BooleanField(
+        default=False,
+        db_index=True,
+        help_text="Whether this event represents a security violation"
+    )
+    requires_investigation = models.BooleanField(
+        default=False,
+        db_index=True,
+        help_text="Whether this event requires manual investigation"
+    )
+    
+    # Resolution tracking
+    resolved = models.BooleanField(
+        default=False,
+        db_index=True,
+        help_text="Whether this event has been resolved"
+    )
+    resolved_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='resolved_audit_logs',
+        help_text="User who resolved this event"
+    )
+    resolved_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="When this event was resolved"
+    )
+    resolution_notes = models.TextField(
+        blank=True,
+        null=True,
+        help_text="Notes about how this event was resolved"
+    )
+    
+    class Meta:
+        db_table = 'security_audit_logs'
+        ordering = ['-timestamp']
+        indexes = [
+            models.Index(fields=['timestamp'], name='idx_audit_timestamp'),
+            models.Index(fields=['event_type'], name='idx_audit_event_type'),
+            models.Index(fields=['severity'], name='idx_audit_severity'),
+            models.Index(fields=['user'], name='idx_audit_user'),
+            models.Index(fields=['tenant'], name='idx_audit_tenant'),
+            models.Index(fields=['is_security_violation'], name='idx_audit_violation'),
+            models.Index(fields=['requires_investigation'], name='idx_audit_investigation'),
+            models.Index(fields=['resolved'], name='idx_audit_resolved'),
+            models.Index(fields=['ip_address'], name='idx_audit_ip'),
+            models.Index(fields=['timestamp', 'event_type'], name='idx_audit_timestamp_event'),
+            models.Index(fields=['tenant', 'timestamp'], name='idx_audit_tenant_timestamp'),
+        ]
+    
+    def __str__(self):
+        return f"{self.get_event_type_display()} - {self.timestamp} - {self.message[:50]}"
+    
+    @classmethod
+    def log_event(cls, event_type, message, user=None, tenant=None, severity='medium', 
+                  ip_address=None, user_agent=None, request_path=None, request_method=None,
+                  details=None, is_security_violation=False, requires_investigation=False):
+        """
+        Log a security event with comprehensive context.
+        
+        Args:
+            event_type: Type of event from EVENT_TYPES
+            message: Human-readable description
+            user: User involved (if applicable)
+            tenant: Tenant context (if applicable)
+            severity: Severity level
+            ip_address: IP address of the request
+            user_agent: User agent string
+            request_path: Request path
+            request_method: HTTP method
+            details: Additional structured data
+            is_security_violation: Whether this is a security violation
+            requires_investigation: Whether manual investigation is needed
+        """
+        return cls.objects.create(
+            event_type=event_type,
+            message=message,
+            user=user,
+            tenant=tenant,
+            severity=severity,
+            ip_address=ip_address,
+            user_agent=user_agent,
+            request_path=request_path,
+            request_method=request_method,
+            details=details or {},
+            is_security_violation=is_security_violation,
+            requires_investigation=requires_investigation
+        )
+    
+    @classmethod
+    def log_login_attempt(cls, user, success, ip_address=None, user_agent=None, 
+                          request_path=None, tenant=None, details=None):
+        """Log a login attempt with appropriate severity and flags."""
+        if success:
+            event_type = 'login_success'
+            severity = 'low'
+            message = f"Successful login for user {user.email}"
+            is_violation = False
+            requires_investigation = False
+        else:
+            event_type = 'login_failed'
+            severity = 'medium'
+            message = f"Failed login attempt for user {user.email if user else 'unknown'}"
+            is_violation = True
+            requires_investigation = True
+        
+        return cls.log_event(
+            event_type=event_type,
+            message=message,
+            user=user,
+            tenant=tenant,
+            severity=severity,
+            ip_address=ip_address,
+            user_agent=user_agent,
+            request_path=request_path,
+            details=details,
+            is_security_violation=is_violation,
+            requires_investigation=requires_investigation
+        )
+    
+    @classmethod
+    def log_tenant_access_denied(cls, user, tenant, ip_address=None, user_agent=None, 
+                                 request_path=None, details=None):
+        """Log when a user is denied access to a tenant."""
+        return cls.log_event(
+            event_type='tenant_access_denied',
+            message=f"User {user.email} denied access to tenant {tenant.name}",
+            user=user,
+            tenant=tenant,
+            severity='high',
+            ip_address=ip_address,
+            user_agent=user_agent,
+            request_path=request_path,
+            details=details,
+            is_security_violation=True,
+            requires_investigation=True
+        )
+    
+    @classmethod
+    def log_data_access_violation(cls, user, tenant, resource_type, ip_address=None, 
+                                  user_agent=None, request_path=None, details=None):
+        """Log when a user attempts to access data they shouldn't."""
+        return cls.log_event(
+            event_type='data_access_violation',
+            message=f"User {user.email} attempted unauthorized access to {resource_type} in tenant {tenant.name}",
+            user=user,
+            tenant=tenant,
+            severity='critical',
+            ip_address=ip_address,
+            user_agent=user_agent,
+            request_path=request_path,
+            details=details,
+            is_security_violation=True,
+            requires_investigation=True
+        )
+    
+    def resolve(self, resolved_by, resolution_notes=None):
+        """Mark this audit log as resolved."""
+        self.resolved = True
+        self.resolved_by = resolved_by
+        self.resolved_at = timezone.now()
+        self.resolution_notes = resolution_notes
+        self.save()
+    
+    def get_security_summary(self):
+        """Get a summary of security events for this log entry."""
+        return {
+            'event_type': self.get_event_type_display(),
+            'severity': self.get_severity_display(),
+            'timestamp': self.timestamp,
+            'user': self.user.email if self.user else None,
+            'tenant': self.tenant.name if self.tenant else None,
+            'is_violation': self.is_security_violation,
+            'requires_investigation': self.requires_investigation,
+            'resolved': self.resolved
+        }

@@ -35,13 +35,10 @@ urlpatterns = [
     path('users/me', tenant_validation.get_user_me, name='user-me-no-slash'),
     
     # Tenant Authentication Endpoints
-    path('tenant/login/', tenant_auth.TenantLoginView.as_view(), name='tenant-login'),
-    path('tenant/login', tenant_auth.TenantLoginView.as_view(), name='tenant-login-no-slash'),
-    path('tenant/refresh-token/', tenant_auth.TenantRefreshTokenView.as_view(), name='tenant-refresh-token'),
-    path('tenant/logout/', tenant_auth.TenantLogoutView.as_view(), name='tenant-logout'),
+    path('tenant/login/', tenant_auth.tenant_login, name='tenant-login'),
+    path('tenant/login', tenant_auth.tenant_login, name='tenant-login-no-slash'),
     path('tenant/register/', tenant_auth.tenant_register, name='tenant-register'),
     path('tenant/register', tenant_auth.tenant_register, name='tenant-register-no-slash'),
-    path('tenant/register-test/', tenant_auth.tenant_register_test, name='tenant-register-test'),
     
     # Tenant Registration Endpoints (for creating new tenants)
     path('tenant/register-tenant/', tenant_registration.register_tenant, name='register-tenant'),

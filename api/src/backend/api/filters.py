@@ -607,11 +607,12 @@ class UserFilter(FilterSet):
     class Meta:
         model = User
         fields = {
-            "name": ["exact", "icontains"],
             "email": ["exact", "icontains"],
-            "company_name": ["exact", "icontains"],
+            "first_name": ["exact", "icontains"],
+            "last_name": ["exact", "icontains"],
             "date_joined": ["date", "gte", "lte"],
             "is_active": ["exact"],
+            "primary_tenant__name": ["exact", "icontains"],
         }
 
 

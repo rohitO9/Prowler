@@ -1,206 +1,97 @@
 import logging
-import json
-import time
-from django.http import Http404
+from django.utils.deprecation import MiddlewareMixin
+from django.http import JsonResponse
 from api.models import Tenant
+from api.models import set_current_tenant, clear_current_tenant
 
 logger = logging.getLogger(__name__)
 
-# Shared exempt paths for all middleware classes
-EXEMPT_PATHS = [
-    '/api/v1/tenant/register',
-    '/api/v1/tenant/register/',
-    '/api/v1/tenant/login',
-    '/api/v1/tenant/login/',
-    '/api/v1/auth/azure/callback',
-    '/api/v1/auth/azure/callback/',
-    '/api/v1/detect-idp',
-    '/api/v1/detect-idp/',
-    '/api/health',
-    '/api/health/',
-    '/admin',
-    '/admin/',
-    '/api/v1/tenant/register-tenant/',
-    '/api/v1/tenant/register-tenant',
-    '/api/v1/tenant/public-info/',
-]
 
-
-class APILoggingMiddleware:
+class SubdomainMiddleware(MiddlewareMixin):
     """
-    Middleware to log API requests and responses.
+    Extract tenant from subdomain and set in request
+    Must run BEFORE authentication middleware
     """
     
-    def __init__(self, get_response):
-        self.get_response = get_response
-
-    def __call__(self, request):
-        # Log request
-        start_time = time.time()
-        
-        # Get request data
-        method = request.method
-        path = request.get_full_path()
-        user = getattr(request, 'user', None)
-        user_info = str(user) if user and hasattr(user, 'username') else 'Anonymous'
-        
-        logger.info(f"API Request: {method} {path} - User: {user_info}")
-        
-        # Process request
-        response = self.get_response(request)
-        
-        # Log response
-        duration = time.time() - start_time
-        status_code = response.status_code
-        
-        logger.info(f"API Response: {method} {path} - Status: {status_code} - Duration: {duration:.3f}s")
-        
-        return response
-
-
-class TenantMiddleware:
-    """
-    Middleware to set tenant context for multi-tenancy.
-    Works in conjunction with SubdomainMiddleware.
-    """
+    # Paths that don't require tenant context
+    EXEMPT_PATHS = [
+        '/admin/',
+        '/api/v1/tenant/register',
+        '/api/v1/tenant/login',
+        '/api/v1/tenant/list',
+        '/health',
+        '/static/',
+        '/media/',
+    ]
     
-    def __init__(self, get_response):
-        self.get_response = get_response
-
-    def __call__(self, request):
-        logger.debug(f"[TENANT_MIDDLEWARE] Processing request: {request.method} {request.path}")
-        
-        # Check if this path should be exempt from tenant processing
-        should_exempt = any(request.path.startswith(path) for path in EXEMPT_PATHS)
-        logger.debug(f"[TENANT_MIDDLEWARE] Checking if path '{request.path}' should be exempt: {should_exempt}")
-        
-        if should_exempt:
-            logger.info(f"[TENANT_MIDDLEWARE] ✅ EXEMPTING path '{request.path}' from tenant context processing")
-            request.tenant_id = None
-            request.tenant_name = None
-            response = self.get_response(request)
-            return response
-        
-        # Get tenant from request (set by SubdomainMiddleware)
-        tenant = getattr(request, 'tenant', None)
-        logger.debug(f"[TENANT_MIDDLEWARE] Tenant from request: {tenant}")
-        
-        if tenant:
-            # Set tenant context for the request
-            request.tenant_id = tenant.id
-            request.tenant_name = tenant.name
-            logger.info(f"[TENANT_MIDDLEWARE] ✅ Set tenant context - ID: {tenant.id}, Name: {tenant.name}")
-        else:
-            request.tenant_id = None
-            request.tenant_name = None
-            logger.debug(f"[TENANT_MIDDLEWARE] ❌ No tenant context available for {request.path}")
-
-        response = self.get_response(request)
-        logger.debug(f"[TENANT_MIDDLEWARE] Request processing complete for {request.path}")
-        return response
-
-
-class SubdomainMiddleware:
-    """
-    Middleware to extract tenant from subdomain.
-    
-    Handles both subdomain.localhost:3000 and custom domains.
-    """
-    
-    def __init__(self, get_response):
-        self.get_response = get_response
-
-    def __call__(self, request):
-        # Add comprehensive logging
-        logger.debug(f"[SUBDOMAIN_MIDDLEWARE] Processing request: {request.method} {request.path}")
-        logger.debug(f"[SUBDOMAIN_MIDDLEWARE] Host: {request.get_host()}")
-        logger.debug(f"[SUBDOMAIN_MIDDLEWARE] Headers: {dict(request.headers)}")
-        
-        # Check if this path should be exempt from tenant processing
-        should_exempt = any(request.path.startswith(path) for path in EXEMPT_PATHS)
-        logger.debug(f"[SUBDOMAIN_MIDDLEWARE] Checking if path '{request.path}' should be exempt: {should_exempt}")
-        
-        if should_exempt:
-            logger.info(f"[SUBDOMAIN_MIDDLEWARE] ✅ EXEMPTING path '{request.path}' from tenant processing")
+    def process_request(self, request):
+        """Extract tenant from subdomain"""
+        # Check if path is exempt
+        if self._is_exempt_path(request.path):
             request.tenant = None
-            response = self.get_response(request)
-            return response
+            clear_current_tenant()
+            return None
         
-        # Extract tenant from subdomain
-        logger.debug(f"[SUBDOMAIN_MIDDLEWARE] Extracting tenant from subdomain...")
-        tenant = self.get_tenant_from_request(request)
+        # Extract tenant from subdomain or header
+        tenant = self._get_tenant_from_request(request)
         
         if tenant:
             request.tenant = tenant
-            logger.info(f"[SUBDOMAIN_MIDDLEWARE] ✅ Tenant found: {tenant.name} (ID: {tenant.id})")
+            set_current_tenant(tenant)  # Set in thread-local for managers
+            logger.debug(f"✅ Tenant set: {tenant.name} ({tenant.subdomain})")
         else:
             request.tenant = None
-            logger.warning(f"[SUBDOMAIN_MIDDLEWARE] ❌ No tenant found for subdomain")
-
-        response = self.get_response(request)
-        logger.debug(f"[SUBDOMAIN_MIDDLEWARE] Request processing complete for {request.path}")
-        return response
-
-    def get_tenant_from_request(self, request):
-        """
-        Extract tenant from request subdomain or domain.
-        """
-        host = request.get_host().split(':')[0]  # Remove port if present
-        logger.debug(f"[SUBDOMAIN_MIDDLEWARE] Extracted host: '{host}'")
-        
-        # Handle localhost development
-        if host.endswith('.localhost'):
-            subdomain = host.replace('.localhost', '')
-            logger.debug(f"[SUBDOMAIN_MIDDLEWARE] Extracted subdomain: '{subdomain}'")
+            clear_current_tenant()
             
-            if subdomain and subdomain != 'www':
-                logger.debug(f"[SUBDOMAIN_MIDDLEWARE] Looking up tenant with subdomain: '{subdomain}'")
-                try:
-                    # First, try to get existing tenant
-                    tenant = Tenant.objects.filter(name=subdomain).first()
-                    if tenant:
-                        logger.info(f"[SUBDOMAIN_MIDDLEWARE] ✅ Found existing tenant: {tenant.name} (ID: {tenant.id})")
-                        return tenant
-                    
-                    logger.debug(f"[SUBDOMAIN_MIDDLEWARE] No existing tenant found, creating new one...")
-                    # If no tenant exists, create one
-                    tenant = Tenant.objects.create(name=subdomain)
-                    logger.info(f"[SUBDOMAIN_MIDDLEWARE] ✅ Created new tenant: {tenant.name} (ID: {tenant.id})")
-                    return tenant
-                except Exception as e:
-                    logger.error(f"[SUBDOMAIN_MIDDLEWARE] ❌ Error getting/creating tenant: {e}")
-                    return None
-            else:
-                logger.debug(f"[SUBDOMAIN_MIDDLEWARE] Invalid subdomain: '{subdomain}' (empty or www)")
-        else:
-            logger.debug(f"[SUBDOMAIN_MIDDLEWARE] Host '{host}' does not end with '.localhost'")
+            # For non-exempt paths, warn about missing tenant
+            if not self._is_exempt_path(request.path):
+                logger.warning(f"⚠️  No tenant found for: {request.path}")
         
-        # Handle custom domains - try to find by name
-        logger.debug(f"[SUBDOMAIN_MIDDLEWARE] Attempting to find tenant by host name: '{host}'")
-        try:
-            tenant = Tenant.objects.get(name=host)
-            logger.info(f"[SUBDOMAIN_MIDDLEWARE] ✅ Found tenant by host name: {tenant.name} (ID: {tenant.id})")
-            return tenant
-        except Tenant.DoesNotExist:
-            logger.debug(f"[SUBDOMAIN_MIDDLEWARE] No tenant found for host: '{host}'")
-        except Exception as e:
-            logger.error(f"[SUBDOMAIN_MIDDLEWARE] ❌ Error looking up tenant by host: {e}")
-        
-        logger.debug(f"[SUBDOMAIN_MIDDLEWARE] No tenant found for request")
         return None
-
-    def get_subdomain(self, request):
-        """
-        Extract subdomain from request host.
-        """
-        host = request.get_host().split(':')[0]
+    
+    def process_response(self, request, response):
+        """Clean up thread-local storage"""
+        clear_current_tenant()
+        return response
+    
+    def _is_exempt_path(self, path):
+        """Check if path doesn't require tenant"""
+        return any(path.startswith(exempt) for exempt in self.EXEMPT_PATHS)
+    
+    def _get_tenant_from_request(self, request):
+        """Extract tenant from subdomain or header"""
+        # Priority 1: Subdomain
+        host = request.get_host().split(':')[0]  # Remove port
         
-        # Handle localhost development
-        if host.endswith('.localhost'):
-            return host.replace('.localhost', '')
+        if '.' in host and not host.startswith('www'):
+            subdomain = host.split('.')[0].lower()
+            
+            # Skip localhost, IP addresses
+            if subdomain not in ['localhost', 'www', 'api', '127'] and not subdomain.replace('.', '').isdigit():
+                try:
+                    tenant = Tenant.objects.get(
+                        subdomain=subdomain,
+                        is_active=True
+                    )
+                    logger.debug(f"Found tenant by subdomain: {subdomain}")
+                    return tenant
+                except Tenant.DoesNotExist:
+                    logger.warning(f"Tenant not found for subdomain: {subdomain}")
+                except Tenant.MultipleObjectsReturned:
+                    logger.error(f"Multiple tenants found for subdomain: {subdomain}")
+                    # This shouldn't happen with unique constraint!
         
-        # Handle custom domains
-        if '.' in host and not host.startswith('www.'):
-            return host.split('.')[0]
+        # Priority 2: Custom header (for API calls)
+        tenant_header = request.headers.get('X-Tenant-Subdomain')
+        if tenant_header:
+            try:
+                tenant = Tenant.objects.get(
+                    subdomain=tenant_header.lower(),
+                    is_active=True
+                )
+                logger.debug(f"Found tenant by header: {tenant_header}")
+                return tenant
+            except Tenant.DoesNotExist:
+                logger.warning(f"Tenant not found for header: {tenant_header}")
         
         return None

@@ -91,15 +91,18 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
-    # Multi-tenant security middleware (order is important)
+    
+    # ✅ CRITICAL ORDER: Multi-tenant security middleware
+    # 1. Extract tenant from subdomain (before tenant isolation)
     "api.middleware.subdomain.SubdomainMiddleware",
-    "api.middleware.tenant_security.TenantSecurityMiddleware",
-    "api.middleware.tenant_security.TenantContextMiddleware",
-    "api.middleware.subdomain.TenantMiddleware",
-    # CRITICAL: Tenant isolation middleware (must be after tenant detection)
+    
+    # 2. Validate tenant access (after auth, uses request.user)
     "api.middleware.tenant_isolation.TenantIsolationMiddleware",
-    "api.middleware.tenant_isolation.TenantQueryScopingMiddleware",
-    "api.middleware.tenant_isolation.TenantSecurityAuditMiddleware",
+    
+    # 3. Audit logging (should be last to capture full request)
+    "api.middleware.tenant_audit.TenantAuditMiddleware",
+    
+    # Additional middleware
     "api.middleware.APILoggingMiddleware",
     "allauth.account.middleware.AccountMiddleware",
 ]

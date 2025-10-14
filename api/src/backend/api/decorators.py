@@ -1,68 +1,121 @@
-import uuid
 from functools import wraps
+from rest_framework.response import Response
+from rest_framework import status
+import logging
 
-from django.db import connection, transaction
-from rest_framework_json_api.serializers import ValidationError
-
-from api.db_utils import POSTGRES_TENANT_VAR, SET_CONFIG_QUERY
+logger = logging.getLogger(__name__)
 
 
-def set_tenant(func=None, *, keep_tenant=False):
+def require_tenant(view_func):
     """
-    Decorator to set the tenant context for a Celery task based on the provided tenant_id.
-
-    This decorator extracts the `tenant_id` from the task's keyword arguments,
-    and uses it to set the tenant context for the current database session.
-    The `tenant_id` is then removed from the kwargs before the task function
-    is executed. If `tenant_id` is not provided, a KeyError is raised.
-
-    Args:
-        func (function): The Celery task function to be decorated.
-
-    Raises:
-        KeyError: If `tenant_id` is not found in the task's keyword arguments.
-
-    Returns:
-        function: The wrapped function with tenant context set.
-
-    Example:
-        # This decorator MUST be defined the last in the decorator chain
-
-        @shared_task
-        @set_tenant
-        def some_task(arg1, **kwargs):
-            # Task logic here
-            pass
-
-        # When calling the task
-        some_task.delay(arg1, tenant_id="8db7ca86-03cc-4d42-99f6-5e480baf6ab5")
-
-        # The tenant context will be set before the task logic executes.
+    Decorator to ensure request has valid tenant context
+    Use on all tenant-scoped API endpoints
     """
+    @wraps(view_func)
+    def wrapper(request, *args, **kwargs):
+        # Check if request has tenant
+        if not hasattr(request, 'tenant') or not request.tenant:
+            logger.warning(f"Endpoint {view_func.__name__} called without tenant context")
+            return Response({
+                'errors': [{
+                    'status': '400',
+                    'code': 'missing_tenant',
+                    'title': 'Tenant Required',
+                    'detail': 'This endpoint requires tenant context. Ensure you are accessing via tenant subdomain.',
+                }]
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Check if tenant is active
+        if not request.tenant.is_active:
+            logger.warning(f"Access attempt to inactive tenant: {request.tenant.subdomain}")
+            return Response({
+                'errors': [{
+                    'status': '403',
+                    'code': 'tenant_inactive',
+                    'title': 'Tenant Inactive',
+                    'detail': 'This organization account is currently inactive.',
+                }]
+            }, status=status.HTTP_403_FORBIDDEN)
+        
+        return view_func(request, *args, **kwargs)
+    
+    return wrapper
 
-    def decorator(func):
-        @wraps(func)
-        @transaction.atomic
-        def wrapper(*args, **kwargs):
-            try:
-                if not keep_tenant:
-                    tenant_id = kwargs.pop("tenant_id")
+
+def require_tenant_admin(view_func):
+    """
+    Decorator to require tenant admin role
+    """
+    @wraps(view_func)
+    @require_tenant
+    def wrapper(request, *args, **kwargs):
+        # Check if user is authenticated
+        if not request.user or not request.user.is_authenticated:
+            return Response({
+                'errors': [{
+                    'status': '401',
+                    'code': 'authentication_required',
+                    'title': 'Authentication Required',
+                    'detail': 'You must be logged in to access this resource.',
+                }]
+            }, status=status.HTTP_401_UNAUTHORIZED)
+        
+        # Check if user is admin for this tenant
+        # Option 1: Check if user is staff/superuser
+        if request.user.is_staff or request.user.is_superuser:
+            return view_func(request, *args, **kwargs)
+        
+        # Option 2: Check TenantMembership role (if implemented)
+        # from api.models import TenantMembership
+        # membership = TenantMembership.objects.filter(
+        #     user=request.user,
+        #     tenant=request.tenant,
+        #     role__in=['owner', 'admin']
+        # ).first()
+        # if membership:
+        #     return view_func(request, *args, **kwargs)
+        
+        logger.warning(
+            f"Non-admin user {request.user.email} attempted admin action "
+            f"on tenant {request.tenant.subdomain}"
+        )
+        
+        return Response({
+            'errors': [{
+                'status': '403',
+                'code': 'insufficient_permissions',
+                'title': 'Forbidden',
+                'detail': 'You do not have admin permissions for this organization.',
+            }]
+        }, status=status.HTTP_403_FORBIDDEN)
+    
+    return wrapper
+
+
+def tenant_scoped_queryset(queryset_or_model):
+    """
+    Decorator to automatically scope queryset to current tenant
+    
+    Usage:
+        @tenant_scoped_queryset(Resource)
+        def list_resources(request):
+            # queryset is already filtered by tenant
+            return queryset
+    """
+    def decorator(view_func):
+        @wraps(view_func)
+        def wrapper(request, *args, **kwargs):
+            # Add tenant-scoped queryset to request
+            if hasattr(request, 'tenant') and request.tenant:
+                from django.db.models import Model
+                
+                if isinstance(queryset_or_model, type) and issubclass(queryset_or_model, Model):
+                    request.tenant_queryset = queryset_or_model.objects.filter(tenant=request.tenant)
                 else:
-                    tenant_id = kwargs["tenant_id"]
-            except KeyError:
-                raise KeyError("This task requires the tenant_id")
-            try:
-                uuid.UUID(tenant_id)
-            except ValueError:
-                raise ValidationError("Tenant ID must be a valid UUID")
-            with connection.cursor() as cursor:
-                cursor.execute(SET_CONFIG_QUERY, [POSTGRES_TENANT_VAR, tenant_id])
-
-            return func(*args, **kwargs)
-
+                    request.tenant_queryset = queryset_or_model.filter(tenant=request.tenant)
+            
+            return view_func(request, *args, **kwargs)
+        
         return wrapper
-
-    if func is None:
-        return decorator
-    else:
-        return decorator(func)
+    
+    return decorator

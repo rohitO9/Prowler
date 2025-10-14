@@ -151,14 +151,18 @@ def register_tenant(request):
                 if hasattr(User.objects, "create_user"):
                     user_kwargs = {
                         'email': admin_email,
+                        'username': admin_email,  # Use email as username
+                        'name': f"{admin_first_name} {admin_last_name}".strip(),  # Full name
                         'first_name': admin_first_name,
                         'last_name': admin_last_name,
                         'password': temp_password,
                         'is_active': True,
                     }
                     
-                    # Add tenant_id if User model has it
-                    if hasattr(User, 'tenant_id'):
+                    # Add primary_tenant if User model has it
+                    if hasattr(User, 'primary_tenant'):
+                        user_kwargs['primary_tenant'] = tenant
+                    elif hasattr(User, 'tenant_id'):
                         user_kwargs['tenant_id'] = tenant
                     elif hasattr(User, 'tenant'):
                         user_kwargs['tenant'] = tenant
@@ -173,13 +177,17 @@ def register_tenant(request):
                 fallback_kwargs = {}
                 candidates = {
                     "email": admin_email,
+                    "username": admin_email,  # Use email as username
+                    "name": f"{admin_first_name} {admin_last_name}".strip(),  # Full name
                     "first_name": admin_first_name,
                     "last_name": admin_last_name,
                     "is_active": True,
                 }
                 
                 # Add tenant relationship if it exists
-                if 'tenant_id' in model_fields:
+                if 'primary_tenant' in model_fields:
+                    candidates['primary_tenant'] = tenant
+                elif 'tenant_id' in model_fields:
                     candidates['tenant_id'] = tenant
                 elif 'tenant' in model_fields:
                     candidates['tenant'] = tenant
