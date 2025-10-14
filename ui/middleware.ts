@@ -30,12 +30,25 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
   
+  // ✅ CRITICAL: Check if user is authenticated for protected routes
+  const protectedRoutes = ['/home', '/dashboard', '/profile', '/settings', '/admin'];
+  const isProtectedRoute = protectedRoutes.some(route => 
+    request.nextUrl.pathname.startsWith(route)
+  );
+  
+  // If accessing protected route without authentication, redirect to sign-in
+  if (isProtectedRoute && !session?.user) {
+    console.log(`🔒 [Middleware] Unauthenticated access to protected route: ${request.nextUrl.pathname}`);
+    return NextResponse.redirect(new URL('/sign-in?message=session_expired', request.url));
+  }
+  
   // If user is authenticated
   if (session?.user) {
-    const userTenant = session.user.tenant_subdomain;
+    // Get tenant from session (stored in JWT token)
+    const userTenant = (session as any).tenantName;
     
-    // ✅ CRITICAL: Validate user's tenant matches URL tenant
-    if (userTenant !== tenant) {
+    // ✅ CRITICAL: Validate user's tenant matches URL tenant (case-insensitive)
+    if (userTenant && userTenant.toLowerCase() !== tenant.toLowerCase()) {
       console.error(
         `🚨 [Middleware] Tenant mismatch! ` +
         `User tenant: ${userTenant}, URL tenant: ${tenant}`
@@ -43,9 +56,34 @@ export async function middleware(request: NextRequest) {
       
       // Redirect to correct tenant or logout
       const correctUrl = new URL(request.nextUrl.pathname, request.url);
-      correctUrl.hostname = `${userTenant}.localhost`;
+      correctUrl.hostname = `${userTenant.toLowerCase()}.localhost`;
       
       return NextResponse.redirect(correctUrl);
+    }
+    
+    // If user has no tenant info, they shouldn't access tenant-specific pages
+    if (!userTenant && tenant) {
+      console.error(
+        `🚨 [Middleware] User has no tenant info but trying to access tenant: ${tenant}`
+      );
+      
+      // Redirect to logout or tenant selection
+      return NextResponse.redirect(new URL('/sign-in', request.url));
+    }
+    
+    // ✅ CRITICAL: Prevent cross-tenant access (case-insensitive)
+    // If user is trying to access a different tenant's dashboard, deny access
+    if (userTenant && tenant && userTenant.toLowerCase() !== tenant.toLowerCase()) {
+      console.error(
+        `🚨 [Middleware] Cross-tenant access denied! ` +
+        `User belongs to: ${userTenant}, trying to access: ${tenant}`
+      );
+      
+      // Show error page or redirect to user's correct tenant
+      const errorUrl = new URL('/sign-in?error=tenant_mismatch', request.url);
+      errorUrl.hostname = `${userTenant.toLowerCase()}.localhost`;
+      
+      return NextResponse.redirect(errorUrl);
     }
   }
   

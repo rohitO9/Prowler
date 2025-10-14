@@ -1,148 +1,112 @@
-'use client';
+"use client";
+import { AuthForm } from "@/components/auth/oss";
+import {
+  getAuthUrl,
+  isGithubOAuthEnabled,
+  isGoogleOAuthEnabled,
+  isAzureOAuthEnabled,
+} from "@/lib/helper";
+import { useEffect, useState } from "react";
+import { getSubdomain } from "@/src/utils/subdomain";
+import { useSearchParams } from "next/navigation";
+import { useToast } from "@/components/ui";
 
-import { useEffect, useState } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
-import { getTenantFromHostname } from '@/lib/tenant';
-import { authenticate } from '@/actions/auth/auth';
-
-export default function SignInPage() {
-  const router = useRouter();
+const SignIn = () => {
+  const GOOGLE_AUTH_URL = getAuthUrl("google");
+  const GITHUB_AUTH_URL = getAuthUrl("github");
+  const AZURE_AUTH_URL = getAuthUrl("azure");
   const searchParams = useSearchParams();
-  const [tenant, setTenant] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
-  
+  const [tenantMismatchError, setTenantMismatchError] = useState(false);
+  const { toast } = useToast();
+
   useEffect(() => {
-    // Extract tenant from URL
-    const currentTenant = getTenantFromHostname(window.location.hostname);
-    
-    if (!currentTenant) {
-      // No tenant in URL - redirect to main page or tenant selection
-      router.push('/');
-      return;
+    // Auto-detect organization from subdomain
+    const subdomain = getSubdomain();
+    if (subdomain && typeof window !== "undefined") {
+      localStorage.setItem("company", subdomain);
     }
     
-    setTenant(currentTenant);
+    // Check for various error scenarios and show appropriate toasts
+    const error = searchParams?.get('error');
+    const message = searchParams?.get('message');
     
-    // Check for error in URL params
-    const errorParam = searchParams.get('error');
-    if (errorParam === 'wrong_tenant') {
-      setError('You do not have access to this organization');
+    if (error === 'tenant_mismatch') {
+      setTenantMismatchError(true);
+      toast({
+        title: "🚫 Access Denied",
+        description: "You don't have access to this tenant. Please sign in to your correct tenant.",
+        variant: "destructive",
+      });
+    } else if (error === 'user_not_found') {
+      toast({
+        title: "👤 User Not Found",
+        description: "No account found with this email address. Please check your email or sign up.",
+        variant: "destructive",
+      });
+    } else if (error === 'invalid_credentials') {
+      toast({
+        title: "🔒 Invalid Credentials",
+        description: "Incorrect email or password. Please try again.",
+        variant: "destructive",
+      });
+    } else if (error === 'account_locked') {
+      toast({
+        title: "🔐 Account Locked",
+        description: "Your account has been locked due to multiple failed login attempts. Please contact support.",
+        variant: "destructive",
+      });
+    } else if (message === 'registration_success') {
+      toast({
+        title: "✅ Registration Successful",
+        description: "Your account has been created successfully. Please sign in to continue.",
+        variant: "default",
+      });
+    } else if (message === 'logout_success') {
+      toast({
+        title: "👋 Logged Out",
+        description: "You have been successfully logged out.",
+        variant: "default",
+      });
+    } else if (message === 'session_expired') {
+      toast({
+        title: "⏰ Session Expired",
+        description: "Your session has expired. Please sign in again to continue.",
+        variant: "destructive",
+      });
     }
-  }, [router, searchParams]);
-  
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    setError(null);
-    setLoading(true);
-    
-    if (!tenant) {
-      setError('No organization detected. Please use your organization\'s subdomain.');
-      setLoading(false);
-      return;
-    }
-    
-    const formData = new FormData(e.currentTarget);
-    formData.append('tenant_subdomain', tenant);
-    
-    try {
-      const result = await authenticate(formData);
-      
-      if (result?.error) {
-        // ✅ Show tenant-specific error messages
-        switch (result.error) {
-          case 'wrong_tenant':
-            setError(
-              'You do not have access to this organization. ' +
-              'Please use your organization\'s subdomain to sign in.'
-            );
-            break;
-          case 'invalid_credentials':
-            setError('Invalid email or password');
-            break;
-          case 'tenant_not_found':
-            setError(`Organization "${tenant}" not found`);
-            break;
-          default:
-            setError(result.message || 'Authentication failed');
-        }
-      } else {
-        // Success - redirect to dashboard
-        router.push('/dashboard');
-      }
-    } catch (err) {
-      console.error('Login error:', err);
-      setError('An unexpected error occurred');
-    } finally {
-      setLoading(false);
-    }
-  };
-  
-  if (!tenant) {
-    return <div>Loading...</div>;
-  }
-  
+  }, [searchParams, toast]);
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50">
-      <div className="max-w-md w-full space-y-8 p-8 bg-white rounded-lg shadow">
-        <div>
-          <h2 className="text-3xl font-bold text-center">
-            Sign in to {tenant}
-          </h2>
-          <p className="mt-2 text-center text-sm text-gray-600">
-            Organization: <strong>{tenant}</strong>
-          </p>
+    <div>
+      {tenantMismatchError && (
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mb-4 mx-4">
+          <div className="flex">
+            <div className="flex-shrink-0">
+              <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+              </svg>
+            </div>
+            <div className="ml-3">
+              <h3 className="text-sm font-medium text-red-800">
+                Access Denied
+              </h3>
+              <div className="mt-2 text-sm text-red-700">
+                <p>You don't have access to this tenant. Please sign in to your correct tenant or contact your administrator.</p>
+              </div>
+            </div>
+          </div>
         </div>
-        
-        {error && (
-          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
-            {error}
-          </div>
-        )}
-        
-        <form onSubmit={handleSubmit} className="mt-8 space-y-6">
-          <div>
-            <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-              Email
-            </label>
-            <input
-              id="email"
-              name="email"
-              type="email"
-              required
-              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md"
-              placeholder="you@example.com"
-            />
-          </div>
-          
-          <div>
-            <label htmlFor="password" className="block text-sm font-medium text-gray-700">
-              Password
-            </label>
-            <input
-              id="password"
-              name="password"
-              type="password"
-              required
-              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md"
-            />
-          </div>
-          
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50"
-          >
-            {loading ? 'Signing in...' : 'Sign in'}
-          </button>
-        </form>
-        
-        <div className="text-center text-sm">
-          <a href="/register" className="text-blue-600 hover:text-blue-500">
-            Don't have an account? Register
-          </a>
-        </div>
-      </div>
+      )}
+      <AuthForm
+        type="sign-in"
+        googleAuthUrl={GOOGLE_AUTH_URL}
+        githubAuthUrl={GITHUB_AUTH_URL}
+        isGoogleOAuthEnabled={isGoogleOAuthEnabled}
+        isGithubOAuthEnabled={isGithubOAuthEnabled}
+        azureAuthUrl={AZURE_AUTH_URL}
+      />
     </div>
   );
-}
+};
+
+export default SignIn;

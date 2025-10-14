@@ -357,5 +357,41 @@ export const getUserByMe = async (accessToken: string, host?: string) => {
 
 export async function logOut() {
   console.log("Logging out user");
-  await signOut();
+  
+  try {
+    // Clear NextAuth session
+    await signOut({ 
+      redirect: false, // We'll handle redirect manually
+      callbackUrl: '/' // Default redirect URL
+    });
+    
+    // Clear any cached data
+    if (typeof window !== 'undefined') {
+      // Clear localStorage
+      localStorage.removeItem('company');
+      localStorage.removeItem('tenant');
+      localStorage.removeItem('user');
+      
+      // Clear sessionStorage
+      sessionStorage.clear();
+      
+      // Clear any other cached data
+      localStorage.removeItem('auth-token');
+      localStorage.removeItem('refresh-token');
+    }
+    
+    console.log("✅ User logged out successfully, session cleared");
+    
+    return {
+      success: true,
+      message: "Logged out successfully"
+    };
+    
+  } catch (error) {
+    console.error("❌ Logout error:", error);
+    return {
+      success: false,
+      message: "Logout failed"
+    };
+  }
 }

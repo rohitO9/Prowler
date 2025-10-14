@@ -7,6 +7,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 import { logOut } from "@/actions/auth";
+import { useRouter } from "next/navigation";
+import { useToast } from "@/components/ui";
 import { AddIcon, InfoIcon } from "@/components/icons";
 import { FileBarChart } from "lucide-react";
 import { FlyoutMenuButton } from "./flyout-menu-button";
@@ -33,6 +35,39 @@ export const Menu = ({ isOpen, user }: { isOpen: boolean; user: UserProfileProps
   
   const pathname = usePathname();
   const menuList = getMenuList(pathname ?? "");
+  const router = useRouter();
+  const { toast } = useToast();
+
+  const handleLogout = async () => {
+    try {
+      const result = await logOut();
+      
+      if (result.success) {
+        toast({
+          title: "👋 Logged Out Successfully",
+          description: "You have been logged out and redirected to the home page.",
+          variant: "default",
+        });
+        
+        // Redirect to home page after successful logout
+        router.push('/');
+        router.refresh(); // Force refresh to clear any cached data
+      } else {
+        toast({
+          title: "❌ Logout Failed",
+          description: result.message || "Unable to log out. Please try again.",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error('Logout error:', error);
+      toast({
+        title: "❌ Logout Error",
+        description: "An unexpected error occurred during logout.",
+        variant: "destructive",
+      });
+    }
+  };
 
   return (
     <>
@@ -123,7 +158,7 @@ export const Menu = ({ isOpen, user }: { isOpen: boolean; user: UserProfileProps
           <Tooltip delayDuration={100}>
             <TooltipTrigger asChild>
               <Button
-                onClick={() => logOut()}
+                onClick={handleLogout}
                 variant="ghost"
                 className={cn(
                   "text-default-700 bg-transparent shadow-none border-none hover:bg-transparent hover:text-indigo-600 transition-all duration-200",
