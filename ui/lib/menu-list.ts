@@ -20,6 +20,7 @@ import {
   BookCopy,
   LifeBuoy,
   Settings,
+  KeyRound,
 } from "lucide-react";
 
 import {
@@ -116,7 +117,7 @@ export const getMenuList = (pathname: string): Omit<GroupProps, 'groupLabel'>[] 
           submenus: [
             { href: "/providers", label: "Cloud Providers", icon: Cloud },
             { href: "/manage-groups", label: "Provider Groups", icon: UsersRound },
-            
+            { href: "/azure-ad-config", label: "Azure AD Configuration", icon: KeyRound },
             { href: "/roles", label: "Roles", icon: Settings },
           ],
         },

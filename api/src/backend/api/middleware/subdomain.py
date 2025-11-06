@@ -19,6 +19,10 @@ class SubdomainMiddleware(MiddlewareMixin):
         '/api/v1/tenant/register',
         '/api/v1/tenant/login',
         '/api/v1/tenant/list',
+        '/api/v1/tokens',  # Add tokens endpoint for authentication
+        '/api/v1/users/me',  # Add users/me endpoint for user info
+        '/api/v1/tenant/validate-invite',  # Invite validation - tenant from token, not subdomain
+        '/api/v1/tenant/accept-invite',  # Accept invite - tenant from token, not subdomain
         '/health',
         '/static/',
         '/media/',

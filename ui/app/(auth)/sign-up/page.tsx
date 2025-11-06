@@ -6,8 +6,10 @@ import { useEffect } from "react";
 import { getSubdomain } from "@/src/utils/subdomain";
 import { useToast } from "@/components/ui";
 import { useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 
 const SignUp = ({ searchParams }: { searchParams: SearchParamsProps }) => {
+  const router = useRouter();
   const invitationToken =
     typeof searchParams?.invitation_token === "string"
       ? searchParams.invitation_token
@@ -19,6 +21,18 @@ const SignUp = ({ searchParams }: { searchParams: SearchParamsProps }) => {
   const urlSearchParams = useSearchParams();
 
   useEffect(() => {
+    // DISABLE SIGN-UP ACCESS - Redirect to sign-in page
+    // Only allow sign-up with valid invitation tokens
+    if (!invitationToken) {
+      toast({
+        title: "🚫 Sign-up Disabled",
+        description: "Sign-up is not available. Please contact your administrator for access.",
+        variant: "destructive",
+      });
+      router.push('/sign-in');
+      return;
+    }
+    
     // Auto-detect organization from subdomain
     const subdomain = getSubdomain();
     if (subdomain && typeof window !== "undefined") {

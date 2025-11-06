@@ -1,0 +1,36 @@
+INVITATION TO JOIN {{ tenant.name }}
+========================================
+
+Hello!
+
+You've been invited by {{ inviter_name }} to join {{ tenant.name }} on our security and compliance platform.
+
+{% if custom_message %}
+Personal Message:
+"{{ custom_message }}"
+{% endif %}
+
+INVITATION DETAILS:
+-------------------
+Organization: {{ tenant.name }}
+Invited by: {{ inviter_name }}
+Expires: {{ expires_at|date:"F j, Y \a\t g:i A" }}
+
+IMPORTANT: This invitation expires on {{ expires_at|date:"F j, Y \a\t g:i A" }}. 
+Please accept it before then.
+
+ACCEPT YOUR INVITATION:
+-----------------------
+Click the link below to accept your invitation:
+
+{{ magic_link }}
+
+SECURITY NOTICE:
+---------------
+This invitation link is unique to you and should not be shared. 
+If you didn't expect this invitation, please contact your organization's administrator.
+
+If you have any questions, please contact your administrator.
+
+---
+© 2024 Prowler Multi-Tenant Platform. All rights reserved.

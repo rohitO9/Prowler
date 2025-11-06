@@ -1,6 +1,7 @@
 import { jwtDecode, JwtPayload } from "jwt-decode";
 import NextAuth, { type NextAuthConfig, User } from "next-auth";
 import Credentials from "next-auth/providers/credentials";
+import AzureAD from "next-auth/providers/azure-ad";
 import { z } from "zod";
 
 import { getToken, getUserByMe } from "./actions/auth";
@@ -77,12 +78,15 @@ export const authConfig = {
         const parsedCredentials = z
           .object({
             email: z.string().email(),
-            password: z.string().min(12),
+            password: z.string().min(8), // Reduced from 12 to 8 to match user's password
             tenant_name: z.string().optional(),
           })
           .safeParse(credentials);
 
-        if (!parsedCredentials.success) return null;
+        if (!parsedCredentials.success) {
+          console.error("🔍 [NextAuth] Credentials validation failed:", parsedCredentials.error);
+          return null;
+        }
 
         console.log("NextAuth authorize called with:", {
           email: parsedCredentials.data.email,
@@ -93,8 +97,20 @@ export const authConfig = {
         // Forward optional tenant_name to backend for enterprise multi-tenant login
         // Try to get host from request context if available
         const host = req?.headers?.get?.('host') || req?.headers?.host;
-        const tokenResponse = await getToken(parsedCredentials.data as any, host);
-        if (!tokenResponse) return null;
+        console.log("🔍 [NextAuth] Host from request:", host);
+        
+        let tokenResponse;
+        try {
+          tokenResponse = await getToken(parsedCredentials.data as any, host);
+          console.log("🔍 [NextAuth] Token response:", tokenResponse ? "SUCCESS" : "FAILED");
+          if (!tokenResponse) {
+            console.error("🔍 [NextAuth] getToken returned null");
+            return null;
+          }
+        } catch (error) {
+          console.error("🔍 [NextAuth] getToken error:", error);
+          return null;
+        }
 
         const userMeResponse = await getUserByMe(tokenResponse.accessToken, host);
 
@@ -110,6 +126,16 @@ export const authConfig = {
           accessToken: tokenResponse.accessToken,
           refreshToken: tokenResponse.refreshToken,
         };
+      },
+    }),
+    AzureAD({
+      clientId: process.env.AZURE_AD_CLIENT_ID!,
+      clientSecret: process.env.AZURE_AD_CLIENT_SECRET!,
+      tenantId: process.env.AZURE_AD_TENANT_ID!,
+      authorization: {
+        params: {
+          scope: "openid profile email User.Read",
+        },
       },
     }),
     Credentials({

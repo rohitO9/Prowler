@@ -1,0 +1,33 @@
+You're Invited to {{ tenant_name }}
+
+Hello {{ user_first_name }},
+
+You've been invited to join {{ tenant_name }} as a team member on our cloud security compliance platform.
+
+INVITATION DETAILS:
+- Organization: {{ tenant_name }}
+- Your Role: {{ role }}
+- Email: {{ user_email }}
+
+WHAT HAPPENS NEXT?
+
+1. Accept Invitation
+   Click the link below to accept this invitation
+
+2. Azure AD Login
+   You'll be redirected to sign in with your organization's Azure AD
+
+3. Access Dashboard
+   Once signed in, you'll have access to your security dashboard
+
+ACCEPT INVITATION:
+{{ invite_url }}
+
+SECURITY NOTE:
+This invitation link is secure and will expire in 7 days. By accepting, you'll be able to access the platform using your organization's Azure AD credentials.
+
+If you have any questions or didn't expect this invitation, please contact your administrator.
+
+---
+This invitation was sent by {{ tenant_name }} via Prowler SaaS
+© 2024 Prowler SaaS. All rights reserved.

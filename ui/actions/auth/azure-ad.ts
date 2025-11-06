@@ -26,19 +26,58 @@ export interface AzureADTokenResponse {
 }
 
 /**
- * Get Azure AD configuration from the backend
+ * Get Azure AD configuration from the backend (tenant-specific from DB)
+ * Extracts tenant from current window location subdomain
  */
 export const getAzureADConfig = async (): Promise<AzureADConfig | null> => {
   try {
-    const response = await fetch(`${getApiBaseUrl()}/tokens/azure/config`, {
+    // Extract tenant subdomain from current window location
+    let tenantSubdomain: string | null = null;
+    if (typeof window !== "undefined") {
+      const hostname = window.location.hostname;
+      // Extract subdomain: company1.localhost -> company1
+      if (hostname.includes('.')) {
+        const parts = hostname.split('.');
+        const firstPart = parts[0];
+        // Skip localhost, IP addresses, www, api, admin
+        if (firstPart && 
+            firstPart !== 'localhost' && 
+            firstPart !== 'www' && 
+            firstPart !== '127' && 
+            firstPart !== 'api' &&
+            firstPart !== 'admin' &&
+            !firstPart.match(/^\d+$/)) {
+          tenantSubdomain = firstPart;
+          
+        }
+      }
+    }
+    
+    // Build API URL with tenant context
+    let apiUrl = `${getApiBaseUrl()}/tokens/azure/config`;
+    if (tenantSubdomain) {
+      // Pass tenant subdomain as query parameter or header
+      apiUrl += `?tenant_subdomain=${tenantSubdomain}`;
+    }
+    
+    // Use the tenant-specific endpoint that gets config from database
+    const response = await fetch(apiUrl, {
       method: "GET",
       headers: {
         "Content-Type": "application/vnd.api+json",
         Accept: "application/vnd.api+json",
+        // Also pass subdomain as header for backend extraction
+        ...(tenantSubdomain && { "X-Tenant-Subdomain": tenantSubdomain }),
       },
+      cache: "no-store", // Always fetch fresh config
     });
 
     if (!response.ok) {
+      // 404 means Azure AD not configured for this tenant - this is OK
+      if (response.status === 404) {
+        console.log("Azure AD not configured for this tenant");
+        return null;
+      }
       console.error("Failed to get Azure AD config:", response.status);
       return null;
     }
@@ -47,7 +86,19 @@ export const getAzureADConfig = async (): Promise<AzureADConfig | null> => {
     
     // Extract the data from JSON API format
     const config = responseData.data || responseData;
-    return config;
+    
+    // Map backend response to expected format
+    if (config) {
+      return {
+        client_id: config.client_id,
+        tenant_id: config.azure_tenant_id || config.tenant_id,
+        redirect_uri: config.redirect_uri,
+        authority: config.authority || `https://login.microsoftonline.com/${config.azure_tenant_id || config.tenant_id}`,
+        scopes: config.scopes || ["openid", "profile", "email", "User.Read"],
+      };
+    }
+    
+    return null;
   } catch (error) {
     console.error("Error getting Azure AD config:", error);
     return null;

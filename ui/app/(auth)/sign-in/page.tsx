@@ -14,7 +14,7 @@ import { useToast } from "@/components/ui";
 const SignIn = () => {
   const GOOGLE_AUTH_URL = getAuthUrl("google");
   const GITHUB_AUTH_URL = getAuthUrl("github");
-  const AZURE_AUTH_URL = getAuthUrl("azure");
+  // Azure AD URL is fetched dynamically from database via getAzureADLoginUrl() in AzureADLogin component
   const searchParams = useSearchParams();
   const [tenantMismatchError, setTenantMismatchError] = useState(false);
   const { toast } = useToast();
@@ -24,6 +24,36 @@ const SignIn = () => {
     const subdomain = getSubdomain();
     if (subdomain && typeof window !== "undefined") {
       localStorage.setItem("company", subdomain);
+    }
+    
+    // Check for SSO mode - auto-trigger Azure AD login for invited users
+    const mode = searchParams?.get('mode');
+    const inviteAccepted = searchParams?.get('invite_accepted');
+    
+    if (mode === 'sso') {
+      // Auto-redirect to Azure AD SSO for invited users (using dynamic config from DB)
+      if (inviteAccepted === 'true') {
+        toast({
+          title: "✅ Invitation Accepted",
+          description: "Redirecting to Azure AD login...",
+          variant: "default",
+        });
+      }
+      // Get Azure AD login URL from database and redirect
+      import("@/actions/auth/azure-ad").then(({ getAzureADLoginUrl }) => {
+        getAzureADLoginUrl().then((azureUrl) => {
+          if (azureUrl) {
+            window.location.href = azureUrl;
+          } else {
+            toast({
+              title: "⚠️ Azure AD Not Configured",
+              description: "Azure AD SSO is not configured for this tenant. Please contact your administrator.",
+              variant: "destructive",
+            });
+          }
+        });
+      });
+      return;
     }
     
     // Check for various error scenarios and show appropriate toasts
@@ -79,6 +109,18 @@ const SignIn = () => {
         description: "Your session has expired. Please sign in again to continue.",
         variant: "destructive",
       });
+    } else if (message === 'invite_accepted') {
+      toast({
+        title: "✅ Invitation Accepted",
+        description: "Please sign in with Azure AD SSO to access your account.",
+        variant: "default",
+      });
+    } else if (error === 'sso_only_user') {
+      toast({
+        title: "🔐 SSO Login Required",
+        description: "This account can only be accessed via Azure AD SSO. Please use the Azure AD login button.",
+        variant: "destructive",
+      });
     }
   }, [searchParams, toast]);
 
@@ -109,7 +151,7 @@ const SignIn = () => {
         githubAuthUrl={GITHUB_AUTH_URL}
         isGoogleOAuthEnabled={isGoogleOAuthEnabled}
         isGithubOAuthEnabled={isGithubOAuthEnabled}
-        azureAuthUrl={AZURE_AUTH_URL}
+        // Azure AD URL is fetched dynamically from database, no hardcoded value
       />
     </div>
   );

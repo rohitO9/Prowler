@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>You're Invited to {{ tenant_name }}</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f8fafc;
+        }
+        .container {
+            background: white;
+            border-radius: 8px;
+            padding: 40px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .logo {
+            width: 48px;
+            height: 48px;
+            background: #3b82f6;
+            border-radius: 8px;
+            margin: 0 auto 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .logo-text {
+            color: white;
+            font-weight: bold;
+            font-size: 20px;
+        }
+        .title {
+            font-size: 24px;
+            font-weight: bold;
+            color: #1f2937;
+            margin-bottom: 10px;
+        }
+        .subtitle {
+            color: #6b7280;
+            font-size: 16px;
+        }
+        .content {
+            margin-bottom: 30px;
+        }
+        .invite-details {
+            background: #f3f4f6;
+            border-radius: 6px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        .detail-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+        }
+        .detail-label {
+            font-weight: 500;
+            color: #374151;
+        }
+        .detail-value {
+            color: #6b7280;
+        }
+        .role-badge {
+            background: #3b82f6;
+            color: white;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 500;
+            text-transform: uppercase;
+        }
+        .cta-button {
+            display: inline-block;
+            background: #3b82f6;
+            color: white;
+            text-decoration: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            font-weight: 500;
+            text-align: center;
+            margin: 20px 0;
+        }
+        .cta-button:hover {
+            background: #2563eb;
+        }
+        .steps {
+            margin: 30px 0;
+        }
+        .step {
+            display: flex;
+            align-items: flex-start;
+            margin-bottom: 15px;
+        }
+        .step-number {
+            background: #3b82f6;
+            color: white;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: bold;
+            margin-right: 12px;
+            flex-shrink: 0;
+        }
+        .step-content h4 {
+            margin: 0 0 5px 0;
+            font-size: 14px;
+            font-weight: 500;
+        }
+        .step-content p {
+            margin: 0;
+            font-size: 13px;
+            color: #6b7280;
+        }
+        .footer {
+            text-align: center;
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 1px solid #e5e7eb;
+            color: #6b7280;
+            font-size: 14px;
+        }
+        .security-note {
+            background: #fef3c7;
+            border: 1px solid #f59e0b;
+            border-radius: 6px;
+            padding: 15px;
+            margin: 20px 0;
+        }
+        .security-note h4 {
+            margin: 0 0 5px 0;
+            color: #92400e;
+            font-size: 14px;
+        }
+        .security-note p {
+            margin: 0;
+            color: #92400e;
+            font-size: 13px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="logo">
+                <div class="logo-text">🛡️</div>
+            </div>
+            <h1 class="title">You're Invited!</h1>
+            <p class="subtitle">Join {{ tenant_name }} on Prowler SaaS</p>
+        </div>
+
+        <div class="content">
+            <p>Hello {{ user_first_name }},</p>
+            
+            <p>You've been invited to join <strong>{{ tenant_name }}</strong> as a team member on our cloud security compliance platform.</p>
+
+            <div class="invite-details">
+                <div class="detail-row">
+                    <span class="detail-label">Organization:</span>
+                    <span class="detail-value">{{ tenant_name }}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Your Role:</span>
+                    <span class="detail-value">
+                        <span class="role-badge">{{ role }}</span>
+                    </span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Email:</span>
+                    <span class="detail-value">{{ user_email }}</span>
+                </div>
+            </div>
+
+            <div class="steps">
+                <h3 style="margin-bottom: 20px;">What happens next?</h3>
+                
+                <div class="step">
+                    <div class="step-number">1</div>
+                    <div class="step-content">
+                        <h4>Accept Invitation</h4>
+                        <p>Click the button below to accept this invitation</p>
+                    </div>
+                </div>
+                
+                <div class="step">
+                    <div class="step-number">2</div>
+                    <div class="step-content">
+                        <h4>Azure AD Login</h4>
+                        <p>You'll be redirected to sign in with your organization's Azure AD</p>
+                    </div>
+                </div>
+                
+                <div class="step">
+                    <div class="step-number">3</div>
+                    <div class="step-content">
+                        <h4>Access Dashboard</h4>
+                        <p>Once signed in, you'll have access to your security dashboard</p>
+                    </div>
+                </div>
+            </div>
+
+            <div style="text-align: center;">
+                <a href="{{ invite_url }}" class="cta-button">Accept Invitation</a>
+            </div>
+
+            <div class="security-note">
+                <h4>🔒 Security Note</h4>
+                <p>This invitation link is secure and will expire in 7 days. By accepting, you'll be able to access the platform using your organization's Azure AD credentials.</p>
+            </div>
+
+            <p>If you have any questions or didn't expect this invitation, please contact your administrator.</p>
+        </div>
+
+        <div class="footer">
+            <p>This invitation was sent by {{ tenant_name }} via Prowler SaaS</p>
+            <p>© 2024 Prowler SaaS. All rights reserved.</p>
+        </div>
+    </div>
+</body>
+</html>

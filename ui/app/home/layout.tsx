@@ -32,7 +32,7 @@ export const viewport: Viewport = {
   ],
 };
 
-export default async function RootLayout({
+export default async function HomeLayout({
   children,
 }: {
   children: React.ReactNode;
@@ -41,20 +41,14 @@ export default async function RootLayout({
   const host = headersList.get('host');
   const user = await getUserInfo(host || undefined);
   return (
-    <html suppressHydrationWarning lang="en">
-      <head />
-      <body
-        suppressHydrationWarning
-        className={cn(
-          "min-h-screen bg-background font-sans antialiased",
-          fontSans.variable,
-        )}
-      >
-        <Providers themeProps={{ attribute: "class", defaultTheme: "dark" }}>
-          <MainLayout user={user}>{children}</MainLayout>
-          <Toaster />
-        </Providers>
-      </body>
-    </html>
+    <div className={cn(
+      "min-h-screen bg-background font-sans antialiased",
+      fontSans.variable,
+    )}>
+      <Providers themeProps={{ attribute: "class", defaultTheme: "dark" }}>
+        <MainLayout user={user}>{children}</MainLayout>
+        <Toaster />
+      </Providers>
+    </div>
   );
 }

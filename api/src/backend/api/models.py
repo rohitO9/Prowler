@@ -492,8 +492,8 @@ class TenantMembership(models.Model):
         choices=[
             ('owner', 'Owner'),
             ('admin', 'Administrator'),
-            ('member', 'Member'),
-            ('guest', 'Guest'),
+            ('auditor', 'Auditor'),
+            ('viewer', 'Viewer'),
         ]
     )
     is_active = models.BooleanField(default=True)
@@ -516,6 +516,16 @@ class TenantMembership(models.Model):
     can_manage_integrations = models.BooleanField(default=False)
     can_manage_scans = models.BooleanField(default=False)
     unlimited_visibility = models.BooleanField(default=False)
+    
+    # Prowler-Specific Permissions
+    can_run_scans = models.BooleanField(default=False, help_text="Can run security scans")
+    can_export_reports = models.BooleanField(default=False, help_text="Can export compliance reports")
+    
+    # Invitation fields
+    invited_at = models.DateTimeField(null=True, blank=True, help_text="When user was invited")
+    invite_accepted_at = models.DateTimeField(null=True, blank=True, help_text="When user accepted invitation")
+    invite_token = models.CharField(max_length=500, blank=True, db_index=True, help_text="JWT invite token")
+    invite_expires_at = models.DateTimeField(null=True, blank=True, help_text="When invite expires")
 
     class Meta:
         db_table = 'tenant_memberships'
@@ -524,6 +534,7 @@ class TenantMembership(models.Model):
             models.Index(fields=['user', 'tenant'], name='idx_membership_user_tenant'),
             models.Index(fields=['tenant', 'is_active']),
             models.Index(fields=['role']),
+            models.Index(fields=['invite_token']),
         ]
 
     def __str__(self):
@@ -541,6 +552,8 @@ class TenantMembership(models.Model):
             'manage_integrations': self.can_manage_integrations,
             'manage_scans': self.can_manage_scans,
             'unlimited_visibility': self.unlimited_visibility,
+            'run_scans': self.can_run_scans,
+            'export_reports': self.can_export_reports,
         }
         return permission_map.get(permission, False)
 
@@ -667,6 +680,94 @@ class User(AbstractUser):
     trial_start = models.DateTimeField(null=True, blank=True)
     trial_end = models.DateTimeField(null=True, blank=True)
     is_trial_active = models.BooleanField(default=False)
+    
+    # Azure AD Integration
+    azure_id = models.CharField(
+        max_length=255, 
+        unique=True, 
+        null=True, 
+        blank=True, 
+        db_index=True,
+        help_text="Azure AD User ID"
+    )
+    azure_tenant_id = models.CharField(
+        max_length=255, 
+        null=True, 
+        blank=True,
+        help_text="Azure AD Tenant ID"
+    )
+    azure_upn = models.CharField(
+        max_length=255, 
+        null=True, 
+        blank=True,
+        help_text="User Principal Name"
+    )
+    
+    # Profile Data (synced from Azure AD)
+    department = models.CharField(
+        max_length=255, 
+        blank=True,
+        help_text="Department from Azure AD"
+    )
+    job_title = models.CharField(
+        max_length=255, 
+        blank=True,
+        help_text="Job title from Azure AD"
+    )
+    phone_number = models.CharField(
+        max_length=50, 
+        blank=True,
+        help_text="Phone number from Azure AD"
+    )
+    manager_azure_id = models.CharField(
+        max_length=255, 
+        blank=True,
+        help_text="Manager's Azure AD ID"
+    )
+    
+    # Status
+    is_sso_user = models.BooleanField(
+        default=False,
+        help_text="Whether user was created via SSO"
+    )
+    deactivated_at = models.DateTimeField(
+        null=True, 
+        blank=True,
+        help_text="When user was deactivated"
+    )
+    deactivation_reason = models.CharField(
+        max_length=50, 
+        choices=[
+            ('REMOVED_FROM_AZURE', 'Removed from Azure'),
+            ('DISABLED_IN_AZURE', 'Disabled in Azure'),
+            ('MANUAL', 'Manual'),
+            ('SUBSCRIPTION_EXPIRED', 'Subscription Expired')
+        ], 
+        blank=True,
+        help_text="Reason for deactivation"
+    )
+    
+    # Timestamps
+    invited_at = models.DateTimeField(
+        null=True, 
+        blank=True,
+        help_text="When user was invited"
+    )
+    accepted_invite_at = models.DateTimeField(
+        null=True, 
+        blank=True,
+        help_text="When user accepted invitation"
+    )
+    first_login_at = models.DateTimeField(
+        null=True, 
+        blank=True,
+        help_text="When user first logged in"
+    )
+    onboarding_completed_at = models.DateTimeField(
+        null=True, 
+        blank=True,
+        help_text="When user completed onboarding"
+    )
 
     class Meta:
         db_table = 'users'
@@ -682,6 +783,8 @@ class User(AbstractUser):
             models.Index(fields=['is_active'], name='idx_user_active'),
             models.Index(fields=['is_verified'], name='idx_user_verified'),
             models.Index(fields=['last_login'], name='idx_user_last_login'),
+            models.Index(fields=['azure_id'], name='idx_user_azure_id'),
+            models.Index(fields=['is_sso_user'], name='idx_user_sso_user'),
         ]
 
     class JSONAPIMeta:
@@ -1617,7 +1720,7 @@ class Invitation(RowLevelSecurityProtectedModel):
     email = models.EmailField(max_length=254, blank=False, null=False)
     state = InvitationStateEnumField(choices=State.choices, default=State.PENDING)
     token = models.CharField(
-        max_length=14,
+        max_length=500,  # Increased to accommodate JWT tokens
         unique=True,
         default=generate_random_token,
         editable=False,
@@ -1628,10 +1731,11 @@ class Invitation(RowLevelSecurityProtectedModel):
     expires_at = models.DateTimeField(default=one_week_from_now)
     inviter = models.ForeignKey(
         User,
-        on_delete=models.SET_NULL,
+        on_delete=models.PROTECT,  # Prevent deletion of user who created invitation
         related_name="invitations",
         related_query_name="invitation",
-        null=True,
+        null=False,  # Database requires NOT NULL
+        db_column='invited_by_id',  # Map to existing database column
     )
 
     class Meta(RowLevelSecurityProtectedModel.Meta):

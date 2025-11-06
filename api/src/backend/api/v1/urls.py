@@ -12,6 +12,8 @@ from api.v1.views import (
     tenant_validation,
     tenant_azure_auth,
     tenant_registration,
+    tenant_onboarding,
+    scim,
     TenantViewSet,
     InvitationViewSet,
     InvitationAcceptViewSet,
@@ -76,6 +78,38 @@ urlpatterns = [
     path('tenant/azure/refresh/', tenant_azure_auth.TenantAzureRefreshView.as_view(), name='tenant-azure-refresh'),
     path('tenant/azure/config/', tenant_azure_auth.TenantAzureConfigView.as_view(), name='tenant-azure-config'),
     path('tenant/azure/login-url/', tenant_azure_auth.get_azure_login_url, name='tenant-azure-login-url'),
+    
+    # New Multi-Tenant Onboarding Endpoints
+    path('tenant/create/', tenant_onboarding.create_tenant, name='tenant-create'),
+    path('tenant/setup-azure-sso/', tenant_onboarding.setup_azure_sso, name='tenant-setup-azure-sso'),
+    path('tenant/sso-config/', tenant_onboarding.get_azure_sso_config, name='tenant-sso-config'),
+    path('tokens/azure/config/', tenant_onboarding.get_azure_ad_config_for_auth, name='azure-ad-config-for-auth'),
+    path('tenant/invite/', tenant_onboarding.create_invite, name='tenant-invite'),
+    path('tenant/invite-user/', tenant_onboarding.invite_user, name='tenant-invite-user'),
+    path('tenant/bulk-invite/', tenant_onboarding.create_bulk_invites, name='tenant-bulk-invite'),
+    path('tenant/validate-invite/', tenant_onboarding.validate_invite_token, name='tenant-validate-invite'),
+    path('tenant/accept-invite/', tenant_onboarding.accept_invite, name='tenant-accept-invite'),
+    path('tenant/invites/', tenant_onboarding.get_tenant_invites, name='tenant-invites'),
+    path('tenant/revoke-invite/', tenant_onboarding.revoke_invite, name='tenant-revoke-invite'),
+    path('tenant/summary/', tenant_onboarding.get_tenant_summary, name='tenant-summary'),
+    path('tenant/verify-domain/', tenant_onboarding.verify_domain, name='tenant-verify-domain'),
+    path('tenant/domain-instructions/', tenant_onboarding.get_domain_verification_instructions, name='tenant-domain-instructions'),
+    
+    # Tenant User Management Endpoints
+    path('tenant/sync-users/', tenant_onboarding.sync_users_from_azure, name='tenant-sync-users'),
+    path('tenant/users/', tenant_onboarding.get_tenant_users, name='tenant-users'),
+    path('tenant/users/<str:user_id>/assign-role/', tenant_onboarding.assign_user_role, name='tenant-assign-role'),
+    path('tenant/users/<str:user_id>/permissions/', tenant_onboarding.update_user_permissions, name='tenant-update-permissions'),
+    path('tenant/users/<str:user_id>/', tenant_onboarding.delete_tenant_user, name='tenant-delete-user'),
+    
+    # SCIM 2.0 Endpoints for Azure AD Integration
+    path('scim/v2/Users/', scim.scim_list_users, name='scim-list-users'),
+    path('scim/v2/Users', scim.scim_list_users, name='scim-list-users-no-slash'),
+    path('scim/v2/Users/', scim.scim_create_user, name='scim-create-user'),
+    path('scim/v2/Users/<str:azure_user_id>/', scim.scim_get_user, name='scim-get-user'),
+    path('scim/v2/Users/<str:azure_user_id>/', scim.scim_update_user, name='scim-update-user'),
+    path('scim/v2/Users/<str:azure_user_id>/', scim.scim_delete_user, name='scim-delete-user'),
+    path('scim/v2/ServiceProviderConfig/', scim.scim_service_provider_config, name='scim-service-provider-config'),
     
     # Include router URLs at the end to avoid conflicts
     path('', include(router.urls)),

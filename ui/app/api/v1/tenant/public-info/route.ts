@@ -1,49 +1,42 @@
 import { NextRequest, NextResponse } from 'next/server';
 
+const API_BASE_URL = process.env.API_BASE_URL || 'http://localhost:8080';
+
 export async function GET(request: NextRequest) {
   try {
-    // Get the subdomain from the request
-    const host = request.headers.get('host') || '';
-    
-    // Extract subdomain and construct the correct API URL
-    let apiBaseUrl = process.env.API_BASE_URL || 'http://localhost:8080/api/v1';
-    
-    // If we have a subdomain, use it for the API call
-    if (host.includes('.localhost')) {
-      const subdomain = host.split('.')[0];
-      apiBaseUrl = `http://${subdomain}.localhost:8080/api/v1`;
+    // Get the hostname to determine the tenant
+    const hostname = request.headers.get('host') || '';
+    const subdomain = hostname.split('.')[0];
+
+    if (subdomain === 'localhost' || subdomain === '127.0.0.1') {
+      return NextResponse.json({ error: 'Invalid tenant context' }, { status: 400 });
     }
-    
-    // Forward the request to Django API with the subdomain
-    const djangoUrl = `${apiBaseUrl}/tenant/public-info`;
-    
-    console.log('Proxying request to:', djangoUrl);
-    console.log('Original host:', host);
-    
-    const response = await fetch(djangoUrl, {
+
+    // Get authorization header for authenticated requests
+    const authHeader = request.headers.get('authorization');
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      'X-Tenant-Subdomain': subdomain,
+    };
+
+    if (authHeader) {
+      headers['Authorization'] = authHeader;
+    }
+
+    const response = await fetch(`${API_BASE_URL}/api/v1/tenant/public-info`, {
       method: 'GET',
-      headers: {
-        'Host': host, // Forward the original host with subdomain
-        'Accept': 'application/vnd.api+json',
-        'Content-Type': 'application/vnd.api+json',
-      },
+      headers,
     });
 
     const data = await response.json();
-    
-    return NextResponse.json(data, { 
-      status: response.status,
-      headers: {
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-      }
-    });
+
+    if (!response.ok) {
+      return NextResponse.json({ error: data.error || 'Failed to load tenant info' }, { status: response.status });
+    }
+
+    return NextResponse.json(data);
   } catch (error) {
-    console.error('API proxy error:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' }, 
-      { status: 500 }
-    );
+    console.error('Error loading tenant info:', error);
+    return NextResponse.json({ error: 'Failed to load tenant info' }, { status: 500 });
   }
 }

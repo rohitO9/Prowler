@@ -29,7 +29,7 @@ export const viewport: Viewport = {
   ],
 };
 
-export default async function RootLayout({
+export default async function AuthLayout({
   children,
 }: {
   children: React.ReactNode;
@@ -41,20 +41,14 @@ export default async function RootLayout({
   }
 
   return (
-    <html suppressHydrationWarning lang="en">
-      <head />
-      <body
-        suppressHydrationWarning
-        className={cn(
-          "min-h-screen bg-background font-sans antialiased",
-          fontSans.variable,
-        )}
-      >
-        <Providers themeProps={{ attribute: "class", defaultTheme: "dark" }}>
-          {children}
-          <Toaster />
-        </Providers>
-      </body>
-    </html>
+    <div className={cn(
+      "min-h-screen bg-background font-sans antialiased",
+      fontSans.variable,
+    )}>
+      <Providers themeProps={{ attribute: "class", defaultTheme: "dark" }}>
+        {children}
+        <Toaster />
+      </Providers>
+    </div>
   );
 }

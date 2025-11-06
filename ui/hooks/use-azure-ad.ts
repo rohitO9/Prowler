@@ -35,12 +35,8 @@ export const useAzureAD = (): UseAzureADReturn => {
     loadConfig();
   }, []);
 
-  const isConfigured = !!(
-    config?.client_id &&
-    config?.tenant_id &&
-    config?.redirect_uri &&
-    config?.authority
-  );
+  // Check if Azure AD is configured (config exists and is active)
+  const isConfigured = !!config && !!config.client_id;
 
   return {
     config,

@@ -3,9 +3,9 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Icon } from "@iconify/react";
 import { Button, Checkbox, Divider, Link, Tooltip } from "@nextui-org/react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useForm } from "react-hook-form";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { z } from "zod";
 
 import { authenticate, createNewUser } from "@/actions/auth";
@@ -32,7 +32,7 @@ export const AuthForm = ({
   githubAuthUrl,
   isGoogleOAuthEnabled,
   isGithubOAuthEnabled,
-  azureAuthUrl,
+  // azureAuthUrl is NOT used - Azure AD URL is fetched dynamically from database via AzureADLogin component
   host,
 }: {
   type: string;
@@ -42,7 +42,7 @@ export const AuthForm = ({
   githubAuthUrl?: string;
   isGoogleOAuthEnabled?: boolean;
   isGithubOAuthEnabled?: boolean;
-  azureAuthUrl?: string;
+  // azureAuthUrl?: string; // Removed - Azure AD uses dynamic config from DB
   host?: string;
 }) => {
   const formSchema = authFormSchema(type);
@@ -71,6 +71,8 @@ export const AuthForm = ({
 
   const isLoading = form.formState.isSubmitting;
   const { toast } = useToast();
+  const searchParams = useSearchParams();
+  const [isSSOMode, setIsSSOMode] = useState(false);
 
   // Prefill organization from localStorage on sign-in
   useEffect(() => {
@@ -87,6 +89,17 @@ export const AuthForm = ({
       }
     }
   }, [type, form]);
+
+  // Check for SSO mode from URL params
+  useEffect(() => {
+    if (type === "sign-in") {
+      const mode = searchParams?.get('mode');
+      const inviteAccepted = searchParams?.get('invite_accepted');
+      if (mode === 'sso' || inviteAccepted === 'true') {
+        setIsSSOMode(true);
+      }
+    }
+  }, [type, searchParams]);
 
   const onSubmit = async (data: z.infer<typeof formSchema>) => {
     console.log("Form submitted with data:", data);
@@ -120,6 +133,24 @@ export const AuthForm = ({
             title: "Access Denied",
             description: "You don't have access to this tenant. Please contact your administrator.",
           });
+        } else if (result.message?.includes("SSO") || errorMessage?.includes("SSO") || errorMessage?.includes("Azure AD")) {
+          // SSO-only user error - redirect to SSO
+          toast({
+            variant: "destructive",
+            title: "SSO Login Required",
+            description: "This account can only be accessed via Azure AD SSO. Please use the Azure AD login button below.",
+          });
+          // Highlight SSO button and scroll to it
+          setTimeout(() => {
+            const ssoButton = document.querySelector('[data-sso-button]');
+            if (ssoButton) {
+              ssoButton.scrollIntoView({ behavior: 'smooth', block: 'center' });
+              (ssoButton as HTMLElement).style.border = '2px solid #3b82f6';
+              setTimeout(() => {
+                (ssoButton as HTMLElement).style.border = '';
+              }, 3000);
+            }
+          }, 500);
         } else {
           toast({
             variant: "destructive",
@@ -380,6 +411,28 @@ export const AuthForm = ({
                 </>
               )}
 
+              {/* SSO Mode Banner for Invited Users */}
+              {type === "sign-in" && isSSOMode && (
+                <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 mb-4">
+                  <div className="flex items-start space-x-3">
+                    <Icon
+                      icon="logos:microsoft-azure"
+                      className="text-blue-600 dark:text-blue-400 mt-0.5"
+                      width={20}
+                      height={20}
+                    />
+                    <div className="flex-1">
+                      <p className="text-sm font-medium text-blue-900 dark:text-blue-100">
+                        SSO Login Required
+                      </p>
+                      <p className="text-xs text-blue-700 dark:text-blue-300 mt-1">
+                        This account can only be accessed via Azure AD SSO. Please use the Azure AD login button below.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {(type === "sign-in" || type === "sign-up") && (
                 <>
                   <CustomInput
@@ -393,7 +446,7 @@ export const AuthForm = ({
                   />
 
                   {type === "sign-in" ? (
-                    <div className="">
+                    <div className={isSSOMode ? "opacity-50 pointer-events-none" : ""}>
                       <CustomInput
                         control={form.control}
                         name="password"
@@ -402,12 +455,18 @@ export const AuthForm = ({
                           !!form.formState.errors.password ||
                           !!form.formState.errors.email
                         }
+                        isDisabled={isSSOMode}
                       />
                       {/* Hidden company field for sign-in to pass tenant context */}
                       <input
                         type="hidden"
                         {...form.register("company")}
                       />
+                      {isSSOMode && (
+                        <p className="text-xs text-gray-500 mt-1 ml-1">
+                          Password login is disabled for invited users. Please use Azure AD SSO.
+                        </p>
+                      )}
                     </div>
                   ) : (
                     <CustomInput
@@ -520,19 +579,27 @@ export const AuthForm = ({
               <CustomButton
                 type="submit"
                 ariaLabel={type === "sign-in" ? "Log In" : type === "sign-up" ? "Sign Up" : "Configure Azure AD"}
-                ariaDisabled={isLoading}
-                className="w-full bg-[#47C6F2] text-white hover:bg-[#1f497a]"
+                ariaDisabled={isLoading || (type === "sign-in" && isSSOMode)}
+                className={`w-full bg-[#47C6F2] text-white hover:bg-[#1f497a] ${type === "sign-in" && isSSOMode ? "opacity-50 cursor-not-allowed" : ""}`}
                 variant="solid"
                 color="action"
                 size="md"
                 radius="md"
                 isLoading={isLoading}
-                isDisabled={isLoading}
+                isDisabled={isLoading || (type === "sign-in" && isSSOMode)}
               >
                 {isLoading ? (
                   <span>Loading</span>
                 ) : (
-                  <span>{type === "sign-in" ? "Log In" : type === "sign-up" ? "Sign Up" : "Configure Azure AD"}</span>
+                  <span>
+                    {type === "sign-in" && isSSOMode 
+                      ? "Use Azure AD SSO Below" 
+                      : type === "sign-in" 
+                        ? "Log In" 
+                        : type === "sign-up" 
+                          ? "Sign Up" 
+                          : "Configure Azure AD"}
+                  </span>
                 )}
               </CustomButton>
               
@@ -663,9 +730,10 @@ export const AuthForm = ({
                 >
                   <span>
                     <AzureADLogin
-                      className="w-full"
-                      variant="bordered"
+                      className={`w-full ${isSSOMode ? "ring-2 ring-blue-500 shadow-lg" : ""}`}
+                      variant={isSSOMode ? "solid" : "bordered"}
                       disabled={!isAzureOAuthEnabled}
+                      data-sso-button
                     />
                   </span>
                 </Tooltip>

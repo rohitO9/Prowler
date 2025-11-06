@@ -6,8 +6,8 @@ import { Providers } from "./providers";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Prowler - Multi-Tenant Security Platform",
-  description: "Secure your cloud infrastructure with Prowler's comprehensive security scanning",
+  title: "SecureStack - Enterprise Cloud Security Platform",
+  description: "Secure your cloud infrastructure with SecureStack's comprehensive security scanning and Azure AD integration",
 };
 
 export default function RootLayout({

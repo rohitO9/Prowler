@@ -51,19 +51,33 @@ export async function authenticate(
   formData: z.infer<typeof formSchemaSignIn>
 ) {
   try {
-    console.log("Attempting authentication for:", formData.email);
-    await signIn("credentials", {
+    console.log("🔍 [authenticate] Attempting authentication for:", formData.email);
+    console.log("🔍 [authenticate] Form data:", {
+      email: formData.email,
+      password: formData.password ? "***" : "MISSING",
+      company: (formData as any).company
+    });
+    
+    const result = await signIn("credentials", {
       ...formData,
       // Support enterprise: allow passing organization/tenant name from UI as "company"
       // NextAuth authorize will forward these to the backend token endpoint
       tenant_name: (formData as any).company,
       redirect: false,
     });
+    
+    console.log("🔍 [authenticate] signIn result:", result);
+    
+    if (result?.error) {
+      console.error("🔍 [authenticate] signIn returned error:", result.error);
+      throw new Error(result.error);
+    }
+    
     return {
       message: "Success",
     };
   } catch (error) {
-    console.error("Authentication error:", error);
+    console.error("🔍 [authenticate] Authentication error:", error);
     
     if (error instanceof AuthError) {
       switch (error.type) {
@@ -108,6 +122,17 @@ export async function authenticate(
         errors: {
           ...defaultValues,
           credentials: "Access denied to this tenant",
+        },
+      };
+    }
+    
+    // Handle SSO-only user error
+    if (errorMessage.includes("SSO_ONLY_USER") || errorMessage.includes("SSO") || errorMessage.includes("Azure AD")) {
+      return {
+        message: "SSO Login Required",
+        errors: {
+          ...defaultValues,
+          credentials: errorMessage.replace("SSO_ONLY_USER: ", "") || "This account can only be accessed via Azure AD SSO. Please use the Azure AD login button.",
         },
       };
     }
@@ -256,12 +281,22 @@ export const getToken = async (formData: z.infer<typeof formSchemaSignIn>, host?
   
   // Auto-detect tenant from current subdomain and send it explicitly
   let subdomain = '';
-  if (typeof window !== 'undefined') {
+  
+  // Check if we have host parameter (server-side)
+  if (host) {
+    console.log('🔍 [getToken] Server-side host:', host);
+    if (host.includes('localhost') && host !== 'localhost') {
+      // Extract subdomain from company1.localhost:3000
+      subdomain = host.split('.')[0];
+      console.log('🔍 [getToken] Server-side detected subdomain:', subdomain);
+    }
+  } else if (typeof window !== 'undefined') {
+    // Client-side detection
     const hostname = window.location.hostname;
     if (hostname.includes('localhost') && hostname !== 'localhost') {
       // Extract subdomain from company1.localhost
       subdomain = hostname.split('.')[0];
-      console.log('🔍 [getToken] Detected subdomain:', subdomain);
+      console.log('🔍 [getToken] Client-side detected subdomain:', subdomain);
     }
   }
   
@@ -279,8 +314,10 @@ export const getToken = async (formData: z.infer<typeof formSchemaSignIn>, host?
   };
 
   try {
-    console.log("Token request payload:", bodyData);
-    console.log("Making POST request to:", url.toString());
+    console.log("🔍 [getToken] Token request payload:", bodyData);
+    console.log("🔍 [getToken] Making POST request to:", url.toString());
+    console.log("🔍 [getToken] API URL:", apiUrl);
+    console.log("🔍 [getToken] Detected subdomain:", subdomain);
     
     const response = await fetch(url.toString(), {
       method: "POST",
@@ -291,17 +328,31 @@ export const getToken = async (formData: z.infer<typeof formSchemaSignIn>, host?
       body: JSON.stringify(bodyData),
     });
     
+    console.log("🔍 [getToken] Response status:", response.status);
+    console.log("🔍 [getToken] Response headers:", Object.fromEntries(response.headers.entries()));
+    
     console.log("Response status:", response.status);
     console.log("Response URL:", response.url);
 
     if (!response.ok) {
       let errorMsg = `Token request failed (${response.status} ${response.statusText})`;
+      let errorCode = '';
       try {
         const parsed = await safeJsonParse(response);
-        errorMsg = parsed?.errors?.[0]?.detail || errorMsg;
+        errorMsg = parsed?.error || parsed?.errors?.[0]?.detail || errorMsg;
+        errorCode = parsed?.code || '';
+        
+        // Check for SSO-only user error
+        if (response.status === 403 && (errorCode === 'SSO_ONLY_USER' || errorMsg.includes('SSO') || errorMsg.includes('Azure AD'))) {
+          throw new Error(`SSO_ONLY_USER: ${errorMsg}`);
+        }
       } catch (parseErr: unknown) {
         console.error("Failed to parse error response:", parseErr);
         if (parseErr instanceof Error) {
+          // If it's already our SSO-only error, rethrow it
+          if (parseErr.message.includes('SSO_ONLY_USER')) {
+            throw parseErr;
+          }
           errorMsg = `${errorMsg} - Parse error: ${parseErr.message}`;
         } else {
           errorMsg = `${errorMsg} - Parse error: ${String(parseErr)}`;
@@ -341,6 +392,11 @@ export const getUserByMe = async (accessToken: string, host?: string) => {
   const apiUrl = host ? getServerApiBaseUrl(host) : getApiBaseUrl();
   const url = new URL(`${apiUrl}/users/me`);
   
+  console.log("🔍 [getUserByMe] API URL:", apiUrl);
+  console.log("🔍 [getUserByMe] Request URL:", url.toString());
+  console.log("🔍 [getUserByMe] Token length:", accessToken.length);
+  console.log("🔍 [getUserByMe] Token preview:", accessToken.substring(0, 50) + "...");
+  
   // Getting user info from backend
 
   try {
@@ -351,6 +407,9 @@ export const getUserByMe = async (accessToken: string, host?: string) => {
         Authorization: `Bearer ${accessToken}`,
       },
     });
+    
+    console.log("🔍 [getUserByMe] Response status:", response.status);
+    console.log("🔍 [getUserByMe] Response headers:", Object.fromEntries(response.headers.entries()));
 
     const parsedResponse = await safeJsonParse(response);
     console.log("🔍 [getUserByMe] Raw response:", parsedResponse);

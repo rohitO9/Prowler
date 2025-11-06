@@ -16,30 +16,44 @@ export async function middleware(request: NextRequest) {
   });
   
   // Public paths that don't need tenant
-  const publicPaths = ['/sign-in', '/sign-up', '/register', '/health'];
+  const publicPaths = [
+    '/sign-in', 
+    '/sign-up', 
+    '/register', 
+    '/health',
+    '/accept-invite',
+    '/azure-callback',
+    '/api/validate-invite',
+    '/api/accept-invite',
+    '/api/tenant-info',
+    '/api/sso-config',
+    '/api/v1/tenant/register',
+    '/api/v1/tenant/register-tenant',
+    '/api/v1/tenant/public-info',
+    '/api/v1/tenant/sync-users',
+    '/api/v1/tenant/invite-user',
+    '/api/v1/tenant/users'
+  ];
   const isPublicPath = publicPaths.some(path => 
     request.nextUrl.pathname.startsWith(path)
   );
   
-  // If no tenant subdomain
+  // If no tenant subdomain (main domain)
   if (!tenant) {
-    // Redirect to tenant selection or main landing page
-    if (!isPublicPath && request.nextUrl.pathname !== '/') {
-      return NextResponse.redirect(new URL('/', request.url));
+    // Allow access to landing page and public paths
+    if (request.nextUrl.pathname === '/' || isPublicPath) {
+      return NextResponse.next();
     }
-    return NextResponse.next();
+    // Redirect other paths to landing page
+    return NextResponse.redirect(new URL('/', request.url));
   }
   
-  // ✅ CRITICAL: Check if user is authenticated for protected routes
-  const protectedRoutes = ['/home', '/dashboard', '/profile', '/settings', '/admin'];
-  const isProtectedRoute = protectedRoutes.some(route => 
-    request.nextUrl.pathname.startsWith(route)
-  );
+  // ✅ SIMPLE RULE: If no token, redirect to sign-in for any non-public page
+  const isPublicRoute = request.nextUrl.pathname === '/' || isPublicPath;
   
-  // If accessing protected route without authentication, redirect to sign-in
-  if (isProtectedRoute && !session?.user) {
-    console.log(`🔒 [Middleware] Unauthenticated access to protected route: ${request.nextUrl.pathname}`);
-    return NextResponse.redirect(new URL('/sign-in?message=session_expired', request.url));
+  if (!isPublicRoute && !session?.user) {
+    console.log(`🔒 [Middleware] No token - redirecting to sign-in: ${request.nextUrl.pathname}`);
+    return NextResponse.redirect(new URL(`http://${tenant}.localhost:3000/sign-in?message=session_expired`, request.url));
   }
   
   // If user is authenticated
@@ -55,35 +69,17 @@ export async function middleware(request: NextRequest) {
       );
       
       // Redirect to sign-in with cross-tenant error message
-      const signInUrl = new URL('/sign-in?error=cross_tenant_access', request.url);
-      signInUrl.hostname = `${userTenant.toLowerCase()}.localhost`;
+      const signInUrl = new URL(`http://${userTenant.toLowerCase()}.localhost:3000/sign-in?error=cross_tenant_access`, request.url);
       
       return NextResponse.redirect(signInUrl);
     }
     
-    // If user has no tenant info, they shouldn't access tenant-specific pages
+    // If user has no tenant info, allow access but don't redirect (user info might not be loaded yet)
     if (!userTenant && tenant) {
-      console.error(
-        `🚨 [Middleware] User has no tenant info but trying to access tenant: ${tenant}`
+      console.log(
+        `ℹ️ [Middleware] User has no tenant info yet, allowing access to: ${request.nextUrl.pathname}`
       );
-      
-      // Redirect to logout or tenant selection
-      return NextResponse.redirect(new URL('/sign-in', request.url));
-    }
-    
-    // ✅ CRITICAL: Prevent cross-tenant access (case-insensitive)
-    // If user is trying to access a different tenant's dashboard, deny access
-    if (userTenant && tenant && userTenant.toLowerCase() !== tenant.toLowerCase()) {
-      console.error(
-        `🚨 [Middleware] Cross-tenant access denied! ` +
-        `User belongs to: ${userTenant}, trying to access: ${tenant}`
-      );
-      
-      // Show error page or redirect to user's correct tenant
-      const errorUrl = new URL('/sign-in?error=cross_tenant_access', request.url);
-      errorUrl.hostname = `${userTenant.toLowerCase()}.localhost`;
-      
-      return NextResponse.redirect(errorUrl);
+      // Don't redirect - let the page handle the missing user info
     }
   }
   

@@ -10,7 +10,7 @@ from django.utils import timezone
 User = get_user_model()
 
 
-class AzureADGroupMapping(models.Model):
+class LegacyAzureADGroupMapping(models.Model):
     """Model for mapping Azure AD groups to local roles"""
     
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -22,7 +22,7 @@ class AzureADGroupMapping(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
     
     class Meta:
-        db_table = 'azure_ad_group_mapping'
+        db_table = 'legacy_azure_ad_group_mapping'
         verbose_name = 'Azure AD Group Mapping'
         verbose_name_plural = 'Azure AD Group Mappings'
         ordering = ['azure_group_name']
@@ -93,7 +93,7 @@ class AzureADUserSync(models.Model):
         return f"{self.user.email} - {self.sync_type} - {self.status}"
 
 
-class AzureADTokenCache(models.Model):
+class LegacyAzureADTokenCache(models.Model):
     """Model for caching Azure AD tokens"""
     
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -107,7 +107,7 @@ class AzureADTokenCache(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
     
     class Meta:
-        db_table = 'azure_ad_token_cache'
+        db_table = 'legacy_azure_ad_token_cache'
         verbose_name = 'Azure AD Token Cache'
         verbose_name_plural = 'Azure AD Token Caches'
         ordering = ['-created_at']
@@ -126,11 +126,11 @@ class AzureADTokenCache(models.Model):
         return timezone.now() > (self.expires_at - timezone.timedelta(minutes=5))
 
 
-class AzureADUserProfile(models.Model):
+class LegacyAzureADUserProfile(models.Model):
     """Extended user profile for Azure AD users"""
     
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='azure_profile')
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='legacy_azure_profile')
     azure_ad_id = models.CharField(max_length=255, unique=True, help_text="Azure AD user ID")
     job_title = models.CharField(max_length=255, blank=True, help_text="Job title from Azure AD")
     department = models.CharField(max_length=255, blank=True, help_text="Department from Azure AD")
@@ -144,7 +144,7 @@ class AzureADUserProfile(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     
     class Meta:
-        db_table = 'azure_ad_user_profile'
+        db_table = 'legacy_azure_ad_user_profile'
         verbose_name = 'Azure AD User Profile'
         verbose_name_plural = 'Azure AD User Profiles'
     
@@ -152,11 +152,11 @@ class AzureADUserProfile(models.Model):
         return f"{self.user.email} - Azure Profile"
 
 
-class AzureADAuditLog(models.Model):
+class LegacyAzureADAuditLog(models.Model):
     """Audit log for Azure AD operations"""
     
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='azure_audit_logs')
+    user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='legacy_azure_audit_logs')
     action = models.CharField(
         max_length=100,
         choices=[
@@ -177,7 +177,7 @@ class AzureADAuditLog(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     
     class Meta:
-        db_table = 'azure_ad_audit_log'
+        db_table = 'legacy_azure_ad_audit_log'
         verbose_name = 'Azure AD Audit Log'
         verbose_name_plural = 'Azure AD Audit Logs'
         ordering = ['-created_at']

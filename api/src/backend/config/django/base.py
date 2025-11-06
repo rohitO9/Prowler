@@ -128,7 +128,7 @@ ROOT_URLCONF = "config.urls"
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
-        "DIRS": [],
+        "DIRS": [BASE_DIR / "templates"],  # Add templates directory (templates/ at backend root)
         "APP_DIRS": True,
         "OPTIONS": {
             "context_processors": [
@@ -275,12 +275,19 @@ USE_TZ = True
 
 STATIC_URL = "static/"
 
-# Email
+# Email Configuration
 EMAIL_BACKEND = env.str(
     "DJANGO_EMAIL_BACKEND",
     default="django.core.mail.backends.console.EmailBackend",
 )
-DEFAULT_FROM_EMAIL = env.str("DJANGO_DEFAULT_FROM_EMAIL", "no-reply@localhost")
+EMAIL_HOST = env.str("DJANGO_EMAIL_HOST", default="smtp.gmail.com")
+EMAIL_PORT = env.int("DJANGO_EMAIL_PORT", default=587)
+EMAIL_USE_TLS = env.bool("DJANGO_EMAIL_USE_TLS", default=True)
+EMAIL_USE_SSL = env.bool("DJANGO_EMAIL_USE_SSL", default=False)
+EMAIL_HOST_USER = env.str("DJANGO_EMAIL_HOST_USER", default="")
+EMAIL_HOST_PASSWORD = env.str("DJANGO_EMAIL_HOST_PASSWORD", default="")
+DEFAULT_FROM_EMAIL = env.str("DJANGO_DEFAULT_FROM_EMAIL", default="no-reply@localhost")
+FRONTEND_URL = env.str("FRONTEND_URL", default="http://localhost:3000")
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.0/ref/settings/#default-auto-field

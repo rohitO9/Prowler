@@ -1,7 +1,8 @@
-from rest_framework.decorators import api_view, permission_classes
+from rest_framework.decorators import api_view, permission_classes, parser_classes
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework import status
+from rest_framework.parsers import JSONParser, FormParser, MultiPartParser
 from django.contrib.auth import authenticate
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.db import transaction
@@ -190,6 +191,7 @@ def tenant_login(request):
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
+@parser_classes([JSONParser, FormParser, MultiPartParser])
 def tenant_register(request):
     """
     Register new tenant with initial user
@@ -213,11 +215,11 @@ def tenant_register(request):
         # Debug: Log parsed data
         logger.info(f"Parsed attributes: {attributes}")
         
-        # Extract registration data
-        email = attributes.get('email', '').strip()
-        password = attributes.get('password')
-        first_name = attributes.get('first_name', '').strip()
-        last_name = attributes.get('last_name', '').strip()
+        # Extract registration data - handle both frontend and API field names
+        email = attributes.get('admin_email') or attributes.get('email', '').strip()
+        password = attributes.get('admin_password') or attributes.get('password')
+        first_name = attributes.get('admin_first_name') or attributes.get('first_name', '').strip()
+        last_name = attributes.get('admin_last_name') or attributes.get('last_name', '').strip()
         
         # Get subdomain from request payload (sent by frontend)
         subdomain = attributes.get('subdomain', '').strip().lower()
