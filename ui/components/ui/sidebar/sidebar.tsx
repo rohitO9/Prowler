@@ -47,7 +47,7 @@ export function Sidebar({ user }: { user: UserProfileProps }) {
             </div>
             {getOpenState() && (
               <div className="flex flex-col justify-center min-w-0 max-w-[12rem]">
-                <span className="text-2xl font-extrabold tracking-tight text-black dark:text-white font-serif bg-gradient-to-r from-indigo-600 to-blue-600 bg-clip-text text-transparent leading-tight">
+                <span className="text-2xl font-extrabold tracking-tight font-serif leading-tight text-gray-900 dark:text-white">
                   VulneralQ
                 </span>
                 <span className="text-xs text-gray-500 dark:text-gray-400 tracking-wide text-left whitespace-normal break-words leading-snug">

@@ -8,6 +8,8 @@ import { getApiBaseUrl } from '@/lib/helper';
  * including their membership details and permissions.
  */
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(request: NextRequest) {
   try {
     const host = request.headers.get('host') || '';

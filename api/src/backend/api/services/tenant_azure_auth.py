@@ -194,6 +194,11 @@ class TenantAzureAuthService:
         """
         Get or create user, ensuring they belong to this tenant.
         
+        SECURITY: Users must have explicit tenant membership (via invitation) to authenticate.
+        Auto-creation is only allowed if:
+        1. User has a pending invitation for this tenant, OR
+        2. Auto-creation is enabled AND user's email domain matches allowed domains
+        
         Args:
             email: User's email address
             name: User's display name
@@ -206,48 +211,127 @@ class TenantAzureAuthService:
             # Check if user exists
             user = User.objects.get(email=email)
             
-            # Check if user belongs to this tenant
-            if not user.can_access_tenant(self.tenant.id):
+            # SECURITY CHECK: Verify user has active membership in this tenant
+            try:
+                membership = TenantMembership.objects.get(
+                    user=user,
+                    tenant=self.tenant,
+                    is_active=True
+                )
+                logger.info(f"User {email} authenticated for tenant {self.tenant.subdomain} with role {membership.role}")
+                return user
+            except TenantMembership.DoesNotExist:
+                # User exists but doesn't belong to this tenant
                 logger.warning(
-                    f"User {email} attempted login to unauthorized tenant {self.tenant.subdomain}"
+                    f"SECURITY: User {email} attempted login to unauthorized tenant {self.tenant.subdomain}. "
+                    f"User belongs to other tenants but not this one."
+                )
+                # Audit this security violation
+                audit_tenant_access(
+                    user=user,
+                    tenant=self.tenant,
+                    action='unauthorized_tenant_access_attempt',
+                    details={
+                        'email': email,
+                        'azure_object_id': azure_object_id,
+                        'reason': 'User does not have membership in this tenant'
+                    }
                 )
                 return None
             
-            return user
-            
         except User.DoesNotExist:
-            # User doesn't exist - check if auto-creation is enabled
+            # User doesn't exist - check if they should be created
+            
+            # SECURITY: Check for pending invitation first
+            from api.models import Invitation
+            pending_invite = Invitation.objects.filter(
+                email=email,
+                tenant=self.tenant,
+                status='pending',
+                expires_at__gt=timezone.now()
+            ).first()
+            
+            if pending_invite:
+                # User has a valid invitation - create account and accept invite
+                logger.info(f"User {email} has pending invitation for tenant {self.tenant.subdomain} - creating account")
+                with transaction.atomic():
+                    user = User.objects.create_user(
+                        email=email,
+                        name=name,
+                        is_verified=not self.oauth_config.require_email_verification,
+                        primary_tenant=self.tenant
+                    )
+                    
+                    # Create tenant membership with role from invitation
+                    TenantMembership.objects.create(
+                        user=user,
+                        tenant=self.tenant,
+                        role=pending_invite.role or 'member',
+                        is_active=True,
+                        invited_by=pending_invite.invited_by
+                    )
+                    
+                    # Mark invitation as accepted
+                    pending_invite.status = 'accepted'
+                    pending_invite.accepted_at = timezone.now()
+                    pending_invite.save()
+                    
+                    logger.info(f"Created user {email} for tenant {self.tenant.subdomain} from invitation")
+                    return user
+            
+            # No invitation found - check if auto-creation is enabled
             if not self.oauth_config.auto_create_users:
-                logger.info(f"User {email} not found and auto-creation disabled for tenant {self.tenant.subdomain}")
+                logger.warning(
+                    f"SECURITY: User {email} attempted login to tenant {self.tenant.subdomain} "
+                    f"but no account exists and auto-creation is disabled. No invitation found."
+                )
                 return None
             
-            # Check if email domain is allowed
+            # Auto-creation is enabled - check if email domain is allowed
             if not self._is_email_domain_allowed(email):
-                logger.warning(f"Email domain not allowed for tenant {self.tenant.subdomain}: {email}")
+                logger.warning(
+                    f"SECURITY: Email domain not allowed for tenant {self.tenant.subdomain}: {email}"
+                )
                 return None
             
-            # Create new user
+            # SECURITY WARNING: Auto-creating user without explicit invitation
+            # This should be logged as a security event
+            logger.warning(
+                f"SECURITY: Auto-creating user {email} for tenant {self.tenant.subdomain} "
+                f"without explicit invitation. This should be reviewed."
+            )
+            
+            # Create new user with minimal permissions
             with transaction.atomic():
                 user = User.objects.create_user(
                     email=email,
                     name=name,
-                    is_verified=not self.oauth_config.require_email_verification
+                    is_verified=not self.oauth_config.require_email_verification,
+                    primary_tenant=self.tenant
                 )
                 
-                # Create tenant membership
+                # Create tenant membership with restricted role
                 TenantMembership.objects.create(
                     user=user,
                     tenant=self.tenant,
-                    role='member',  # Default role for new users
+                    role='member',  # Default role - admin should review and promote if needed
                     is_active=True
                 )
                 
-                # Set primary tenant if user doesn't have one
-                if not user.primary_tenant:
-                    user.primary_tenant = self.tenant
-                    user.save()
+                # Audit auto-creation
+                audit_tenant_access(
+                    user=user,
+                    tenant=self.tenant,
+                    action='user_auto_created_via_azure',
+                    details={
+                        'email': email,
+                        'azure_object_id': azure_object_id,
+                        'auto_creation_enabled': True,
+                        'warning': 'User created without explicit invitation'
+                    }
+                )
                 
-                logger.info(f"Created new user {email} for tenant {self.tenant.subdomain}")
+                logger.info(f"Auto-created user {email} for tenant {self.tenant.subdomain}")
                 return user
     
     def _create_or_update_oauth_user(self, user: User, azure_object_id: str, 

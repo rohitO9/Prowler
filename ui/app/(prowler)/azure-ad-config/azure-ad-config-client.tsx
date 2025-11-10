@@ -308,13 +308,43 @@ export function AzureADConfigClient() {
         const syncData = await response.json();
         console.log('🔍 [handleSyncUsers] Sync response:', syncData);
         await loadUsers();
+        
+        // Build detailed message from stats
+        const stats = syncData.stats || {};
+        const messageParts = [];
+        
+        if (stats.created > 0) {
+          messageParts.push(`${stats.created} new user(s) created`);
+        }
+        if (stats.skipped_existing > 0) {
+          messageParts.push(`${stats.skipped_existing} existing user(s) skipped`);
+        }
+        if (stats.memberships_created > 0) {
+          messageParts.push(`${stats.memberships_created} membership(s) created`);
+        }
+        
+        let description = messageParts.length > 0 
+          ? messageParts.join(', ') 
+          : 'User sync completed.';
+        
+        // Add warning about existing users
+        if (stats.skipped_existing > 0 && stats.existing_users && stats.existing_users.length > 0) {
+          description += ` ${stats.existing_users.length} user(s) already exist in other tenant(s) and were not added.`;
+        }
+        
         toast({
           title: 'Users Synced',
-          description: 'Users have been synced from Azure AD successfully.',
+          description: description,
+          variant: stats.skipped_existing > 0 ? 'default' : 'default',
         });
       } else {
         const errorData = await response.json();
         setError(errorData.message || 'Failed to sync users');
+        toast({
+          title: 'Sync Failed',
+          description: errorData.message || 'Failed to sync users',
+          variant: 'destructive',
+        });
       }
     } catch (err) {
       console.error('Error syncing users:', err);
@@ -463,20 +493,38 @@ export function AzureADConfigClient() {
       });
 
       if (response.ok) {
+        const responseData = await response.json();
+        const updatedPermissions = responseData.permissions || permissions;
+        
         toast({
           title: 'Permissions Updated',
           description: 'User permissions have been updated successfully.',
         });
-        // Reload users to get updated permissions
-        loadUsers();
-        // Update selected user if modal is open - reload and update after a short delay
+        
+        // Update selectedUser state immediately with response data for real-time UI update
         if (selectedUser?.id === userId) {
-          setTimeout(async () => {
-            await loadUsers();
-            // The loadUsers will update the users array, we can update selected user from there
-            // This will be handled by the users array update
-          }, 500);
+          setSelectedUser(prev => {
+            if (prev && prev.id === userId) {
+              return {
+                ...prev,
+                permissions: updatedPermissions
+              };
+            }
+            return prev;
+          });
         }
+        
+        // Update users array to reflect the change in the table
+        setUsers(prevUsers => 
+          prevUsers.map(user => 
+            user.id === userId 
+              ? { ...user, permissions: updatedPermissions }
+              : user
+          )
+        );
+        
+        // Reload users from backend to ensure consistency
+        await loadUsers();
       } else {
         const errorData = await response.json();
         toast({
@@ -514,14 +562,25 @@ export function AzureADConfigClient() {
   };
 
   // Update selected user when users array changes
+  // Preserve permissions if they were just updated (to avoid overwriting real-time updates)
   useEffect(() => {
     if (selectedUser && users.length > 0) {
       const updatedUser = users.find(u => u.id === selectedUser.id);
       if (updatedUser) {
-        setSelectedUser(updatedUser);
+        // Preserve permissions from selectedUser if they exist (might be more recent)
+        setSelectedUser(prev => {
+          if (prev && prev.id === updatedUser.id && prev.permissions) {
+            // Merge permissions - prefer selectedUser permissions if they exist
+            return {
+              ...updatedUser,
+              permissions: prev.permissions || updatedUser.permissions
+            };
+          }
+          return updatedUser;
+        });
       }
     }
-  }, [users]);
+  }, [users, selectedUser?.id]);
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -538,10 +597,10 @@ export function AzureADConfigClient() {
 
   if (status === 'loading' || isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
         <div className="text-center">
-          <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
-          <p className="text-gray-600">
+          <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-indigo-600 dark:text-indigo-400" />
+          <p className="text-gray-600 dark:text-gray-400">
             {status === 'loading' ? 'Checking authentication...' : 'Loading Azure AD configuration...'}
           </p>
         </div>
@@ -551,12 +610,12 @@ export function AzureADConfigClient() {
 
   if (status === 'unauthenticated') {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
         <div className="text-center">
-          <AlertCircle className="h-8 w-8 text-red-500 mx-auto mb-4" />
-          <h2 className="text-xl font-semibold text-gray-900 mb-2">Authentication Required</h2>
-          <p className="text-gray-600 mb-4">Please sign in to access Azure AD configuration.</p>
-          <Button onClick={() => router.push('/sign-in')}>
+          <AlertCircle className="h-8 w-8 text-red-500 dark:text-red-400 mx-auto mb-4" />
+          <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">Authentication Required</h2>
+          <p className="text-gray-600 dark:text-gray-400 mb-4">Please sign in to access Azure AD configuration.</p>
+          <Button onClick={() => router.push('/sign-in')} className="bg-indigo-600 hover:bg-indigo-700 text-white">
             Go to Sign In
           </Button>
         </div>
@@ -565,21 +624,26 @@ export function AzureADConfigClient() {
   }
 
   return (
-    <div className="p-6">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-6">
       {/* Page Header */}
-      <div className="mb-6">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center">
-            <KeyRound className="h-8 w-8 text-blue-600 mr-3" />
+      <div className="mb-8">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <div className="p-3 rounded-xl bg-gradient-to-br from-indigo-500 to-blue-600 shadow-lg">
+              <KeyRound className="h-6 w-6 text-white" />
+            </div>
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">Azure AD Configuration</h1>
-              <p className="text-sm text-gray-500">
+              <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Azure AD Configuration</h1>
+              <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
                 {tenant?.name ? `${tenant.name} - Single Sign-On Setup` : 'Single Sign-On Setup'}
               </p>
             </div>
           </div>
           <div className="flex items-center space-x-4">
-            <Badge variant={ssoConfig?.is_active ? "default" : ssoConfig ? "secondary" : "destructive"}>
+            <Badge 
+              variant={ssoConfig?.is_active ? "default" : ssoConfig ? "secondary" : "destructive"}
+              className="px-4 py-1.5 text-sm font-semibold"
+            >
               {ssoConfig?.is_active ? 'SSO Active' : ssoConfig ? 'SSO Configured (Inactive)' : 'SSO Not Configured'}
             </Badge>
           </div>
@@ -595,44 +659,44 @@ export function AzureADConfigClient() {
 
       <div className="space-y-6">
         {/* Tab Navigation */}
-        <div className="border-b border-gray-200">
+        <div className="border-b border-gray-200 dark:border-gray-700">
           <nav className="-mb-px flex space-x-8">
             <button
               onClick={() => setActiveTab('configuration')}
-              className={`py-2 px-1 border-b-2 font-medium text-sm ${
+              className={`py-3 px-1 border-b-2 font-semibold text-sm transition-colors ${
                 activeTab === 'configuration'
-                  ? 'border-blue-500 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  ? 'border-indigo-600 dark:border-indigo-400 text-indigo-600 dark:text-indigo-400'
+                  : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:border-gray-300 dark:hover:border-gray-600'
               }`}
             >
               Configuration
             </button>
             <button
               onClick={() => setActiveTab('scim-setup')}
-              className={`py-2 px-1 border-b-2 font-medium text-sm ${
+              className={`py-3 px-1 border-b-2 font-semibold text-sm transition-colors ${
                 activeTab === 'scim-setup'
-                  ? 'border-blue-500 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  ? 'border-indigo-600 dark:border-indigo-400 text-indigo-600 dark:text-indigo-400'
+                  : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:border-gray-300 dark:hover:border-gray-600'
               }`}
             >
               SCIM Setup
             </button>
             <button
               onClick={() => setActiveTab('users')}
-              className={`py-2 px-1 border-b-2 font-medium text-sm ${
+              className={`py-3 px-1 border-b-2 font-semibold text-sm transition-colors ${
                 activeTab === 'users'
-                  ? 'border-blue-500 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  ? 'border-indigo-600 dark:border-indigo-400 text-indigo-600 dark:text-indigo-400'
+                  : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:border-gray-300 dark:hover:border-gray-600'
               }`}
             >
               User Management
             </button>
             <button
               onClick={() => setActiveTab('setup-guide')}
-              className={`py-2 px-1 border-b-2 font-medium text-sm ${
+              className={`py-3 px-1 border-b-2 font-semibold text-sm transition-colors ${
                 activeTab === 'setup-guide'
-                  ? 'border-blue-500 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  ? 'border-indigo-600 dark:border-indigo-400 text-indigo-600 dark:text-indigo-400'
+                  : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:border-gray-300 dark:hover:border-gray-600'
               }`}
             >
               Setup Guide
@@ -643,42 +707,56 @@ export function AzureADConfigClient() {
         {/* Configuration Tab */}
         {activeTab === 'configuration' && (
         <div className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center">
-                <Settings className="h-5 w-5 mr-2" />
-                Azure AD SSO Configuration
-              </CardTitle>
-              <CardDescription>
-                Configure your Azure AD application for single sign-on integration.
-              </CardDescription>
+          <Card className="shadow-xl border-0 bg-white dark:bg-gray-800">
+            <CardHeader className="pb-4 border-b border-gray-200 dark:border-gray-700">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-indigo-100 dark:bg-indigo-900">
+                  <Settings className="h-5 w-5 text-indigo-600 dark:text-indigo-300" />
+                </div>
+                <div>
+                  <CardTitle className="text-xl font-bold text-gray-900 dark:text-white">
+                    Azure AD SSO Configuration
+                  </CardTitle>
+                  <CardDescription className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                    Configure your Azure AD application for single sign-on integration.
+                  </CardDescription>
+                </div>
+              </div>
             </CardHeader>
-            <CardContent>
-              <form onSubmit={handleSSOSetup} className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <CardContent className="pt-6">
+              <form onSubmit={handleSSOSetup} className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-2">
-                    <Label htmlFor="azure_tenant_id">Azure Tenant ID</Label>
+                    <Label htmlFor="azure_tenant_id" className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+                      Azure Tenant ID
+                    </Label>
                     <Input
                       id="azure_tenant_id"
                       value={ssoFormData.azure_tenant_id}
                       onChange={(e) => setSSOFormData({ ...ssoFormData, azure_tenant_id: e.target.value })}
                       placeholder="Enter your Azure Tenant ID"
                       required
+                      className="bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500"
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="client_id">Client ID</Label>
+                    <Label htmlFor="client_id" className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+                      Client ID
+                    </Label>
                     <Input
                       id="client_id"
                       value={ssoFormData.client_id}
                       onChange={(e) => setSSOFormData({ ...ssoFormData, client_id: e.target.value })}
                       placeholder="Enter your Azure AD Client ID"
                       required
+                      className="bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500"
                     />
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="client_secret">Client Secret</Label>
+                  <Label htmlFor="client_secret" className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+                    Client Secret
+                  </Label>
                   <Input
                     id="client_secret"
                     type="password"
@@ -686,9 +764,14 @@ export function AzureADConfigClient() {
                     onChange={(e) => setSSOFormData({ ...ssoFormData, client_secret: e.target.value })}
                     placeholder="Enter your Azure AD Client Secret"
                     required
+                    className="bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500"
                   />
                 </div>
-                <Button type="submit" disabled={isSSOLoading} className="w-full">
+                <Button 
+                  type="submit" 
+                  disabled={isSSOLoading} 
+                  className="w-full bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white shadow-lg"
+                >
                   {isSSOLoading ? (
                     <>
                       <Loader2 className="h-4 w-4 mr-2 animate-spin" />
@@ -710,65 +793,77 @@ export function AzureADConfigClient() {
         {/* SCIM Setup Tab */}
         {activeTab === 'scim-setup' && (
         <div className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center">
-                <Users className="h-5 w-5 mr-2" />
-                SCIM Provisioning
-              </CardTitle>
-              <CardDescription>
-                Configure SCIM for automatic user provisioning from Azure AD.
-              </CardDescription>
+          <Card className="shadow-xl border-0 bg-white dark:bg-gray-800">
+            <CardHeader className="pb-4 border-b border-gray-200 dark:border-gray-700">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-indigo-100 dark:bg-indigo-900">
+                  <Users className="h-5 w-5 text-indigo-600 dark:text-indigo-300" />
+                </div>
+                <div>
+                  <CardTitle className="text-xl font-bold text-gray-900 dark:text-white">
+                    SCIM Provisioning
+                  </CardTitle>
+                  <CardDescription className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                    Configure SCIM for automatic user provisioning from Azure AD.
+                  </CardDescription>
+                </div>
+              </div>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="pt-6 space-y-6">
               {ssoConfig ? (
                 <>
                   <div className="space-y-2">
-                    <Label>SCIM Endpoint URL</Label>
-                    <div className="flex items-center space-x-2">
+                    <Label className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+                      SCIM Endpoint URL
+                    </Label>
+                    <div className="flex items-center gap-2">
                       <Input
                         value={ssoConfig.scim_url}
                         readOnly
-                        className="bg-gray-50"
+                        className="bg-gray-50 dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white font-mono text-sm"
                       />
                       <Button
                         variant="outline"
                         size="sm"
                         onClick={() => copyToClipboard(ssoConfig.scim_url, 'SCIM URL')}
+                        className="border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
                       >
                         <Copy className="h-4 w-4" />
                       </Button>
                     </div>
                   </div>
                   <div className="space-y-2">
-                    <Label>SCIM Bearer Token</Label>
-                    <div className="flex items-center space-x-2">
+                    <Label className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+                      SCIM Bearer Token
+                    </Label>
+                    <div className="flex items-center gap-2">
                       <Input
                         value={ssoConfig.scim_bearer_token}
                         readOnly
                         type="password"
-                        className="bg-gray-50"
+                        className="bg-gray-50 dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white font-mono text-sm"
                       />
                       <Button
                         variant="outline"
                         size="sm"
                         onClick={() => copyToClipboard(ssoConfig.scim_bearer_token, 'SCIM Token')}
+                        className="border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
                       >
                         <Copy className="h-4 w-4" />
                       </Button>
                     </div>
                   </div>
-                  <Alert>
-                    <Info className="h-4 w-4" />
-                    <AlertDescription>
+                  <Alert className="bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800">
+                    <Info className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                    <AlertDescription className="text-blue-800 dark:text-blue-200">
                       Use these credentials to configure SCIM provisioning in your Azure AD application.
                     </AlertDescription>
                   </Alert>
                 </>
               ) : (
-                <Alert>
-                  <AlertCircle className="h-4 w-4" />
-                  <AlertDescription>
+                <Alert variant="destructive" className="bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800">
+                  <AlertCircle className="h-4 w-4 text-red-600 dark:text-red-400" />
+                  <AlertDescription className="text-red-800 dark:text-red-200">
                     Please configure SSO first to enable SCIM provisioning.
                   </AlertDescription>
                 </Alert>
@@ -781,14 +876,27 @@ export function AzureADConfigClient() {
         {/* User Management Tab */}
         {activeTab === 'users' && (
         <div className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center justify-between">
-                <div className="flex items-center">
-                  <Users className="h-5 w-5 mr-2" />
-                  User Management
+          <Card className="shadow-xl border-0 bg-white dark:bg-gray-800">
+            <CardHeader className="pb-4 border-b border-gray-200 dark:border-gray-700">
+              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-lg bg-indigo-100 dark:bg-indigo-900">
+                    <Users className="h-5 w-5 text-indigo-600 dark:text-indigo-300" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-xl font-bold text-gray-900 dark:text-white">
+                      User Management
+                    </CardTitle>
+                    <CardDescription className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                      Manage users synced from Azure AD and send invitations.
+                    </CardDescription>
+                  </div>
                 </div>
-                <Button onClick={handleSyncUsers} disabled={isSyncLoading}>
+                <Button 
+                  onClick={handleSyncUsers} 
+                  disabled={isSyncLoading}
+                  className="bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white shadow-lg"
+                >
                   {isSyncLoading ? (
                     <>
                       <Loader2 className="h-4 w-4 mr-2 animate-spin" />
@@ -801,57 +909,55 @@ export function AzureADConfigClient() {
                     </>
                   )}
                 </Button>
-              </CardTitle>
-              <CardDescription>
-                Manage users synced from Azure AD and send invitations.
-              </CardDescription>
+              </div>
             </CardHeader>
-            <CardContent>
+            <CardContent className="pt-6">
               {users.length > 0 ? (
                 <>
-                  <div className="mb-4 flex items-center justify-between">
-                    <p className="text-sm text-gray-600">
-                      Showing <span className="font-medium text-gray-900">{users.length}</span> user{users.length !== 1 ? 's' : ''}
+                  <div className="mb-6 flex items-center justify-between">
+                    <p className="text-sm text-gray-600 dark:text-gray-400">
+                      Showing <span className="font-semibold text-gray-900 dark:text-white">{users.length}</span> user{users.length !== 1 ? 's' : ''}
                     </p>
                     <Button
                       size="sm"
                       variant="outline"
                       onClick={loadUsers}
+                      className="border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
                     >
                       <RefreshCw className="h-4 w-4 mr-2" />
                       Refresh
                     </Button>
                   </div>
-                  <div className="overflow-x-auto">
-                    <table className="min-w-full divide-y divide-gray-200">
-                    <thead className="bg-gray-50">
+                  <div className="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-700">
+                    <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                    <thead className="bg-gray-50 dark:bg-gray-700">
                       <tr>
-                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
-                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
-                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
-                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Department</th>
-                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                        <th scope="col" className="px-6 py-4 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider">Name</th>
+                        <th scope="col" className="px-6 py-4 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider">Email</th>
+                        <th scope="col" className="px-6 py-4 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider">Role</th>
+                        <th scope="col" className="px-6 py-4 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider">Department</th>
+                        <th scope="col" className="px-6 py-4 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider">Status</th>
+                        <th scope="col" className="px-6 py-4 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider">Actions</th>
                       </tr>
                     </thead>
-                    <tbody className="bg-white divide-y divide-gray-200">
+                    <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                       {users.map((user) => (
                         <tr 
                           key={user.id} 
-                          className="hover:bg-gray-50 cursor-pointer transition-colors"
+                          className="hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer transition-colors"
                           onClick={() => openUserDetails(user)}
                         >
                           <td className="px-6 py-4 whitespace-nowrap">
                             <div className="flex items-center">
-                              <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center mr-3">
-                                <Users className="h-5 w-5 text-blue-600" />
+                              <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-blue-600 rounded-full flex items-center justify-center mr-3 shadow-md">
+                                <Users className="h-5 w-5 text-white" />
                               </div>
                               <div>
-                                <div className="text-sm font-medium text-gray-900">
+                                <div className="text-sm font-semibold text-gray-900 dark:text-white">
                                   {[user.first_name, user.last_name].filter(Boolean).join(' ') || user.email.split('@')[0]}
                                 </div>
                                 {(user.job_title || user.department) && (
-                                  <div className="text-xs text-gray-500">
+                                  <div className="text-xs text-gray-500 dark:text-gray-400">
                                     {[user.department, user.job_title].filter(Boolean).join(' • ') || '-'}
                                   </div>
                                 )}
@@ -859,9 +965,9 @@ export function AzureADConfigClient() {
                             </div>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="text-sm text-gray-900">{user.email}</div>
+                            <div className="text-sm font-medium text-gray-900 dark:text-white">{user.email}</div>
                             {user.is_sso_user && (
-                              <div className="text-xs text-blue-600">SSO User</div>
+                              <div className="text-xs text-indigo-600 dark:text-indigo-400 font-medium">SSO User</div>
                             )}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
@@ -869,18 +975,19 @@ export function AzureADConfigClient() {
                               {user.role}
                             </Badge>
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">
                             {user.department && user.department.trim() ? user.department : '-'}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
                             {getStatusBadge(user.is_active ? 'active' : 'inactive')}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm font-medium" onClick={(e) => e.stopPropagation()}>
-                            <div className="flex items-center space-x-2">
+                            <div className="flex items-center gap-2">
                               <Button
                                 size="sm"
                                 variant="outline"
                                 onClick={() => openUserDetails(user)}
+                                className="border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
                               >
                                 <Eye className="h-4 w-4 mr-1" />
                                 View
@@ -889,19 +996,21 @@ export function AzureADConfigClient() {
                                 <Button
                                   size="sm"
                                   onClick={() => handleInviteUser(user.email, user.role)}
+                                  className="bg-indigo-600 hover:bg-indigo-700 text-white"
                                 >
                                   <Mail className="h-4 w-4 mr-1" />
                                   Invite
                                 </Button>
                               ) : user.invite_status === 'pending' ? (
-                                <Badge variant="outline">Invited</Badge>
+                                <Badge variant="outline" className="border-yellow-300 dark:border-yellow-600 text-yellow-700 dark:text-yellow-400">Invited</Badge>
                               ) : user.invite_status === 'accepted' ? (
-                                <Badge variant="default">Accepted</Badge>
+                                <Badge variant="default" className="bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300">Accepted</Badge>
                               ) : (
                                 <Button
                                   size="sm"
                                   variant="outline"
                                   onClick={() => handleInviteUser(user.email, user.role)}
+                                  className="border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
                                 >
                                   <Mail className="h-4 w-4 mr-1" />
                                   Re-invite
@@ -927,9 +1036,10 @@ export function AzureADConfigClient() {
                   </div>
                 </>
               ) : (
-                <div className="text-center py-8">
-                  <Users className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                  <p className="text-gray-500">No users found. Sync users from Azure AD to get started.</p>
+                <div className="text-center py-12 bg-gray-50 dark:bg-gray-700/50 rounded-xl border-2 border-dashed border-gray-300 dark:border-gray-600">
+                  <Users className="h-12 w-12 text-gray-400 dark:text-gray-500 mx-auto mb-4" />
+                  <p className="text-sm font-medium text-gray-600 dark:text-gray-400">No users found</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">Sync users from Azure AD to get started</p>
                 </div>
               )}
             </CardContent>
@@ -940,20 +1050,29 @@ export function AzureADConfigClient() {
         {/* Setup Guide Tab */}
         {activeTab === 'setup-guide' && (
         <div className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center">
-                <Shield className="h-5 w-5 mr-2" />
-                Azure AD Setup Guide
-              </CardTitle>
-              <CardDescription>
-                Follow these steps to configure Azure AD integration.
-              </CardDescription>
+          <Card className="shadow-xl border-0 bg-white dark:bg-gray-800">
+            <CardHeader className="pb-4 border-b border-gray-200 dark:border-gray-700">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-indigo-100 dark:bg-indigo-900">
+                  <Shield className="h-5 w-5 text-indigo-600 dark:text-indigo-300" />
+                </div>
+                <div>
+                  <CardTitle className="text-xl font-bold text-gray-900 dark:text-white">
+                    Azure AD Setup Guide
+                  </CardTitle>
+                  <CardDescription className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                    Follow these steps to configure Azure AD integration.
+                  </CardDescription>
+                </div>
+              </div>
             </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="space-y-4">
-                <h3 className="text-lg font-semibold">Step 1: Create Azure AD Application</h3>
-                <ol className="list-decimal list-inside space-y-2 text-sm text-gray-600">
+            <CardContent className="pt-6 space-y-8">
+              <div className="space-y-4 p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg border border-gray-200 dark:border-gray-600">
+                <h3 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                  <span className="flex items-center justify-center w-8 h-8 rounded-full bg-indigo-600 text-white text-sm font-bold">1</span>
+                  Create Azure AD Application
+                </h3>
+                <ol className="list-decimal list-inside space-y-2 text-sm text-gray-700 dark:text-gray-300 ml-10">
                   <li>Go to Azure Portal → Azure Active Directory → App registrations</li>
                   <li>Click "New registration"</li>
                   <li>Enter application name: "Prowler SSO"</li>
@@ -963,9 +1082,12 @@ export function AzureADConfigClient() {
                 </ol>
               </div>
 
-              <div className="space-y-4">
-                <h3 className="text-lg font-semibold">Step 2: Configure Authentication</h3>
-                <ol className="list-decimal list-inside space-y-2 text-sm text-gray-600">
+              <div className="space-y-4 p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg border border-gray-200 dark:border-gray-600">
+                <h3 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                  <span className="flex items-center justify-center w-8 h-8 rounded-full bg-indigo-600 text-white text-sm font-bold">2</span>
+                  Configure Authentication
+                </h3>
+                <ol className="list-decimal list-inside space-y-2 text-sm text-gray-700 dark:text-gray-300 ml-10">
                   <li>Go to Authentication → Platform configurations</li>
                   <li>Add Web platform</li>
                   <li>Set redirect URI: "https://{tenant?.subdomain}.localhost:3000/api/auth/callback/azure"</li>
@@ -974,9 +1096,12 @@ export function AzureADConfigClient() {
                 </ol>
               </div>
 
-              <div className="space-y-4">
-                <h3 className="text-lg font-semibold">Step 3: Create Client Secret</h3>
-                <ol className="list-decimal list-inside space-y-2 text-sm text-gray-600">
+              <div className="space-y-4 p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg border border-gray-200 dark:border-gray-600">
+                <h3 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                  <span className="flex items-center justify-center w-8 h-8 rounded-full bg-indigo-600 text-white text-sm font-bold">3</span>
+                  Create Client Secret
+                </h3>
+                <ol className="list-decimal list-inside space-y-2 text-sm text-gray-700 dark:text-gray-300 ml-10">
                   <li>Go to Certificates & secrets</li>
                   <li>Click "New client secret"</li>
                   <li>Add description: "Prowler SSO Secret"</li>
@@ -985,9 +1110,12 @@ export function AzureADConfigClient() {
                 </ol>
               </div>
 
-              <div className="space-y-4">
-                <h3 className="text-lg font-semibold">Step 4: Configure SCIM (Optional)</h3>
-                <ol className="list-decimal list-inside space-y-2 text-sm text-gray-600">
+              <div className="space-y-4 p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg border border-gray-200 dark:border-gray-600">
+                <h3 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                  <span className="flex items-center justify-center w-8 h-8 rounded-full bg-indigo-600 text-white text-sm font-bold">4</span>
+                  Configure SCIM (Optional)
+                </h3>
+                <ol className="list-decimal list-inside space-y-2 text-sm text-gray-700 dark:text-gray-300 ml-10">
                   <li>Go to Enterprise applications → Your app → Provisioning</li>
                   <li>Set provisioning mode to "Automatic"</li>
                   <li>Set tenant URL: "{ssoConfig?.scim_url || 'SCIM URL will appear after SSO setup'}"</li>
@@ -996,9 +1124,9 @@ export function AzureADConfigClient() {
                 </ol>
               </div>
 
-              <Alert>
-                <Info className="h-4 w-4" />
-                <AlertDescription>
+              <Alert className="bg-indigo-50 dark:bg-indigo-900/20 border-indigo-200 dark:border-indigo-800">
+                <Info className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
+                <AlertDescription className="text-indigo-800 dark:text-indigo-200">
                   After completing these steps, return to the Configuration tab and enter your Azure Tenant ID, Client ID, and Client Secret to activate the integration.
                 </AlertDescription>
               </Alert>
@@ -1010,34 +1138,34 @@ export function AzureADConfigClient() {
 
       {/* User Details Modal */}
       <Dialog open={isUserModalOpen} onOpenChange={setIsUserModalOpen}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-2xl bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
           <DialogHeader>
-            <DialogTitle>User Details</DialogTitle>
-            <DialogDescription>
+            <DialogTitle className="text-xl font-bold text-gray-900 dark:text-white">User Details</DialogTitle>
+            <DialogDescription className="text-sm text-gray-600 dark:text-gray-400">
               View and manage user information
             </DialogDescription>
           </DialogHeader>
           {selectedUser && (
-            <div className="space-y-4">
+            <div className="space-y-6">
               {/* User Avatar and Basic Info */}
-              <div className="flex items-start space-x-4 pb-4 border-b">
-                <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center">
-                  <Users className="h-8 w-8 text-blue-600" />
+              <div className="flex items-start gap-4 pb-6 border-b border-gray-200 dark:border-gray-700">
+                <div className="w-16 h-16 bg-gradient-to-br from-indigo-500 to-blue-600 rounded-full flex items-center justify-center shadow-lg">
+                  <Users className="h-8 w-8 text-white" />
                 </div>
                 <div className="flex-1">
-                  <h3 className="text-lg font-semibold text-gray-900">
+                  <h3 className="text-xl font-bold text-gray-900 dark:text-white">
                     {selectedUser.first_name} {selectedUser.last_name}
                   </h3>
-                  <p className="text-sm text-gray-500">{selectedUser.email}</p>
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">{selectedUser.email}</p>
                   {selectedUser.job_title && (
-                    <p className="text-sm text-gray-600">{selectedUser.job_title}</p>
+                    <p className="text-sm text-gray-700 dark:text-gray-300 mt-1">{selectedUser.job_title}</p>
                   )}
-                  <div className="flex items-center space-x-2 mt-2">
+                  <div className="flex items-center gap-2 mt-3">
                     <Badge variant={selectedUser.role === 'admin' ? 'default' : 'secondary'}>
                       {selectedUser.role}
                     </Badge>
                     {selectedUser.is_sso_user && (
-                      <Badge variant="outline" className="border-blue-500 text-blue-600">
+                      <Badge variant="outline" className="border-indigo-500 dark:border-indigo-400 text-indigo-600 dark:text-indigo-400">
                         SSO User
                       </Badge>
                     )}
@@ -1047,33 +1175,34 @@ export function AzureADConfigClient() {
               </div>
 
               {/* User Details Grid */}
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-6">
                 <div>
-                  <Label className="text-xs text-gray-500 uppercase">Department</Label>
-                  <p className="text-sm font-medium text-gray-900 mt-1">
+                  <Label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Department</Label>
+                  <p className="text-sm font-medium text-gray-900 dark:text-white mt-2">
                     {selectedUser.department || 'Not specified'}
                   </p>
                 </div>
                 <div>
-                  <Label className="text-xs text-gray-500 uppercase">Job Title</Label>
-                  <p className="text-sm font-medium text-gray-900 mt-1">
+                  <Label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Job Title</Label>
+                  <p className="text-sm font-medium text-gray-900 dark:text-white mt-2">
                     {selectedUser.job_title || 'Not specified'}
                   </p>
                 </div>
                 <div>
-                  <Label className="text-xs text-gray-500 uppercase">Invite Status</Label>
-                  <div className="mt-1">
+                  <Label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Invite Status</Label>
+                  <div className="mt-2">
                     {getStatusBadge(selectedUser.invite_status)}
                   </div>
                 </div>
                 <div>
-                  <Label className="text-xs text-gray-500 uppercase">User ID</Label>
-                  <div className="flex items-center space-x-2 mt-1">
-                    <p className="text-sm font-mono text-gray-600 truncate">{selectedUser.id}</p>
+                  <Label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">User ID</Label>
+                  <div className="flex items-center gap-2 mt-2">
+                    <p className="text-sm font-mono text-gray-700 dark:text-gray-300 truncate">{selectedUser.id}</p>
                     <Button
                       size="sm"
                       variant="ghost"
                       onClick={() => copyToClipboard(selectedUser.id, 'User ID')}
+                      className="text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200"
                     >
                       <Copy className="h-3 w-3" />
                     </Button>
@@ -1083,15 +1212,15 @@ export function AzureADConfigClient() {
 
               {/* Invite Information */}
               {selectedUser.invited_at && (
-                <div className="pt-4 border-t">
-                  <Label className="text-xs text-gray-500 uppercase">Invitation Details</Label>
-                  <div className="mt-2 space-y-1">
-                    <p className="text-sm text-gray-600">
-                      Invited: {new Date(selectedUser.invited_at).toLocaleString()}
+                <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
+                  <Label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Invitation Details</Label>
+                  <div className="mt-3 space-y-2">
+                    <p className="text-sm text-gray-700 dark:text-gray-300">
+                      <span className="font-medium">Invited:</span> {new Date(selectedUser.invited_at).toLocaleString()}
                     </p>
                     {selectedUser.accepted_invite_at && (
-                      <p className="text-sm text-gray-600">
-                        Accepted: {new Date(selectedUser.accepted_invite_at).toLocaleString()}
+                      <p className="text-sm text-gray-700 dark:text-gray-300">
+                        <span className="font-medium">Accepted:</span> {new Date(selectedUser.accepted_invite_at).toLocaleString()}
                       </p>
                     )}
                   </div>
@@ -1100,12 +1229,12 @@ export function AzureADConfigClient() {
 
               {/* Permissions Management */}
               {selectedUser.permissions && (
-                <div className="pt-4 border-t">
-                  <Label className="text-xs text-gray-500 uppercase mb-3 block">Permissions</Label>
-                  <div className="space-y-2">
+                <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
+                  <Label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-4 block">Permissions</Label>
+                  <div className="space-y-3">
                     {Object.entries(selectedUser.permissions).map(([key, value]) => (
-                      <div key={key} className="flex items-center justify-between">
-                        <Label className="text-sm font-normal text-gray-700 capitalize">
+                      <div key={key} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+                        <Label className="text-sm font-medium text-gray-700 dark:text-gray-300 capitalize">
                           {key.replace(/_/g, ' ')}
                         </Label>
                         <Button
@@ -1113,13 +1242,24 @@ export function AzureADConfigClient() {
                           variant={value ? "default" : "outline"}
                           onClick={async () => {
                             if (selectedUser) {
+                              // Optimistically update UI immediately
+                              const newValue = !value;
                               const updatedPermissions = {
                                 ...selectedUser.permissions,
-                                [key]: !value
+                                [key]: newValue
                               };
+                              
+                              // Update selectedUser state immediately for instant UI feedback
+                              setSelectedUser({
+                                ...selectedUser,
+                                permissions: updatedPermissions
+                              });
+                              
+                              // Then sync with backend
                               await handleUpdatePermissions(selectedUser.id, updatedPermissions);
                             }
                           }}
+                          className={value ? "bg-indigo-600 hover:bg-indigo-700 text-white" : "border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300"}
                         >
                           {value ? 'Enabled' : 'Disabled'}
                         </Button>

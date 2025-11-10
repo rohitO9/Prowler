@@ -84,7 +84,7 @@ export const FlyoutMenuButton: React.FC<FlyoutMenuButtonProps> = ({
         aria-expanded={open}
       >
         {Icon && <Icon size={18} className="mr-3" />}
-        {isOpen && <span className="truncate">{label}</span>}
+        {isOpen && <span className="truncate text-gray-900 dark:text-white">{label}</span>}
         <span className="ml-auto text-gray-500 dark:text-gray-400">
         <FaArrowRightFromBracket  size={16} />
         </span>

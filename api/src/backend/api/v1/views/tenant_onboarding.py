@@ -366,9 +366,26 @@ def sync_users_from_azure(request):
             user_agent=request.META.get('HTTP_USER_AGENT')
         )
         
+        # Build response message
+        message_parts = []
+        if stats.get('created', 0) > 0:
+            message_parts.append(f"{stats['created']} new user(s) created")
+        if stats.get('skipped_existing', 0) > 0:
+            message_parts.append(f"{stats['skipped_existing']} existing user(s) skipped")
+        if stats.get('memberships_created', 0) > 0:
+            message_parts.append(f"{stats['memberships_created']} membership(s) created")
+        
+        message = 'User sync completed. ' + ', '.join(message_parts) if message_parts else 'User sync completed.'
+        
+        # Add warning if users were skipped
+        if stats.get('skipped_existing', 0) > 0:
+            existing_users = stats.get('existing_users', [])
+            if existing_users:
+                message += f" {len(existing_users)} user(s) already exist in other tenant(s) and were not added."
+        
         return Response({
             'status': 'success',
-            'message': 'User sync completed',
+            'message': message,
             'stats': stats
         }, status=status.HTTP_200_OK)
         
@@ -610,6 +627,7 @@ def delete_tenant_user(request, user_id):
 
 @api_view(['PATCH'])
 @permission_classes([IsAuthenticated])
+@parser_classes([JSONParser, FormParser, MultiPartParser])
 def update_user_permissions(request, user_id):
     """
     Update user permissions.

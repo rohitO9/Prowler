@@ -8,6 +8,8 @@ import { getApiBaseUrl } from '@/lib/helper';
  * It generates the authorization URL and handles the OAuth flow.
  */
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(request: NextRequest) {
   try {
     const host = request.headers.get('host') || '';

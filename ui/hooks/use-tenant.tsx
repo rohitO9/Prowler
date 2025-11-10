@@ -416,3 +416,4 @@ export const useTenantMembership = () => {
 
   return { isMember, isLoading };
 };
+

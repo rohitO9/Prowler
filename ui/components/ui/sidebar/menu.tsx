@@ -118,7 +118,7 @@ export const Menu = ({ isOpen, user }: { isOpen: boolean; user: UserProfileProps
                                   </span>
                                   <p
                                     className={cn(
-                                      "max-w-[200px] truncate",
+                                      "max-w-[200px] truncate text-gray-900 dark:text-white",
                                       isOpen === false
                                         ? "-translate-x-96 opacity-0"
                                         : "translate-x-0 opacity-100",
@@ -156,7 +156,7 @@ export const Menu = ({ isOpen, user }: { isOpen: boolean; user: UserProfileProps
       </ScrollArea>
      
 
-      <div className="absolute left-0 bottom-7 w-full text-muted-foreground border-t border-gray-400 
+      <div className="absolute left-0 bottom-7 w-full text-gray-900 dark:text-white border-t border-gray-400 
       dark:border-white border-border bg-inherit flex items-center justify-center gap-x-8 pt-10 pb-2 px-2 mb-4">
         <UserNav user={user}  />
         <TooltipProvider disableHoverableContent>
@@ -166,7 +166,7 @@ export const Menu = ({ isOpen, user }: { isOpen: boolean; user: UserProfileProps
                 onClick={handleLogout}
                 variant="ghost"
                 className={cn(
-                  "text-default-700 bg-transparent shadow-none border-none hover:bg-transparent hover:text-indigo-600 transition-all duration-200",
+                  "text-gray-900 dark:text-white bg-transparent shadow-none border-none hover:bg-transparent hover:text-indigo-600 dark:hover:text-indigo-400 transition-all duration-200",
                   isOpen
                     ? "px-8 py-3 pr-4 text-base justify-center"
                     : "p-2 justify-center",
@@ -198,7 +198,7 @@ export const Menu = ({ isOpen, user }: { isOpen: boolean; user: UserProfileProps
               className="flex items-center gap-1"
             >
               <InfoIcon size={16} />
-              <span className="text-muted-foreground font-normal opacity-80 transition-opacity hover:font-bold hover:opacity-100">
+              <span className="text-gray-900 dark:text-white font-normal opacity-80 transition-opacity hover:font-bold hover:opacity-100">
                 Service Status
               </span>
             </Link>

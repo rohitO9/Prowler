@@ -18,7 +18,7 @@ import {
   CheckCircle,
   Clock
 } from 'lucide-react';
-import { useToast } from '@/components/ui/use-toast';
+import { useToast } from '@/components/ui/toast/use-toast';
 
 interface UserInfo {
   id: string;

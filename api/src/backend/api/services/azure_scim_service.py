@@ -35,11 +35,14 @@ class AzureSCIMService:
         """
         Handle SCIM user creation from Azure AD
         
+        SECURITY: Checks if user already exists globally before creating.
+        Prevents duplicate users across tenants.
+        
         Args:
             scim_user_data: SCIM user data from Azure AD
             
         Returns:
-            Created User object
+            Created User object or raises ValueError if user already exists
         """
         try:
             # Extract user data from SCIM format
@@ -51,18 +54,47 @@ class AzureSCIMService:
             job_title = scim_user_data.get('title', '')
             active = scim_user_data.get('active', True)
             
+            if not email:
+                raise ValueError("User email is required")
+            
+            # SECURITY: Check if user already exists globally
+            existing_user = User.objects.filter(email=email).first()
+            if existing_user:
+                # Check if user already belongs to this tenant
+                existing_membership = TenantMembership.objects.filter(
+                    user=existing_user,
+                    tenant=self.tenant,
+                    is_active=True
+                ).first()
+                
+                if existing_membership:
+                    logger.info(f"User {email} already exists in tenant {self.tenant.name}")
+                    return existing_user
+                else:
+                    # User exists but belongs to different tenant(s)
+                    logger.warning(
+                        f"SECURITY: User {email} already exists in other tenant(s) "
+                        f"but not in {self.tenant.name}. Cannot create duplicate user."
+                    )
+                    raise ValueError(
+                        f"User {email} already exists in another tenant. "
+                        f"Users cannot be duplicated across tenants."
+                    )
+            
             # Determine role from Azure AD groups
             groups = scim_user_data.get('groups', [])
             role = self._determine_role_from_groups(groups)
             
             with transaction.atomic():
-                # Create user
+                # Create user (we've verified they don't exist)
                 user = User.objects.create(
-                    azure_id=azure_id,
-                    azure_tenant_id=self.sso_config.azure_tenant_id,
                     email=email,
                     first_name=first_name,
                     last_name=last_name,
+                    username=email,
+                    name=f"{first_name} {last_name}".strip() or email,
+                    azure_id=azure_id,
+                    azure_tenant_id=self.sso_config.azure_tenant_id,
                     department=department,
                     job_title=job_title,
                     is_sso_user=True,
@@ -225,6 +257,10 @@ class AzureSCIMService:
         """
         Perform full synchronization with Azure AD via Microsoft Graph API
         
+        SECURITY: Checks if users already exist globally before creating.
+        Only creates users that don't exist and only creates memberships
+        for users that don't already belong to this tenant.
+        
         Returns:
             Dictionary with sync statistics
         """
@@ -233,8 +269,12 @@ class AzureSCIMService:
                 'total': 0,
                 'created': 0,
                 'updated': 0,
+                'skipped_existing': 0,
+                'memberships_created': 0,
+                'memberships_skipped': 0,
                 'deactivated': 0,
-                'errors': 0
+                'errors': 0,
+                'existing_users': []  # List of emails that already exist
             }
             
             # Get access token for Microsoft Graph API
@@ -248,23 +288,63 @@ class AzureSCIMService:
             # Process each user
             for user_data in users_data:
                 try:
+                    email = user_data.get('mail') or user_data.get('userPrincipalName')
+                    if not email:
+                        logger.warning(f"Skipping user with no email: {user_data.get('id', 'unknown')}")
+                        stats['errors'] += 1
+                        continue
+                    
+                    # SECURITY: Check if user already exists globally
+                    existing_user = User.objects.filter(email=email).first()
+                    
+                    if existing_user:
+                        # User already exists - check if they belong to this tenant
+                        existing_membership = TenantMembership.objects.filter(
+                            user=existing_user,
+                            tenant=self.tenant,
+                            is_active=True
+                        ).first()
+                        
+                        if existing_membership:
+                            # User already belongs to this tenant - skip
+                            logger.info(f"User {email} already exists in tenant {self.tenant.name} - skipping")
+                            stats['skipped_existing'] += 1
+                            stats['existing_users'].append(email)
+                            continue
+                        else:
+                            # User exists but belongs to different tenant(s)
+                            # Don't create duplicate user - just log and skip
+                            logger.warning(
+                                f"SECURITY: User {email} already exists in other tenant(s) "
+                                f"but not in {self.tenant.name}. Skipping to prevent duplicate users."
+                            )
+                            stats['skipped_existing'] += 1
+                            stats['existing_users'].append(email)
+                            continue
+                    
+                    # User doesn't exist - create new user
                     user, created = self._create_or_update_user(user_data)
                     
                     if created:
                         stats['created'] += 1
-                        logger.info(f"Created user from Azure AD: {user.email}")
+                        logger.info(f"Created new user from Azure AD: {user.email}")
                     else:
                         stats['updated'] += 1
                         logger.info(f"Updated user from Azure AD: {user.email}")
                     
-                    # Create or update tenant membership (separate try-catch to ensure membership is created)
+                    # Create tenant membership (only for newly created users)
                     try:
-                        self._create_or_update_membership(user, user_data)
+                        membership, membership_created = self._create_or_update_membership(user, user_data)
+                        if membership_created:
+                            stats['memberships_created'] += 1
+                        else:
+                            stats['memberships_skipped'] += 1
                     except Exception as membership_error:
-                        logger.warning(f"Failed to create membership for user {user.email}, but user was created: {membership_error}")
+                        logger.warning(f"Failed to create membership for user {user.email}: {membership_error}")
                         # Try to create membership with default role
                         try:
                             self._create_or_update_membership(user, {'role': 'member', 'accountEnabled': True})
+                            stats['memberships_created'] += 1
                         except Exception as fallback_error:
                             logger.error(f"Failed to create membership with fallback role for user {user.email}: {fallback_error}")
                             stats['errors'] += 1
@@ -273,7 +353,7 @@ class AzureSCIMService:
                     logger.error(f"Failed to process user {user_data.get('mail', 'unknown')}: {e}")
                     stats['errors'] += 1
             
-            stats['total'] = stats['created'] + stats['updated']
+            stats['total'] = stats['created'] + stats['updated'] + stats['skipped_existing']
             
             # Update sync status
             self.sso_config.last_sync_at = timezone.now()
@@ -378,10 +458,24 @@ class AzureSCIMService:
     def _create_or_update_user(self, user_data: Dict[str, Any]) -> Tuple[User, bool]:
         """
         Create or update user from Azure AD data
+        
+        SECURITY: This method should only be called for users that don't exist globally.
+        The caller is responsible for checking if the user already exists.
         """
         email = user_data.get('mail') or user_data.get('userPrincipalName')
         if not email:
             raise ValueError("User has no email address")
+        
+        # SECURITY: Double-check that user doesn't already exist
+        # This is a safety check in case the method is called incorrectly
+        existing_user = User.objects.filter(email=email).first()
+        if existing_user:
+            logger.warning(
+                f"SECURITY: Attempted to create user {email} that already exists. "
+                f"This should have been caught earlier. Returning existing user."
+            )
+            # Don't update the existing user - just return it
+            return existing_user, False
         
         # Extract user information
         first_name = user_data.get('givenName', '')
@@ -393,70 +487,71 @@ class AzureSCIMService:
         azure_id = user_data.get('id', '')
         account_enabled = user_data.get('accountEnabled', True)
         
-        # Create or update user
-        user, created = User.objects.get_or_create(
+        # Create new user (we've already verified they don't exist)
+        user = User.objects.create(
             email=email,
-            defaults={
-                'first_name': first_name,
-                'last_name': last_name,
-                'username': email,  # Use email as username
-                'azure_id': azure_id,
-                'azure_upn': user_data.get('userPrincipalName', ''),
-                'department': department,
-                'job_title': job_title,
-                'is_sso_user': True,
-                'is_active': account_enabled,
-                'is_staff': False,
-                'is_superuser': False
-            }
+            first_name=first_name,
+            last_name=last_name,
+            username=email,  # Use email as username
+            name=f"{first_name} {last_name}".strip() or display_name or email,
+            azure_id=azure_id,
+            azure_upn=user_data.get('userPrincipalName', ''),
+            department=department,
+            job_title=job_title,
+            is_sso_user=True,
+            is_active=account_enabled,
+            is_staff=False,
+            is_superuser=False,
+            primary_tenant=self.tenant
         )
         
-        if not created:
-            # Update existing user
-            user.first_name = first_name
-            user.last_name = last_name
-            user.azure_id = azure_id
-            user.azure_upn = user_data.get('userPrincipalName', '')
-            user.department = department
-            user.job_title = job_title
-            user.is_sso_user = True
-            user.is_active = account_enabled
-            user.save()
-        
-        return user, created
+        logger.info(f"Created new user {email} for tenant {self.tenant.name}")
+        return user, True
     
-    def _create_or_update_membership(self, user: User, user_data: Dict[str, Any]) -> None:
+    def _create_or_update_membership(self, user: User, user_data: Dict[str, Any]) -> Tuple[TenantMembership, bool]:
         """
         Create or update tenant membership for user
+        
+        Returns:
+            Tuple of (membership, created) where created is True if membership was created
         """
+        # SECURITY: Check if membership already exists
+        existing_membership = TenantMembership.objects.filter(
+            user=user,
+            tenant=self.tenant
+        ).first()
+        
+        if existing_membership:
+            # Update existing membership
+            role = self._determine_user_role(user_data)
+            existing_membership.role = role
+            existing_membership.is_active = user_data.get('accountEnabled', True)
+            existing_membership.save()
+            return existing_membership, False
+        
         # Determine role based on user properties or groups
         role = self._determine_user_role(user_data)
         
-        membership, created = TenantMembership.objects.get_or_create(
+        # Create new membership
+        membership = TenantMembership.objects.create(
             user=user,
             tenant=self.tenant,
-            defaults={
-                'role': role,
-                'is_active': user_data.get('accountEnabled', True),
-                'can_run_scans': True,
-                'can_export_reports': True,
-                'can_invite_users': role == 'admin',
-                'can_manage_users': role == 'admin',
-                'can_manage_settings': role == 'admin',
-                'can_view_analytics': True,
-                'can_manage_billing': role == 'admin',
-                'can_manage_providers': role == 'admin',
-                'can_manage_integrations': role == 'admin',
-                'can_manage_scans': role == 'admin',
-                'unlimited_visibility': role == 'admin'
-            }
+            role=role,
+            is_active=user_data.get('accountEnabled', True),
+            can_run_scans=True,
+            can_export_reports=True,
+            can_invite_users=role == 'admin',
+            can_manage_users=role == 'admin',
+            can_manage_settings=role == 'admin',
+            can_view_analytics=True,
+            can_manage_billing=role == 'admin',
+            can_manage_providers=role == 'admin',
+            can_manage_integrations=role == 'admin',
+            can_manage_scans=role == 'admin',
+            unlimited_visibility=role == 'admin'
         )
         
-        if not created:
-            # Update existing membership
-            membership.role = role
-            membership.is_active = user_data.get('accountEnabled', True)
-            membership.save()
+        return membership, True
     
     def _determine_user_role(self, user_data: Dict[str, Any]) -> str:
         """

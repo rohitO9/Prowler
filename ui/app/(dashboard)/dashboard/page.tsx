@@ -21,7 +21,7 @@ import {
   UserPlus,
   Mail
 } from 'lucide-react';
-import { useToast } from '@/components/ui/use-toast';
+import { useToast } from '@/components/ui/toast/use-toast';
 
 interface TenantInfo {
   id: string;

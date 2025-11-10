@@ -1,10 +1,9 @@
+'use client';
 
-import { ReactNode } from "react";
+import { ReactNode, useEffect, useState } from "react";
 
 import { ThemeSwitch } from "@/components/ThemeSwitch";
 import { UserProfileProps } from "@/types";
-import { auth } from "@/auth.config";
-
 
 import Link from "next/link";
 import { Button } from "../button/button";
@@ -15,11 +14,111 @@ interface NavbarProps {
   user: UserProfileProps;
 }
 
-export async function Navbar({ title, icon, user }: NavbarProps) {
-  const session = await auth();
-  const tenantPrefix = (session as any)?.tenantPrefix || (session as any)?.tenant_prefix;
-  const tenantSuffix = (session as any)?.tenantSuffix || (session as any)?.tenant_suffix;
-  const tenantName = (session as any)?.tenantName || (session as any)?.tenant_name;
+interface TenantInfo {
+  name?: string;
+  trial_ends_at?: string;
+}
+
+export function Navbar({ title, icon, user }: NavbarProps) {
+  const [tenantInfo, setTenantInfo] = useState<TenantInfo | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    async function getTenantInfo() {
+      try {
+        setIsLoading(true);
+        const host = window.location.hostname;
+        console.log('🔍 [Navbar] Current hostname:', host);
+        
+        // Always try to fetch tenant info if we have a subdomain
+        const subdomain = host.split('.')[0];
+        console.log('🔍 [Navbar] Extracted subdomain:', subdomain);
+        
+        if (subdomain && subdomain !== 'localhost' && subdomain !== '127.0.0.1' && subdomain !== 'www') {
+          const response = await fetch('/api/v1/tenant/public-info', {
+            method: 'GET',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+          });
+
+          console.log('🔍 [Navbar] Response status:', response.status);
+          
+          if (response.ok) {
+            const data = await response.json();
+            console.log('🔍 [Navbar] Full API response:', JSON.stringify(data, null, 2));
+            
+            // Handle nested response structure: data.data.data.tenant (three levels of nesting)
+            let tenant = null;
+            if (data.data?.data?.data?.tenant) {
+              // Three levels: data.data.data.tenant
+              tenant = data.data.data.data.tenant;
+              console.log('🔍 [Navbar] Found tenant at data.data.data.tenant');
+            } else if (data.data?.data?.tenant) {
+              // Two levels: data.data.tenant
+              tenant = data.data.data.tenant;
+              console.log('🔍 [Navbar] Found tenant at data.data.tenant');
+            } else if (data.data?.tenant) {
+              // One level: data.tenant
+              tenant = data.data.tenant;
+              console.log('🔍 [Navbar] Found tenant at data.tenant');
+            } else if (data.data?.attributes) {
+              tenant = data.data.attributes;
+              console.log('🔍 [Navbar] Found tenant at data.data.attributes');
+            } else if (data.data) {
+              tenant = data.data;
+              console.log('🔍 [Navbar] Found tenant at data.data');
+            } else if (data.attributes) {
+              tenant = data.attributes;
+              console.log('🔍 [Navbar] Found tenant at data.attributes');
+            } else {
+              tenant = data;
+              console.log('🔍 [Navbar] Using data as tenant');
+            }
+            
+            console.log('🔍 [Navbar] Extracted tenant:', tenant);
+            console.log('🔍 [Navbar] Tenant name:', tenant?.name);
+            console.log('🔍 [Navbar] Trial ends at:', tenant?.trial_ends_at);
+            setTenantInfo(tenant);
+          } else {
+            const errorData = await response.json().catch(() => ({}));
+            console.error('🔍 [Navbar] API response not ok:', response.status, errorData);
+          }
+        } else {
+          console.log('🔍 [Navbar] No valid subdomain detected, host:', host, 'subdomain:', subdomain);
+        }
+      } catch (error) {
+        console.error('❌ [Navbar] Error fetching tenant info:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+
+    getTenantInfo();
+  }, []);
+
+  const tenantName = tenantInfo?.name;
+  const trialEndsAt = tenantInfo?.trial_ends_at;
+  
+  // Calculate days remaining
+  let daysRemaining: number | null = null;
+  if (trialEndsAt) {
+    try {
+      const trialDate = new Date(trialEndsAt);
+      const now = new Date();
+      const diffMs = trialDate.getTime() - now.getTime();
+      daysRemaining = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+      console.log('🔍 [Navbar] Trial calculation:', {
+        trialEndsAt,
+        trialDate: trialDate.toISOString(),
+        now: now.toISOString(),
+        diffMs,
+        daysRemaining
+      });
+    } catch (error) {
+      console.error('❌ [Navbar] Error calculating days remaining:', error);
+    }
+  }
   return (
     <header className="sticky top-0 z-10 w-full bg-background/95 shadow backdrop-blur supports-[backdrop-filter] bg-gray-100 dark:bg-gray-900 dark:shadow-primary">
       <div className="mx-4 flex h-14 items-center sm:mx-8">
@@ -54,11 +153,17 @@ export async function Navbar({ title, icon, user }: NavbarProps) {
 
         {/* Center: Org badge if present */}
         <div className="flex-1 flex justify-center">
-          {tenantName && (
-            <div className="px-3 py-1 rounded-full bg-blue-100 text-blue-800 text-sm font-semibold border border-blue-300">
-              {tenantPrefix ? `[${tenantPrefix}] ` : ""}
+          {isLoading ? (
+            <div className="px-3 py-1 rounded-full bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 text-sm font-semibold border border-gray-300 dark:border-gray-600">
+              Loading...
+            </div>
+          ) : tenantName ? (
+            <div className="px-3 py-1 rounded-full bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 text-sm font-semibold border border-blue-300 dark:border-blue-700">
               {tenantName}
-              {tenantSuffix ? ` - ${tenantSuffix}` : ""}
+            </div>
+          ) : (
+            <div className="px-3 py-1 rounded-full bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 text-sm font-semibold border border-gray-300 dark:border-gray-600">
+              No Company
             </div>
           )}
         </div>
@@ -68,11 +173,19 @@ export async function Navbar({ title, icon, user }: NavbarProps) {
 
         {/* Right: User/Theme/Trial */}
         <div className="flex items-center flex-none gap-3">
-          {tenantName && (
-            <span className="px-3 py-1 rounded bg-yellow-100 text-yellow-800 text-sm font-medium border border-yellow-300">
-              {tenantPrefix ? `${tenantPrefix}-` : ''}{tenantSuffix || ''}
+          {isLoading ? (
+            <div className="px-3 py-1 rounded bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 text-sm font-medium border border-gray-300 dark:border-gray-600">
+              Loading...
+            </div>
+          ) : trialEndsAt && daysRemaining !== null ? (
+            <span className="px-3 py-1 rounded bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200 text-sm font-medium border border-yellow-300 dark:border-yellow-700">
+              {daysRemaining > 0 ? `${daysRemaining} days left` : daysRemaining === 0 ? 'Trial ends today' : 'Trial expired'}
             </span>
-          )}
+          ) : trialEndsAt ? (
+            <span className="px-3 py-1 rounded bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200 text-sm font-medium border border-yellow-300 dark:border-yellow-700">
+              Trial ends: {new Date(trialEndsAt).toLocaleDateString()}
+            </span>
+          ) : null}
           <ThemeSwitch />
          
         </div>

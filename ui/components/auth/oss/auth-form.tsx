@@ -73,6 +73,7 @@ export const AuthForm = ({
   const { toast } = useToast();
   const searchParams = useSearchParams();
   const [isSSOMode, setIsSSOMode] = useState(false);
+  const [imageError, setImageError] = useState(false);
 
   // Prefill organization from localStorage on sign-in
   useEffect(() => {
@@ -313,12 +314,27 @@ export const AuthForm = ({
           <span className="text-xs text-gray-500 dark:text-gray-400 text-center w-full">Cloud Security Tool</span>
         </div>
         {/* Login Logo Image and Welcome Message */}
-        <div className="mt-8 mb-6  flex flex-col items-center">
-          <img
-            src="/loginlogo.png"
-            alt="Login Logo"
-            className="w-[400px] h-[400px] object-contain"
-          />
+        <div className="mt-8 mb-6 flex flex-col items-center">
+          <div className="relative w-[400px] h-[400px] flex items-center justify-center">
+            {!imageError ? (
+              <img
+                src="/loginlogo.png"
+                alt="Login Logo"
+                className="w-full h-full object-contain"
+                onError={() => {
+                  console.error('Failed to load login logo from /loginlogo.png');
+                  setImageError(true);
+                }}
+                onLoad={() => {
+                  console.log('Login logo loaded successfully');
+                }}
+              />
+            ) : (
+              <div className="w-64 h-64 rounded-2xl bg-gradient-to-br from-indigo-500 to-blue-600 flex items-center justify-center shadow-2xl">
+                <span className="text-6xl font-black text-white select-none">VQ</span>
+              </div>
+            )}
+          </div>
           <h2 className="mt-2 text-3xl font-bold text-center">
             Welcome to <span className="bg-gradient-to-r from-indigo-600 via-blue-600 to-indigo-900 bg-clip-text text-transparent dark:from-indigo-400 dark:via-blue-400 dark:to-indigo-600">VulneraIQ!</span>
           </h2>

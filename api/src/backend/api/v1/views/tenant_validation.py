@@ -13,6 +13,8 @@ from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 from django.utils.decorators import method_decorator
+from django.utils import timezone
+from datetime import timedelta
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
@@ -436,37 +438,74 @@ def get_tenant_public_info(request):
     This endpoint is accessible without authentication.
     """
     try:
-        # Get tenant from subdomain
-        host = request.get_host().split(':')[0]
-        if not host.endswith('.localhost'):
-            return Response({
-                'error': 'Invalid request context',
-                'code': 'INVALID_CONTEXT'
-            }, status=status.HTTP_400_BAD_REQUEST)
+        # First, try to get tenant from request (set by middleware)
+        tenant = getattr(request, 'tenant', None)
         
-        subdomain = host.replace('.localhost', '')
-        try:
-            tenant = Tenant.objects.get(subdomain=subdomain, is_active=True)
-        except Tenant.DoesNotExist:
+        # If not set by middleware, try to get from header
+        if not tenant:
+            subdomain = request.META.get('HTTP_X_TENANT_SUBDOMAIN', '').strip()
+            if not subdomain:
+                # Try to extract from host as fallback
+                host = request.get_host().split(':')[0]
+                if '.localhost' in host:
+                    subdomain = host.split('.')[0]
+                elif len(host.split('.')) > 2:
+                    subdomain = host.split('.')[0]
+            
+            if subdomain:
+                try:
+                    tenant = Tenant.objects.get(subdomain=subdomain, is_active=True)
+                    logger.debug(f"Found tenant from subdomain: {subdomain}")
+                except Tenant.DoesNotExist:
+                    logger.warning(f"Tenant not found for subdomain: {subdomain}")
+                    return Response({
+                        'error': 'Tenant not found',
+                        'code': 'TENANT_NOT_FOUND'
+                    }, status=status.HTTP_404_NOT_FOUND)
+            else:
+                logger.warning("No tenant subdomain found in request")
+                return Response({
+                    'error': 'Tenant subdomain is required',
+                    'code': 'MISSING_SUBDOMAIN'
+                }, status=status.HTTP_400_BAD_REQUEST)
+        
+        if not tenant:
             return Response({
                 'error': 'Tenant not found',
                 'code': 'TENANT_NOT_FOUND'
             }, status=status.HTTP_404_NOT_FOUND)
         
+        # If trial_ends_at is null and subscription_status is 'trial', set it to 14 days from now
+        if not tenant.trial_ends_at and tenant.subscription_status == 'trial':
+            tenant.trial_ends_at = timezone.now() + timedelta(days=14)
+            tenant.save(update_fields=['trial_ends_at'])
+            logger.info(f"Set trial_ends_at for tenant {tenant.subdomain}: {tenant.trial_ends_at}")
+        
         # Return public tenant information
         return Response({
-                'tenant': {
-                    'name': tenant.name,
-                    'subdomain': tenant.subdomain,
-                    'is_active': tenant.is_active,
-                    'allow_registration': tenant.allow_registration,
-                    'theme_color': tenant.theme_color,
-                    'logo_url': tenant.logo_url,
+            'data': {
+                'data': {
+                    'tenant': {
+                        'id': str(tenant.id),
+                        'name': tenant.name,
+                        'subdomain': tenant.subdomain,
+                        'is_active': tenant.is_active,
+                        'is_verified': tenant.is_verified,
+                        'allow_registration': tenant.allow_registration,
+                        'require_email_verification': tenant.require_email_verification,
+                        'theme_color': tenant.theme_color,
+                        'secondary_color': getattr(tenant, 'secondary_color', None),
+                        'logo_url': tenant.logo_url,
+                        'subscription_status': tenant.subscription_status,
+                        'trial_ends_at': tenant.trial_ends_at.isoformat() if tenant.trial_ends_at else None,
+                        'contact_email': tenant.contact_email,
+                    }
                 }
+            }
         }, status=status.HTTP_200_OK)
         
     except Exception as e:
-        logger.error(f"Error getting tenant public info: {e}")
+        logger.error(f"Error getting tenant public info: {e}", exc_info=True)
         return Response({
             'error': 'Internal server error',
             'code': 'INTERNAL_ERROR'

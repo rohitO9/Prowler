@@ -107,6 +107,7 @@ export interface MembershipDetailData {
 
 export interface UserDataWithRoles
   extends Omit<UserData, "attributes" | "relationships"> {
+  data: any;
   attributes: UserAttributes & {
     role?: {
       name: string;

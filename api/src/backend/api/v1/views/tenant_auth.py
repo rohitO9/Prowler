@@ -6,6 +6,8 @@ from rest_framework.parsers import JSONParser, FormParser, MultiPartParser
 from django.contrib.auth import authenticate
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.db import transaction
+from django.utils import timezone
+from datetime import timedelta
 from api.models import Tenant, User, TenantMembership
 import logging
 
@@ -274,16 +276,48 @@ def tenant_register(request):
             # CASE 1: Tenant exists - register user to existing tenant
             logger.info(f"Tenant exists: {existing_tenant.name} ({subdomain}) - registering user")
             
-            # Check if user already exists
-            if User.objects.filter(email=email).exists():
+            # SECURITY: Check if tenant allows registration
+            if not existing_tenant.allow_registration:
                 return Response({
                     'errors': [{
-                        'status': '409',
-                        'code': 'user_exists',
-                        'title': 'User Already Exists',
-                        'detail': 'A user with this email already exists',
+                        'status': '403',
+                        'code': 'registration_disabled',
+                        'title': 'Registration Disabled',
+                        'detail': 'Registration is not allowed for this organization. Please contact an administrator.',
                     }]
-                }, status=status.HTTP_409_CONFLICT)
+                }, status=status.HTTP_403_FORBIDDEN)
+            
+            # SECURITY: Check if user already exists globally
+            existing_user = User.objects.filter(email=email).first()
+            if existing_user:
+                # Check if user already belongs to this tenant
+                from api.models import TenantMembership
+                existing_membership = TenantMembership.objects.filter(
+                    user=existing_user,
+                    tenant=existing_tenant,
+                    is_active=True
+                ).first()
+                
+                if existing_membership:
+                    return Response({
+                        'errors': [{
+                            'status': '409',
+                            'code': 'user_already_member',
+                            'title': 'Already a Member',
+                            'detail': 'You are already a member of this organization. Please sign in instead.',
+                        }]
+                    }, status=status.HTTP_409_CONFLICT)
+                else:
+                    # User exists but belongs to different tenant(s)
+                    return Response({
+                        'errors': [{
+                            'status': '409',
+                            'code': 'user_exists_other_tenant',
+                            'title': 'Account Already Exists',
+                            'detail': 'An account with this email already exists. Please sign in to access your account. '
+                                     'If you need access to this organization, please contact an administrator for an invitation.',
+                        }]
+                    }, status=status.HTTP_409_CONFLICT)
             
             # Create user and assign to existing tenant
             with transaction.atomic():
@@ -334,24 +368,34 @@ def tenant_register(request):
             company_name = subdomain.replace('-', ' ').replace('_', ' ').title()
             logger.info(f"Auto-generated company name from subdomain: {company_name}")
         
-        # ✅ Check for duplicate user email
-        if User.objects.filter(email=email).exists():
+        # SECURITY: Check for duplicate user email - prevent users from registering under multiple tenants
+        existing_user = User.objects.filter(email=email).first()
+        if existing_user:
+            # User already exists - they cannot create a new tenant with the same email
+            # They should either:
+            # 1. Sign in to their existing account
+            # 2. Use a different email
+            # 3. Get invited to join another tenant
             return Response({
                 'errors': [{
                     'status': '409',
                     'code': 'email_exists',
                     'title': 'Email Already Registered',
-                    'detail': f'An account with email "{email}" already exists',
+                    'detail': f'An account with email "{email}" already exists. '
+                             f'Please sign in to your existing account. '
+                             f'If you need to create a new organization, please use a different email address.',
                 }]
             }, status=status.HTTP_409_CONFLICT)
         
         # ✅ Create tenant and user in atomic transaction
         with transaction.atomic():
-            # Create tenant
+            # Create tenant with trial period
             tenant = Tenant.objects.create(
                 name=company_name,
                 subdomain=subdomain,
                 is_active=True,
+                subscription_status='trial',
+                trial_ends_at=timezone.now() + timedelta(days=14),  # 14-day trial
             )
             
             logger.info(f"Created tenant: {tenant.name} ({tenant.subdomain})")

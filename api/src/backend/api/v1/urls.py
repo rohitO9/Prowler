@@ -56,6 +56,7 @@ urlpatterns = [
     
     # Public Tenant Information (no authentication required)
     path('tenant/public-info/', tenant_validation.get_tenant_public_info, name='tenant-public-info'),
+    path('tenant/public-info', tenant_validation.get_tenant_public_info, name='tenant-public-info-no-slash'),
     
     # Authenticated Tenant Information
     # path('tenant/info/', include('api.v1.views.tenant_info.urls')),
