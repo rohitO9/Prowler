@@ -63,6 +63,8 @@ coverage*
 # Node
 node_modules/
 **/node_modules/
+node_modules_tmp/
+**/node_modules_tmp/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
@@ -126,3 +128,16 @@ htmlcov/
 
 # Persistent data
 _data/
+
+# Large binary files
+*.dll
+*.so
+*.dylib
+*.m4v
+*.mov
+*.mp4
+*.avi
+
+# Temporary build artifacts
+**/tmp/
+**/temp/
