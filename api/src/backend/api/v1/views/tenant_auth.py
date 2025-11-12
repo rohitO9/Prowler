@@ -364,6 +364,21 @@ def tenant_register(request):
             # CASE 2: Tenant doesn't exist - create new tenant with user
             logger.info(f"Creating new tenant: {subdomain}")
             
+            # SECURITY: Explicit subdomain uniqueness check before attempting creation
+            # This provides better error messages than database constraint violation
+            existing_tenant_check = Tenant.objects.filter(subdomain=subdomain).first()
+            if existing_tenant_check:
+                logger.warning(f"SECURITY: Attempted to create tenant with existing subdomain: {subdomain}")
+                return Response({
+                    'errors': [{
+                        'status': '409',
+                        'code': 'subdomain_exists',
+                        'title': 'Subdomain Already Exists',
+                        'detail': f'A tenant with subdomain "{subdomain}" already exists. '
+                                 f'Please choose a different subdomain or contact support if you believe this is an error.',
+                    }]
+                }, status=status.HTTP_409_CONFLICT)
+            
             # Auto-generate company name from subdomain
             company_name = subdomain.replace('-', ' ').replace('_', ' ').title()
             logger.info(f"Auto-generated company name from subdomain: {company_name}")

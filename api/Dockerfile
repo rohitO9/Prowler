@@ -53,9 +53,12 @@ WORKDIR /home/prowler/backend
 # Development image
 FROM build AS dev
 
-ENTRYPOINT ["../docker-entrypoint.sh", "dev"]
+# Ensure entrypoint script is available and executable
+COPY --from=build --chmod=755 /home/prowler/docker-entrypoint.sh /home/prowler/docker-entrypoint.sh
+
+ENTRYPOINT ["/home/prowler/docker-entrypoint.sh", "dev"]
 
 # Production image
 FROM build
 
-ENTRYPOINT ["../docker-entrypoint.sh", "prod"]
+ENTRYPOINT ["/home/prowler/docker-entrypoint.sh", "prod"]

@@ -19,29 +19,19 @@ const defaultValues: z.infer<typeof formSchemaSignIn> = {
 async function safeJsonParse(response: Response) {
   const contentType = response.headers.get("content-type") || "";
   
-  // Log response details for debugging
-  console.log(`Response status: ${response.status} ${response.statusText}`);
-  console.log(`Content-Type: ${contentType}`);
-  console.log(`Response URL: ${response.url}`);
-  
   if (
     !contentType.includes("application/json") &&
     !contentType.includes("application/vnd.api+json")
   ) {
     const text = await response.text();
-    console.error("Non-JSON response received:", text.substring(0, 500));
     throw new Error(
       `Non-JSON response from backend (${response.status}):\n${text.substring(0, 200)}`
     );
   }
   
-  
   try {
-    const json = await response.json();
-    console.log("Parsed JSON response:", JSON.stringify(json, null, 2));
-    return json;
+    return await response.json();
   } catch (parseError) {
-    console.error("Failed to parse JSON:", parseError);
     throw new Error("Invalid JSON response from backend");
   }
 }
@@ -51,13 +41,6 @@ export async function authenticate(
   formData: z.infer<typeof formSchemaSignIn>
 ) {
   try {
-    console.log("🔍 [authenticate] Attempting authentication for:", formData.email);
-    console.log("🔍 [authenticate] Form data:", {
-      email: formData.email,
-      password: formData.password ? "***" : "MISSING",
-      company: (formData as any).company
-    });
-    
     const result = await signIn("credentials", {
       ...formData,
       // Support enterprise: allow passing organization/tenant name from UI as "company"
@@ -66,10 +49,7 @@ export async function authenticate(
       redirect: false,
     });
     
-    console.log("🔍 [authenticate] signIn result:", result);
-    
     if (result?.error) {
-      console.error("🔍 [authenticate] signIn returned error:", result.error);
       throw new Error(result.error);
     }
     
@@ -77,7 +57,6 @@ export async function authenticate(
       message: "Success",
     };
   } catch (error) {
-    console.error("🔍 [authenticate] Authentication error:", error);
     
     if (error instanceof AuthError) {
       switch (error.type) {
@@ -163,7 +142,6 @@ export const createNewUser = async (
     if (hostname.includes('localhost') && hostname !== 'localhost') {
       subdomain = hostname.split('.')[0];
       apiBaseUrl = `http://${hostname}:8080/api/v1`;
-      console.log('🔍 [createNewUser] Client-side fallback detected subdomain:', subdomain);
     }
   }
   
@@ -172,11 +150,8 @@ export const createNewUser = async (
     if (host.includes('localhost') && host !== 'localhost') {
       subdomain = host.split('.')[0];
       apiBaseUrl = `http://${host}:8080/api/v1`;
-      console.log('🔍 [createNewUser] Server-side fallback detected subdomain:', subdomain);
     }
   }
-  
-  console.log('🔍 [createNewUser] Final subdomain:', subdomain);
   
   const url = new URL(`${apiBaseUrl}/tenant/register`);
 
@@ -185,6 +160,18 @@ export const createNewUser = async (
   }
 
   // Extract first and last name from full name
+  // Name is required for sign-up, but TypeScript needs explicit check
+  if (!formData.name) {
+    return {
+      errors: [
+        {
+          source: { pointer: "/data/attributes/name" },
+          detail: "Name is required",
+        },
+      ],
+    };
+  }
+
   const nameParts = formData.name.split(' ');
   const first_name = nameParts[0] || '';
   const last_name = nameParts.slice(1).join(' ') || '';
@@ -203,9 +190,6 @@ export const createNewUser = async (
     },
   };
   
-  console.log("Creating new user with payload:", bodyData);
-  console.log("API URL:", url.toString());
-
   try {
     const response = await fetch(url.toString(), {
       method: "POST",
@@ -249,7 +233,6 @@ export const createNewUser = async (
 
     return parsedResponse;
   } catch (error) {
-    console.error("Create user error:", error);
     return {
       errors: [
         {
@@ -273,7 +256,6 @@ export const getToken = async (formData: z.infer<typeof formSchemaSignIn>, host?
     if (hostname.includes('localhost') && hostname !== 'localhost') {
       // We're on a subdomain like company1.localhost
       apiUrl = `http://${hostname}:8080/api/v1`;
-      console.log('🔍 [getToken] Using subdomain API URL:', apiUrl);
     }
   }
   
@@ -284,11 +266,9 @@ export const getToken = async (formData: z.infer<typeof formSchemaSignIn>, host?
   
   // Check if we have host parameter (server-side)
   if (host) {
-    console.log('🔍 [getToken] Server-side host:', host);
     if (host.includes('localhost') && host !== 'localhost') {
       // Extract subdomain from company1.localhost:3000
       subdomain = host.split('.')[0];
-      console.log('🔍 [getToken] Server-side detected subdomain:', subdomain);
     }
   } else if (typeof window !== 'undefined') {
     // Client-side detection
@@ -296,7 +276,6 @@ export const getToken = async (formData: z.infer<typeof formSchemaSignIn>, host?
     if (hostname.includes('localhost') && hostname !== 'localhost') {
       // Extract subdomain from company1.localhost
       subdomain = hostname.split('.')[0];
-      console.log('🔍 [getToken] Client-side detected subdomain:', subdomain);
     }
   }
   
@@ -314,11 +293,6 @@ export const getToken = async (formData: z.infer<typeof formSchemaSignIn>, host?
   };
 
   try {
-    console.log("🔍 [getToken] Token request payload:", bodyData);
-    console.log("🔍 [getToken] Making POST request to:", url.toString());
-    console.log("🔍 [getToken] API URL:", apiUrl);
-    console.log("🔍 [getToken] Detected subdomain:", subdomain);
-    
     const response = await fetch(url.toString(), {
       method: "POST",
       headers: {
@@ -327,12 +301,6 @@ export const getToken = async (formData: z.infer<typeof formSchemaSignIn>, host?
       },
       body: JSON.stringify(bodyData),
     });
-    
-    console.log("🔍 [getToken] Response status:", response.status);
-    console.log("🔍 [getToken] Response headers:", Object.fromEntries(response.headers.entries()));
-    
-    console.log("Response status:", response.status);
-    console.log("Response URL:", response.url);
 
     if (!response.ok) {
       let errorMsg = `Token request failed (${response.status} ${response.statusText})`;
@@ -347,7 +315,6 @@ export const getToken = async (formData: z.infer<typeof formSchemaSignIn>, host?
           throw new Error(`SSO_ONLY_USER: ${errorMsg}`);
         }
       } catch (parseErr: unknown) {
-        console.error("Failed to parse error response:", parseErr);
         if (parseErr instanceof Error) {
           // If it's already our SSO-only error, rethrow it
           if (parseErr.message.includes('SSO_ONLY_USER')) {
@@ -368,21 +335,14 @@ export const getToken = async (formData: z.infer<typeof formSchemaSignIn>, host?
     const refreshToken = parsedResponse?.data?.refresh;
 
     if (!accessToken || !refreshToken) {
-      console.error("Missing tokens in response:", parsedResponse);
       throw new Error("Tokens missing in backend response.");
     }
-
-    console.log("Successfully received tokens:", {
-      accessTokenLength: accessToken.length,
-      refreshTokenLength: refreshToken.length,
-    });
 
     return {
       accessToken,
       refreshToken,
     };
   } catch (error) {
-    console.error("getToken error:", error);
     throw new Error(error instanceof Error ? error.message : "Error in trying to get token");
   }
 };
@@ -391,13 +351,6 @@ export const getUserByMe = async (accessToken: string, host?: string) => {
   // Use server-side API URL if host is provided, otherwise use client-side
   const apiUrl = host ? getServerApiBaseUrl(host) : getApiBaseUrl();
   const url = new URL(`${apiUrl}/users/me`);
-  
-  console.log("🔍 [getUserByMe] API URL:", apiUrl);
-  console.log("🔍 [getUserByMe] Request URL:", url.toString());
-  console.log("🔍 [getUserByMe] Token length:", accessToken.length);
-  console.log("🔍 [getUserByMe] Token preview:", accessToken.substring(0, 50) + "...");
-  
-  // Getting user info from backend
 
   try {
     const response = await fetch(url.toString(), {
@@ -407,14 +360,8 @@ export const getUserByMe = async (accessToken: string, host?: string) => {
         Authorization: `Bearer ${accessToken}`,
       },
     });
-    
-    console.log("🔍 [getUserByMe] Response status:", response.status);
-    console.log("🔍 [getUserByMe] Response headers:", Object.fromEntries(response.headers.entries()));
 
     const parsedResponse = await safeJsonParse(response);
-    console.log("🔍 [getUserByMe] Raw response:", parsedResponse);
-    console.log("🔍 [getUserByMe] data:", parsedResponse?.data);
-    console.log("🔍 [getUserByMe] attributes:", parsedResponse?.data?.attributes);
 
     if (!response.ok) {
       let errorMsg = `Get user failed (${response.status} ${response.statusText})`;
@@ -438,34 +385,26 @@ export const getUserByMe = async (accessToken: string, host?: string) => {
     // Safety check for response structure (handle double-nested data)
     const attributes = parsedResponse?.data?.data?.attributes || parsedResponse?.data?.attributes;
     if (!attributes) {
-      console.error("🔍 [getUserByMe] Invalid response structure:", parsedResponse);
       throw new Error("Invalid response structure from server");
     }
     
-    const userData = {
+    return {
       name: attributes.name,
       email: attributes.email,
       company: attributes.company_name,
       dateJoined: attributes.date_joined,
     };
     
-    console.log("Successfully retrieved user data:", userData);
-    return userData;
-    
   } catch (error: any) {
-    console.error("getUserByMe error:", error);
     throw new Error(error.message || "Network error or server unreachable");
   }
 };
 
 export async function logOut() {
-  console.log("Logging out user");
-  
   try {
     // Clear NextAuth session
     await signOut({ 
-      redirect: false, // We'll handle redirect manually
-      callbackUrl: '/' // Default redirect URL
+      redirect: false // We'll handle redirect manually
     });
     
     // Clear any cached data
@@ -483,15 +422,12 @@ export async function logOut() {
       localStorage.removeItem('refresh-token');
     }
     
-    console.log("✅ User logged out successfully, session cleared");
-    
     return {
       success: true,
       message: "Logged out successfully"
     };
     
   } catch (error) {
-    console.error("❌ Logout error:", error);
     return {
       success: false,
       message: "Logout failed"

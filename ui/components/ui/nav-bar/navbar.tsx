@@ -28,11 +28,9 @@ export function Navbar({ title, icon, user }: NavbarProps) {
       try {
         setIsLoading(true);
         const host = window.location.hostname;
-        console.log('🔍 [Navbar] Current hostname:', host);
         
-        // Always try to fetch tenant info if we have a subdomain
+        // Extract subdomain from hostname
         const subdomain = host.split('.')[0];
-        console.log('🔍 [Navbar] Extracted subdomain:', subdomain);
         
         if (subdomain && subdomain !== 'localhost' && subdomain !== '127.0.0.1' && subdomain !== 'www') {
           const response = await fetch('/api/v1/tenant/public-info', {
@@ -41,54 +39,34 @@ export function Navbar({ title, icon, user }: NavbarProps) {
               'Content-Type': 'application/json',
             },
           });
-
-          console.log('🔍 [Navbar] Response status:', response.status);
           
           if (response.ok) {
             const data = await response.json();
-            console.log('🔍 [Navbar] Full API response:', JSON.stringify(data, null, 2));
             
             // Handle nested response structure: data.data.data.tenant (three levels of nesting)
             let tenant = null;
             if (data.data?.data?.data?.tenant) {
-              // Three levels: data.data.data.tenant
               tenant = data.data.data.data.tenant;
-              console.log('🔍 [Navbar] Found tenant at data.data.data.tenant');
             } else if (data.data?.data?.tenant) {
-              // Two levels: data.data.tenant
               tenant = data.data.data.tenant;
-              console.log('🔍 [Navbar] Found tenant at data.data.tenant');
             } else if (data.data?.tenant) {
-              // One level: data.tenant
               tenant = data.data.tenant;
-              console.log('🔍 [Navbar] Found tenant at data.tenant');
             } else if (data.data?.attributes) {
               tenant = data.data.attributes;
-              console.log('🔍 [Navbar] Found tenant at data.data.attributes');
             } else if (data.data) {
               tenant = data.data;
-              console.log('🔍 [Navbar] Found tenant at data.data');
             } else if (data.attributes) {
               tenant = data.attributes;
-              console.log('🔍 [Navbar] Found tenant at data.attributes');
             } else {
               tenant = data;
-              console.log('🔍 [Navbar] Using data as tenant');
             }
             
-            console.log('🔍 [Navbar] Extracted tenant:', tenant);
-            console.log('🔍 [Navbar] Tenant name:', tenant?.name);
-            console.log('🔍 [Navbar] Trial ends at:', tenant?.trial_ends_at);
             setTenantInfo(tenant);
-          } else {
-            const errorData = await response.json().catch(() => ({}));
-            console.error('🔍 [Navbar] API response not ok:', response.status, errorData);
           }
-        } else {
-          console.log('🔍 [Navbar] No valid subdomain detected, host:', host, 'subdomain:', subdomain);
         }
       } catch (error) {
-        console.error('❌ [Navbar] Error fetching tenant info:', error);
+        // Silently handle errors - don't break UI if tenant info fails to load
+        setTenantInfo(null);
       } finally {
         setIsLoading(false);
       }
@@ -108,15 +86,9 @@ export function Navbar({ title, icon, user }: NavbarProps) {
       const now = new Date();
       const diffMs = trialDate.getTime() - now.getTime();
       daysRemaining = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
-      console.log('🔍 [Navbar] Trial calculation:', {
-        trialEndsAt,
-        trialDate: trialDate.toISOString(),
-        now: now.toISOString(),
-        diffMs,
-        daysRemaining
-      });
     } catch (error) {
-      console.error('❌ [Navbar] Error calculating days remaining:', error);
+      // Silently handle date parsing errors
+      daysRemaining = null;
     }
   }
   return (

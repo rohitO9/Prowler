@@ -345,23 +345,12 @@ export const useTenantInfo = () => {
       }
 
       const data = await response.json();
-      console.log('🔍 [useTenantInfo] API Response:', data);
-      console.log('🔍 [useTenantInfo] data.data:', data.data);
-      console.log('🔍 [useTenantInfo] data.data?.tenant:', data.data?.tenant);
       
       const result = data.data?.tenant || data.data;
-      console.log('🔍 [useTenantInfo] Final result:', result);
-      console.log('🔍 [useTenantInfo] Setting tenant state with:', result);
       
       // Handle API response structure: data.data.tenant
       setTenant(result);
     } catch (error) {
-      console.error('❌ [useTenantInfo] Error loading tenant:', error);
-      console.error('❌ [useTenantInfo] Error details:', {
-        message: error instanceof Error ? error.message : 'Unknown error',
-        stack: error instanceof Error ? error.stack : undefined,
-        error: error
-      });
       setError(error instanceof Error ? error.message : 'Failed to load tenant');
     } finally {
       setIsLoading(false);

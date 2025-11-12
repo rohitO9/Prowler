@@ -8,7 +8,7 @@ import {
 } from "@/lib/helper";
 import { useEffect, useState } from "react";
 import { getSubdomain } from "@/src/utils/subdomain";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import { useToast } from "@/components/ui";
 
 const SignIn = () => {
@@ -16,14 +16,28 @@ const SignIn = () => {
   const GITHUB_AUTH_URL = getAuthUrl("github");
   // Azure AD URL is fetched dynamically from database via getAzureADLoginUrl() in AzureADLogin component
   const searchParams = useSearchParams();
+  const router = useRouter();
   const [tenantMismatchError, setTenantMismatchError] = useState(false);
   const { toast } = useToast();
 
+  // Auto-detect organization from subdomain (non-blocking)
   useEffect(() => {
-    // Auto-detect organization from subdomain
     const subdomain = getSubdomain();
     if (subdomain && typeof window !== "undefined") {
       localStorage.setItem("company", subdomain);
+    }
+    
+    // Non-blocking tenant validation - middleware already handles this
+    // This is just for UX feedback if tenant doesn't exist
+    if (subdomain) {
+      fetch('/api/v1/tenant/public-info', {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      }).catch(() => {
+        // Silently fail - middleware will handle redirect if tenant doesn't exist
+      });
     }
     
     // Check for SSO mode - auto-trigger Azure AD login for invited users

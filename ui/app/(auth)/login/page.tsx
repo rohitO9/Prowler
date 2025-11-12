@@ -7,9 +7,9 @@ import { signIn } from 'next-auth/react';
 import { z } from 'zod';
 import { Button } from '@/components/ui/button/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label/label';
+import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Alert, AlertDescription } from '@/components/ui/alert/alert';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Loader2, Eye, EyeOff, Shield, Building2 } from 'lucide-react';
 import { useTenant } from '@/hooks/use-tenant';
 import { authenticate } from '@/actions/auth/auth';
@@ -97,7 +97,8 @@ const LoginPage: React.FC<LoginPageProps> = () => {
       const validatedData = loginSchema.parse(formData);
       
       // Attempt authentication with tenant context
-      const result = await authenticate(validatedData);
+      // authenticate expects 2 arguments: prevState and formData
+      const result = await authenticate(null, validatedData);
       
       if (result.message === 'Success') {
         // Authentication successful, redirect to dashboard
@@ -264,18 +265,8 @@ const LoginPage: React.FC<LoginPageProps> = () => {
               </Button>
             </form>
 
-            <div className="mt-6 text-center">
-              <p className="text-sm text-gray-600">
-                Don't have an account?{' '}
-                <button
-                  onClick={() => router.push('/sign-up')}
-                  className="font-medium text-blue-600 hover:text-blue-500"
-                  disabled={isLoading}
-                >
-                  Sign up here
-                </button>
-              </p>
-            </div>
+            {/* SECURITY: Invite-only application - no public registration */}
+            {/* Removed "Sign up here" link - users must be invited by tenant admin */}
           </CardContent>
         </Card>
 
