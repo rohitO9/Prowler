@@ -5,6 +5,9 @@
 [._]ss[a-gi-z]
 [._]sw[a-p]
 
+_data/
+.pytest_cache/
+.venv/
 # Python code
 __pycache__
 venv/
