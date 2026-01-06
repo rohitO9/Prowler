@@ -233,7 +233,7 @@ const LandingPage: React.FC = () => {
                 onRegistrationComplete={(subdomain) => {
                   setShowRegistration(false);
                   // Redirect to the subdomain
-                  window.location.href = `http://${subdomain}.localhost:3000`;
+                  window.location.href = `https://${subdomain}.vulneralq.anantacloud.com`;
                 }}
               />
             </div>
@@ -262,7 +262,7 @@ const LandingPage: React.FC = () => {
                   Access your company dashboard by visiting your subdomain URL:
                 </p>
                 <div className="bg-gray-50 p-3 rounded-md">
-                  <code className="text-sm">yourcompany.localhost:3000</code>
+                  <code className="text-sm">yourcompany.vulneralq.anantacloud.com</code>
                 </div>
                 <p className="text-xs text-gray-500 mt-2">
                   Don't have a company account? <button 

@@ -72,7 +72,7 @@ const TenantSetup: React.FC<TenantSetupProps> = ({ onSetupComplete }) => {
       
       if (response.ok) {
         // Redirect to the new subdomain
-        const newUrl = `http://${subdomain}.localhost:3000`;
+        const newUrl = `https://${subdomain}.vulneralq.anantacloud.com`;
         if (onSetupComplete) {
           onSetupComplete(subdomain);
         } else {
@@ -135,7 +135,7 @@ const TenantSetup: React.FC<TenantSetupProps> = ({ onSetupComplete }) => {
             </button>
           </div>
           <div className="mt-1 text-sm text-gray-500">
-            Your URL will be: <strong>{subdomain}.localhost:3000</strong>
+            Your URL will be: <strong>{subdomain}.vulneralq.anantacloud.com</strong>
           </div>
           {isSubdomainAvailable !== null && (
             <div className={`mt-1 text-sm ${

@@ -35,7 +35,7 @@ const TenantRegistration: React.FC<TenantRegistrationProps> = ({ onRegistrationC
       const hostname = window.location.hostname;
       console.log('🔍 [TenantRegistration] Current hostname:', hostname);
       
-      if (hostname.includes('.localhost')) {
+      if (hostname.includes('.vulneralq.anantacloud.com')) {
         const subdomain = hostname.split('.')[0];
         const companyName = subdomain.replace('-', ' ').replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase());
         console.log('🔍 [TenantRegistration] Auto-detected subdomain:', subdomain);
@@ -277,7 +277,7 @@ const TenantRegistration: React.FC<TenantRegistrationProps> = ({ onRegistrationC
           />
         </div>
         <div className="mt-1 text-sm text-gray-500">
-          Your URL will be: <strong>{formData.subdomain}.localhost:3000</strong>
+          Your URL will be: <strong>{formData.subdomain}.vulneralq.anantacloud.com</strong>
         </div>
         {autoSubdomain && (
           <p className="mt-1 text-sm text-green-600">
