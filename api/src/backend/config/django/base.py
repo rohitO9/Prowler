@@ -109,19 +109,37 @@ MIDDLEWARE = [
 
 SITE_ID = 1
 
-CORS_ALLOWED_ORIGINS = [
-    "http://localhost", 
-    "http://127.0.0.1", 
-    "http://localhost:3000", 
-    "http://localhost:8080",
-    "http://company1.localhost:3000",
-    "http://company2.localhost:3000", 
-    "http://test.localhost:3000",
-    "http://google.localhost:3000",
-    "http://companynew.localhost:3000",
-    "http://testcompany.localhost:3000",
-    "http://*.localhost:3000",  # Allow all subdomains
-]
+# CORS Configuration - Use environment variable for production
+# In production, set CORS_ALLOWED_ORIGINS in .env file:
+# CORS_ALLOWED_ORIGINS=https://vulneralq.anantacloud.com,https://*.vulneralq.anantacloud.com
+CORS_ALLOWED_ORIGINS = env.list(
+    "CORS_ALLOWED_ORIGINS",
+    default=[
+        "http://localhost", 
+        "http://127.0.0.1", 
+        "http://localhost:3000", 
+        "http://localhost:8080",
+        "http://company1.localhost:3000",
+        "http://company2.localhost:3000", 
+        "http://test.localhost:3000",
+        "http://google.localhost:3000",
+        "http://companynew.localhost:3000",
+        "http://testcompany.localhost:3000",
+        # Note: Wildcard subdomains in CORS_ALLOWED_ORIGINS don't work
+        # Use CORS_ALLOWED_ORIGIN_REGEXES for wildcard support
+    ]
+)
+
+# For wildcard subdomain support (e.g., *.vulneralq.anantacloud.com)
+CORS_ALLOWED_ORIGIN_REGEXES = env.list(
+    "CORS_ALLOWED_ORIGIN_REGEXES",
+    default=[
+        r"^http://.*\.localhost:3000$",  # Development: *.localhost:3000
+    ]
+)
+
+# In production, add this to .env:
+# CORS_ALLOWED_ORIGIN_REGEXES=^https://.*\.vulneralq\.anantacloud\.com$,^https://vulneralq\.anantacloud\.com$
 
 ROOT_URLCONF = "config.urls"
 

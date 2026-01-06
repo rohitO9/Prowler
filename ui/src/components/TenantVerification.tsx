@@ -61,7 +61,7 @@ const TenantVerification: React.FC = () => {
   const handleLogin = () => {
     // Extract subdomain from the current URL or redirect to login
     const hostname = window.location.hostname;
-    if (hostname.includes('.localhost')) {
+    if (hostname.includes('.vulneralq.anantacloud.com')) {
       const subdomain = hostname.split('.')[0];
       router.push(`/login?subdomain=${subdomain}`);
     } else {

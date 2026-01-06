@@ -7,8 +7,10 @@ EMAIL_HOST_USER = 'your-email@domain.com'
 EMAIL_HOST_PASSWORD = 'your-email-password'
 DEFAULT_FROM_EMAIL = 'noreply@yourdomain.com'
 
-# Frontend URL for invitation links
-FRONTEND_URL = 'https://your-frontend-domain.com'
+# Frontend URL for invitation links - Use environment variable
+# In production, set FRONTEND_URL=https://vulneralq.anantacloud.com
+from config.env import env
+FRONTEND_URL = env("FRONTEND_URL", default="https://vulneralq.anantacloud.com")
 
 INSTALLED_APPS = [
     # Django built-in apps

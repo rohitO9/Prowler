@@ -21,10 +21,11 @@ export const getApiBaseUrl = () => {
       return apiUrl;
     }
     
-    // Handle production - assume API is on same domain but different port
-    const apiUrl = `https://${hostname}:${port}/api/v1`;
-    console.log('🔍 [getApiBaseUrl] Generated production API URL:', apiUrl);
-    return apiUrl;
+    // Handle production - use the production API URL
+    // For production, API might be on a different subdomain or same domain
+    const productionApiUrl = process.env.NEXT_PUBLIC_API_BASE_URL || `https://api.vulneralq.anantacloud.com/api/v1`;
+    console.log('🔍 [getApiBaseUrl] Generated production API URL:', productionApiUrl);
+    return productionApiUrl;
   }
   
   // Server-side fallback - try to detect tenant from headers

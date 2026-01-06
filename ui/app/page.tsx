@@ -49,7 +49,7 @@ export default function LandingPage() {
   // Detect if we're on a tenant subdomain
   useEffect(() => {
     const hostname = window.location.hostname;
-    if (hostname.includes('localhost') && hostname !== 'localhost') {
+    if (hostname.includes('.vulneralq.anantacloud.com') && hostname !== 'vulneralq.anantacloud.com') {
       // Extract subdomain from company2.localhost
       const subdomain = hostname.split('.')[0];
       setIsTenantSubdomain(true);
@@ -196,7 +196,7 @@ export default function LandingPage() {
       }
 
       // Redirect to the new tenant's dashboard
-      window.location.href = `http://${formData.subdomain}.localhost:3000/dashboard`;
+      window.location.href = `https://${formData.subdomain}.vulneralq.anantacloud.com/dashboard`;
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Registration failed');
     } finally {
@@ -342,10 +342,10 @@ export default function LandingPage() {
                       required
                       className="flex-1"
                     />
-                    <span className="text-sm text-gray-500">.localhost:3000</span>
+                    <span className="text-sm text-gray-500">.vulneralq.anantacloud.com</span>
                   </div>
                   <p className="text-xs text-gray-500">
-                    Your dashboard will be at: {formData.subdomain || 'subdomain'}.localhost:3000
+                    Your dashboard will be at: {formData.subdomain || 'subdomain'}.vulneralq.anantacloud.com
                   </p>
                 </div>
 

@@ -28,3 +28,25 @@ DATABASES["default"] = DATABASES["prowler_user"]
 
 # Add SECRET_KEY with default
 SECRET_KEY = env("SECRET_KEY", default="your-secret-key-here-change-this-in-production")
+
+# Production CORS Configuration
+# Override CORS settings from base.py for production
+# Set these in .env file:
+# CORS_ALLOWED_ORIGINS=https://vulneralq.anantacloud.com
+# CORS_ALLOWED_ORIGIN_REGEXES=^https://.*\.vulneralq\.anantacloud\.com$,^https://vulneralq\.anantacloud\.com$
+CORS_ALLOWED_ORIGINS = env.list(
+    "CORS_ALLOWED_ORIGINS",
+    default=[
+        "https://vulneralq.anantacloud.com",
+    ]
+)
+
+CORS_ALLOWED_ORIGIN_REGEXES = env.list(
+    "CORS_ALLOWED_ORIGIN_REGEXES",
+    default=[
+        r"^https://.*\.vulneralq\.anantacloud\.com$",
+        r"^https://vulneralq\.anantacloud\.com$",
+    ]
+)
+
+CORS_ALLOW_CREDENTIALS = True

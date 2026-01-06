@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { getApiBaseUrl } from '@/lib/helper';
 
 interface TenantRegistrationProps {
   onRegistrationComplete?: (subdomain: string) => void;
@@ -193,7 +194,10 @@ const TenantRegistration: React.FC<TenantRegistrationProps> = ({ onRegistrationC
     console.log('Sending registration payload:', JSON.stringify(payload, null, 2));
 
     try {
-        const response = await fetch('http://localhost:8080/api/v1/tenant/register-tenant', {
+        const apiUrl = `${getApiBaseUrl()}/tenant/register-tenant`;
+        console.log('🔍 [TenantRegistration] API URL:', apiUrl);
+        
+        const response = await fetch(apiUrl, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/vnd.api+json',
@@ -201,6 +205,15 @@ const TenantRegistration: React.FC<TenantRegistrationProps> = ({ onRegistrationC
             },
             body: JSON.stringify(payload)
         });
+
+        // Check if response is JSON before parsing
+        const contentType = response.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) {
+            const text = await response.text();
+            console.error('🔍 [TenantRegistration] Non-JSON response:', text.substring(0, 200));
+            setError('Server returned an invalid response. Please try again.');
+            return;
+        }
 
         const data = await response.json();
 
@@ -213,13 +226,17 @@ const TenantRegistration: React.FC<TenantRegistrationProps> = ({ onRegistrationC
                 onRegistrationComplete(formData.subdomain);
             }
         } else {
-            const errorMessage = data.errors?.[0]?.detail || 'Failed to create tenant';
+            const errorMessage = data.errors?.[0]?.detail || data.error || 'Failed to create tenant';
             setError(errorMessage);
             console.error('Registration failed:', data);
         }
     } catch (error) {
         console.error('Registration error:', error);
-        setError('Network error while creating tenant');
+        if (error instanceof SyntaxError) {
+            setError('Server returned an invalid response. Please check your API configuration.');
+        } else {
+            setError('Network error while creating tenant. Please check your connection.');
+        }
     } finally {
         setIsRegistering(false);
     }
