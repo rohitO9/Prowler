@@ -5,7 +5,10 @@ DEBUG = env.bool("DJANGO_DEBUG", default=False)
 # ALLOWED_HOSTS: Include domain, server IP, and localhost for production
 # Set DJANGO_ALLOWED_HOSTS in .env file, e.g.:
 # DJANGO_ALLOWED_HOSTS=vulneralq.anantacloud.com,107.21.175.192,localhost,127.0.0.1
-ALLOWED_HOSTS = env.list("DJANGO_ALLOWED_HOSTS", default=["vulneralq.anantacloud.com", "107.21.175.192", "localhost", "127.0.0.1"])
+# Note: Remove quotes from the value in .env file - quotes will be treated as part of the hostname
+_allowed_hosts = env.list("DJANGO_ALLOWED_HOSTS", default=["vulneralq.anantacloud.com", "107.21.175.192", "localhost", "127.0.0.1"])
+# Strip quotes from each host if present (handles cases where .env has quoted values)
+ALLOWED_HOSTS = [host.strip('"\'') for host in _allowed_hosts]
 
 # Database
 # TODO Use Django database routers https://docs.djangoproject.com/en/5.0/topics/db/multi-db/#automatic-database-routing
