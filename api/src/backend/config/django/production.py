@@ -2,7 +2,10 @@ from config.django.base import *  # noqa
 from config.env import env
 
 DEBUG = env.bool("DJANGO_DEBUG", default=False)
-ALLOWED_HOSTS = env.list("DJANGO_ALLOWED_HOSTS", default=["localhost", "127.0.0.1"])
+# ALLOWED_HOSTS: Include domain, server IP, and localhost for production
+# Set DJANGO_ALLOWED_HOSTS in .env file, e.g.:
+# DJANGO_ALLOWED_HOSTS=vulneralq.anantacloud.com,107.21.175.192,localhost,127.0.0.1
+ALLOWED_HOSTS = env.list("DJANGO_ALLOWED_HOSTS", default=["vulneralq.anantacloud.com", "107.21.175.192", "localhost", "127.0.0.1"])
 
 # Database
 # TODO Use Django database routers https://docs.djangoproject.com/en/5.0/topics/db/multi-db/#automatic-database-routing
