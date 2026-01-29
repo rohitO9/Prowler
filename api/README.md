@@ -333,3 +333,22 @@ Resource-finding mappings created successfully.
 
 Successfully populated test data.
 ```
+
+## Troubleshooting
+
+### `permission denied for table django_migrations`
+
+If the app (or `runserver`) fails with this error, the database user (e.g. `prowler_user`) does not have permission to read the `django_migrations` table. Fix it by running the following as a PostgreSQL superuser (e.g. `postgres` or your admin user):
+
+```console
+psql -U postgres -d prowler_db -f scripts/grant_django_migrations.sql
+```
+
+Or run the SQL manually (replace `prowler_user` with your app DB user if different):
+
+```sql
+GRANT SELECT, INSERT, UPDATE ON django_migrations TO prowler_user;
+GRANT USAGE, SELECT ON SEQUENCE django_migrations_id_seq TO prowler_user;
+```
+
+Ensure migrations are applied using the admin user so that grants are applied: `python manage.py migrate --database admin`.

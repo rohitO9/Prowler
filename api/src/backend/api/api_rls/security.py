@@ -3,6 +3,12 @@ class BaseSecurityConstraint:
         self.name = name
         self.kwargs = kwargs
 
+    def _check(self, model, connection):
+        """
+        Django model check hook. Return no errors (constraint is DB-level).
+        """
+        return []
+
     def clone(self):
         # Return a new instance with the same attributes
         return BaseSecurityConstraint(name=self.name, **self.kwargs)

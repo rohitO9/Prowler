@@ -71,11 +71,11 @@ DATABASES = {
     },
     'admin': {
         'ENGINE': 'psqlextra.backend',
-        'NAME': env.str('POSTGRES_ADMIN_USER', 'prowler_admin'),  # define separately in env
-        'USER': env.str('POSTGRES_ADMIN_USER', 'admin_user'),
-        'PASSWORD': env.str('POSTGRES_ADMIN_PASSWORD', 'admin_password'),
-        'HOST': env.str('POSTGRES_HOST', 'localhost'),
-        'PORT': env.str('POSTGRES_PORT', '5432'),
+        'NAME': env.str('DJANGO_DB_NAME', 'prowler_db'),  # same DB as default
+        'USER': env.str('POSTGRES_ADMIN_USER', 'postgres'),  # Postgres superuser for GRANTs
+        'PASSWORD': env.str('POSTGRES_ADMIN_PASSWORD', 'postgres'),
+        'HOST': env.str('DJANGO_DB_HOST', 'localhost'),
+        'PORT': env.str('DJANGO_DB_PORT', '5432'),
         'OPTIONS': {
             'connect_timeout': 60,
         },

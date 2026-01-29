@@ -116,47 +116,6 @@ def get_row_level_security_protected_model():
 RowLevelSecurityProtectedModel = get_row_level_security_protected_model()
 
 
-class Provider(get_row_level_security_protected_model()):
-    """
-    Represents a cloud or service provider.
-
-    Fields:
-    - id: Primary key UUID.
-    - alias: Human-readable alias for the provider.
-    - secret: Encrypted secret field, optional.
-    - connection_status: Status of the connection.
-    - is_deleted: Soft-delete flag.
-    - created_at, updated_at: Timestamps for audit.
-    """
-
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    alias = models.CharField(max_length=255, unique=True)
-    secret = models.TextField(blank=True, null=True)
-    connection_status = models.CharField(max_length=50, default='disconnected')
-    is_deleted = models.BooleanField(default=False)
-
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-
-    class Meta:
-        verbose_name = _("Provider")
-        verbose_name_plural = _("Providers")
-        indexes = [
-            models.Index(fields=["alias"]),
-            models.Index(fields=["connection_status"]),
-        ]
-
-    def active_provider_filter(cls):
-        """
-        Class method to filter only active (not deleted) providers.
-        """
-        return cls.objects.filter(is_deleted=False)
-
-    def __str__(self):
-        return self.alias
-
-
-
 class StatusChoices(models.TextChoices):
     """
     This list is based on the finding status in the Prowler CLI.
