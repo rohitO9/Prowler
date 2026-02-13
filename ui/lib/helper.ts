@@ -28,15 +28,24 @@ export const getApiBaseUrl = () => {
   return base.endsWith("/api/v1") ? base : base.replace(/\/?$/, "") + "/api/v1";
 };
 
-// Server-side function to get API URL with tenant context
+// Server-side function to get API URL with tenant context.
+// When host is provided (e.g. hcl.vulneralq.anantacloud.com), use that host so the
+// backend receives the correct Host header and can resolve the tenant from the subdomain.
 export const getServerApiBaseUrl = (host?: string) => {
-  if (host && isDevHost(host)) {
+  if (!host) {
+    const base =
+      process.env.API_BASE_URL || `http://127.0.0.1:${DEV_API_PORT}`;
+    return base.endsWith("/api/v1") ? base : base.replace(/\/?$/, "") + "/api/v1";
+  }
+  if (isDevHost(host)) {
     const hostname = host.split(":")[0];
     return `http://${hostname}:${DEV_API_PORT}/api/v1`;
   }
-  const base =
-    process.env.API_BASE_URL || `http://127.0.0.1:${DEV_API_PORT}`;
-  return base.endsWith("/api/v1") ? base : base.replace(/\/?$/, "") + "/api/v1";
+  // Production: use the same host the user is on (e.g. hcl.vulneralq.anantacloud.com)
+  // so Django receives Host: hcl.vulneralq.anantacloud.com and can extract tenant "hcl"
+  const hostname = host.split(":")[0];
+  const protocol = process.env.NEXT_PUBLIC_APP_PROTOCOL || "https";
+  return `${protocol}://${hostname}/api/v1`;
 };
 
 const _apiBase =
