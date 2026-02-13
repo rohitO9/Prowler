@@ -40,7 +40,10 @@ class TenantIsolationMiddleware(MiddlewareMixin):
                 
                 return JsonResponse({
                     'error': 'Invalid tenant subdomain',
-                    'message': 'Please access via tenant subdomain (e.g., company1.localhost:3000)'
+                    'message': (
+                        'Please access via tenant subdomain. '
+                        'E.g. tenant.yourdomain.com or (for local dev) company1.localhost:3000'
+                    )
                 }, status=400)
             
             # Set tenant in thread-local storage
@@ -93,41 +96,47 @@ class TenantIsolationMiddleware(MiddlewareMixin):
         return response
     
     def _extract_tenant_from_host(self, request, host):
-        """Extract tenant from hostname or header"""
+        """Extract tenant from X-Tenant-Subdomain header or hostname (two-level subdomain rule)."""
         try:
-            # Priority 1: Check X-Tenant-Subdomain header (for API calls through Next.js)
+            # Priority 1: X-Tenant-Subdomain header (set by Next.js when proxying to backend)
             tenant_header = request.META.get('HTTP_X_TENANT_SUBDOMAIN')
             if tenant_header:
                 try:
                     tenant = Tenant.objects.get(
-                        subdomain=tenant_header.lower(),
+                        subdomain=tenant_header.lower().strip(),
                         is_active=True
                     )
                     logger.debug(f"Found tenant by header: {tenant_header}")
                     return tenant
                 except Tenant.DoesNotExist:
                     logger.warning(f"Tenant not found for header: {tenant_header}")
-            
-            # Priority 2: Extract from hostname
-            # Handle localhost development
-            if '.localhost' in host:
-                subdomain = host.split('.')[0].lower()
-            # Handle production domains
-            elif '.' in host and not host.startswith('www.'):
-                subdomain = host.split('.')[0].lower()
+
+            # Priority 2: Extract from hostname (same two-level rule as frontend)
+            hostname = host.split(':')[0].strip().lower()
+            parts = hostname.split('.')
+
+            if '.localhost' in hostname:
+                # Dev: tenant from first segment (e.g. company1.localhost -> company1)
+                if len(parts) > 1 and parts[0] not in ('www', 'api', 'admin', 'app', 'dashboard'):
+                    subdomain = parts[0]
+                else:
+                    subdomain = None
             else:
+                # Production: only two-level subdomain is tenant (e.g. tenant1.valnarq.domain.com -> tenant1)
+                # Single-level (valnarq.vaniva.shop) is app domain, not tenant
+                if len(parts) >= 4 and parts[0] not in ('www', 'api', 'admin', 'app', 'dashboard'):
+                    subdomain = parts[0]
+                else:
+                    subdomain = None
+
+            if not subdomain:
                 return None
-            
-            # Skip common non-tenant subdomains
-            if subdomain in ['www', 'api', 'admin', 'app', 'dashboard']:
-                return None
-            
-            # Get tenant by subdomain
+
             try:
                 return Tenant.objects.get(subdomain=subdomain, is_active=True)
             except Tenant.DoesNotExist:
                 return None
-                
+
         except Exception as e:
             logger.error(f"Error extracting tenant from host {host}: {e}")
             return None
