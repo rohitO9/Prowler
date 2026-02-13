@@ -34,10 +34,14 @@ class TenantIsolationMiddleware(MiddlewareMixin):
             tenant = self._extract_tenant_from_host(request, host)
             
             if not tenant:
-                # Allow public endpoints
+                # Allow public endpoints (e.g. tenant registration, public info)
                 if self._is_public_endpoint(request.path):
                     return None
-                
+                logger.warning(
+                    "Tenant required but none found. path=%r host=%r",
+                    request.path,
+                    request.META.get('HTTP_HOST', ''),
+                )
                 return JsonResponse({
                     'error': 'Invalid tenant subdomain',
                     'message': (
@@ -142,24 +146,34 @@ class TenantIsolationMiddleware(MiddlewareMixin):
             return None
     
     def _is_public_endpoint(self, path):
-        """Check if endpoint is public (no tenant required). Handles path prefix from proxies."""
-        # Strip query string; normalize for comparison
-        path_clean = path.split('?')[0]
-        public_subpaths = [
+        """Check if endpoint is public (no tenant required). Handles path prefix and case from proxies."""
+        if not path:
+            return False
+        path_clean = path.split('?')[0].strip()
+        path_lower = path_clean.lower()
+        # Explicit public path segments (any occurrence = public)
+        public_contains = [
+            'tenant/register',
+            'tenant/public-info',
+            'tenant/validate-invite',
+            'tenant/accept-invite',
+            'scim/v2/serviceproviderconfig',
+            '/api/auth/',
+            '/health',
+            '/status',
+        ]
+        if any(segment in path_lower for segment in public_contains):
+            return True
+        # Exact/prefix style (case-insensitive)
+        public_prefixes = [
             '/api/v1/tenant/register',
             '/api/v1/tenant/public-info',
             '/api/v1/tenant/validate-invite',
             '/api/v1/tenant/accept-invite',
-            '/api/v1/scim/v2/ServiceProviderConfig',
-            '/api/auth/',
             '/health/',
             '/status/',
         ]
-        # Match startswith or contains (so /prefix/api/v1/tenant/register is allowed)
-        return any(
-            path_clean.startswith(p) or p in path_clean
-            for p in public_subpaths
-        )
+        return any(path_lower.startswith(p.lower()) for p in public_prefixes)
     
     def _validate_user_tenant_access(self, user, tenant):
         """Validate user has access to tenant"""
