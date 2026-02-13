@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-import { DEFAULT_DEV_API_BASE_URL } from '@/lib/env';
-const API_BASE_URL = process.env.API_BASE_URL || DEFAULT_DEV_API_BASE_URL;
+import { getBackendOrigin } from '@/lib/env';
 
 export async function POST(request: NextRequest) {
   try {
@@ -12,7 +11,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Token is required' }, { status: 400 });
     }
 
-    const response = await fetch(`${API_BASE_URL}/api/v1/tenant/accept-invite/`, {
+    const response = await fetch(`${getBackendOrigin()}/api/v1/tenant/accept-invite/`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

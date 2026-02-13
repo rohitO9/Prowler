@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-import { DEFAULT_DEV_API_BASE_URL } from '@/lib/env';
-const API_BASE_URL = process.env.API_BASE_URL || DEFAULT_DEV_API_BASE_URL;
+import { getBackendOrigin } from '@/lib/env';
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
@@ -12,7 +11,7 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const response = await fetch(`${API_BASE_URL}/api/v1/tenant/validate-invite/?token=${token}`, {
+    const response = await fetch(`${getBackendOrigin()}/api/v1/tenant/validate-invite/?token=${token}`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',

@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSubdomainFromHost } from '@/src/utils/subdomain';
-import { DEFAULT_DEV_API_BASE_URL } from '@/lib/env';
-
-const API_BASE_URL = process.env.API_BASE_URL || DEFAULT_DEV_API_BASE_URL;
+import { getBackendOrigin } from '@/lib/env';
 
 export async function PATCH(
   request: NextRequest,
@@ -28,7 +26,7 @@ export async function PATCH(
 
     const body = await request.json();
 
-    const response = await fetch(`${API_BASE_URL}/api/v1/tenant/users/${params.userId}/permissions/`, {
+    const response = await fetch(`${getBackendOrigin()}/api/v1/tenant/users/${params.userId}/permissions/`, {
       method: 'PATCH',
       headers,
       body: JSON.stringify(body),

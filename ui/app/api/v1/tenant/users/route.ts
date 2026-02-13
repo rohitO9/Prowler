@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSubdomainFromHost } from '@/src/utils/subdomain';
-import { DEFAULT_DEV_API_BASE_URL } from '@/lib/env';
-
-const API_BASE_URL = process.env.API_BASE_URL || DEFAULT_DEV_API_BASE_URL;
+import { getBackendOrigin } from '@/lib/env';
 
 export const dynamic = 'force-dynamic';
 
@@ -26,7 +24,7 @@ export async function GET(request: NextRequest) {
       headers['Authorization'] = authHeader;
     }
 
-    const response = await fetch(`${API_BASE_URL}/api/v1/tenant/users/`, {
+    const response = await fetch(`${getBackendOrigin()}/api/v1/tenant/users/`, {
       method: 'GET',
       headers,
     });

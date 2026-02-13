@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-import { DEFAULT_DEV_API_BASE_URL } from '@/lib/env';
-const API_BASE_URL = process.env.API_BASE_URL || DEFAULT_DEV_API_BASE_URL;
+import { getBackendOrigin } from '@/lib/env';
 
 export async function POST(request: NextRequest) {
   console.log('🚀 [API] Tenant register route called');
@@ -26,9 +25,10 @@ export async function POST(request: NextRequest) {
       }, { status: 400 });
     }
 
-    console.log('🔄 [API] Forwarding to backend:', `${API_BASE_URL}/api/v1/tenant/register`);
-    
-    const response = await fetch(`${API_BASE_URL}/api/v1/tenant/register`, {
+    const backendUrl = `${getBackendOrigin()}/api/v1/tenant/register`;
+    console.log('🔄 [API] Forwarding to backend:', backendUrl);
+
+    const response = await fetch(backendUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

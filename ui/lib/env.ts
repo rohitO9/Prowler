@@ -33,6 +33,15 @@ export function isDevHost(host: string): boolean {
 /** Default backend API origin in dev (no path). Routes append /api/v1/... Use API_BASE_URL from .env when set. */
 export const DEFAULT_DEV_API_BASE_URL = `http://${DEV_DOMAIN}:${DEV_API_PORT}`;
 
+/**
+ * Backend origin only (no path). Use this when building URLs like /api/v1/tenant/register
+ * so we never double /api/v1 (e.g. if API_BASE_URL is set to https://host/api/v1).
+ */
+export function getBackendOrigin(): string {
+  const raw = process.env.API_BASE_URL || DEFAULT_DEV_API_BASE_URL;
+  return raw.replace(/\/api\/v1\/?$/i, "").replace(/\/$/, "") || raw;
+}
+
 /** Build backend API base URL for a tenant subdomain in dev (e.g. http://tenant1.localhost:8080/api/v1). */
 export function getDevTenantApiBaseUrl(subdomain: string): string {
   return `http://${subdomain}.${DEV_DOMAIN}:${DEV_API_PORT}/api/v1`;
