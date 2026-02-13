@@ -57,6 +57,7 @@ const refreshAccessToken = async (token: JwtPayload) => {
 };
 
 export const authConfig = {
+  trustHost: true,
   secret: process.env.NEXTAUTH_SECRET || "development-secret-key-change-in-production",
   session: {
     strategy: "jwt",

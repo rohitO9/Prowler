@@ -3,29 +3,80 @@ import type { NextRequest } from 'next/server';
 import { getTenantFromHostname } from '@/lib/tenant';
 import { auth } from '@/auth.config';
 
+/**
+ * Build a tenant-aware redirect URL that works in both dev and production.
+ * Uses the incoming request's protocol and base host to construct the URL.
+ */
+function buildTenantUrl(
+  request: NextRequest,
+  tenant: string,
+  path: string,
+): string {
+  const proto = request.headers.get('x-forwarded-proto') || request.nextUrl.protocol.replace(':', '') || 'https';
+  const incomingHost = request.headers.get('host') || request.nextUrl.host;
+
+  // Remove port for comparison
+  const hostWithoutPort = incomingHost.split(':')[0];
+  const parts = hostWithoutPort.split('.');
+
+  // Determine base domain (everything after the tenant part)
+  // For localhost: base is "localhost" (port preserved)
+  // For production 3-part domain (vulneralq.anantacloud.com): keep all 3 parts
+  // For production 4+ part domain: drop the first part (the existing tenant)
+  let baseDomain: string;
+  const isLocal = hostWithoutPort === 'localhost' || hostWithoutPort === '127.0.0.1'
+    || hostWithoutPort.endsWith('.localhost');
+
+  if (isLocal) {
+    // Preserve port for localhost
+    baseDomain = incomingHost.includes(':')
+      ? `localhost:${incomingHost.split(':')[1]}`
+      : 'localhost:3000';
+  } else if (parts.length >= 4) {
+    // Already has a tenant prefix — strip it to get base domain
+    baseDomain = parts.slice(1).join('.');
+  } else {
+    // App domain (e.g. vulneralq.anantacloud.com) — keep as-is
+    baseDomain = hostWithoutPort;
+  }
+
+  return `${proto}://${tenant}.${baseDomain}${path}`;
+}
+
 export async function middleware(request: NextRequest) {
   const hostname = request.headers.get('host') || '';
   const tenant = getTenantFromHostname(hostname);
-  const session = await auth();
-  
-  // Production: Logging removed for performance and security
-  
-  // SECURITY: Multi-tenant application - all routes require tenant subdomain
-  // Only exception: tenant registration page on main domain
-  const isTenantRegistrationPage = request.nextUrl.pathname === '/' && !tenant;
-  
+  const pathname = request.nextUrl.pathname;
+
+  // --- Paths that are allowed WITHOUT a tenant (main domain) ---
+  // Tenant registration page + its API route
+  const mainDomainAllowedPaths = [
+    '/',
+    '/api/v1/tenant/register',
+    '/api/v1/tenant/register/',
+    '/api/v1/tenant/register-tenant',
+    '/api/v1/tenant/register-tenant/',
+    '/api/v1/tenant/public-info',
+    '/api/tenant-info',
+  ];
+
+  const isMainDomainAllowed = mainDomainAllowedPaths.some(p =>
+    pathname === p || pathname.startsWith(p + '/')
+  ) || pathname.startsWith('/api/v1/tenant/register');
+
   // If no tenant subdomain (main domain)
   if (!tenant) {
-    // SECURITY: Only allow tenant registration page on main domain
-    // All other routes require tenant subdomain
-    if (isTenantRegistrationPage) {
+    if (isMainDomainAllowed) {
       return NextResponse.next();
     }
     // Redirect all other paths to tenant registration page
     return NextResponse.redirect(new URL('/', request.url));
   }
-  
-  // With tenant subdomain: define public paths that don't require authentication
+
+  // --- With tenant subdomain ---
+  const session = await auth();
+
+  // Public paths that don't require authentication (within a tenant)
   const publicPaths = [
     '/sign-in',
     '/accept-invite',
@@ -33,45 +84,35 @@ export async function middleware(request: NextRequest) {
     '/api/validate-invite',
     '/api/accept-invite',
     '/api/v1/tenant/public-info',
+    '/api/v1/tenant/register',
+    '/api/tenant-info',
   ];
-  const isPublicPath = publicPaths.some(path => 
-    request.nextUrl.pathname.startsWith(path)
+  const isPublicPath = publicPaths.some(path =>
+    pathname.startsWith(path)
   );
-  
-  // SECURITY: Tenant validation is handled by API routes and pages
-  // Middleware just enforces routing rules - actual tenant existence is validated server-side
-  
-  // ✅ SIMPLE RULE: If no token, redirect to sign-in for any non-public page
-  const isPublicRoute = request.nextUrl.pathname === '/' || isPublicPath;
-  
+
+  const isPublicRoute = pathname === '/' || isPublicPath;
+
+  // If not public and not authenticated → redirect to sign-in
   if (!isPublicRoute && !session?.user) {
-    return NextResponse.redirect(new URL(`http://${tenant}.localhost:3000/sign-in?message=session_expired`, request.url));
+    const signInUrl = buildTenantUrl(request, tenant, '/sign-in?message=session_expired');
+    return NextResponse.redirect(new URL(signInUrl, request.url));
   }
-  
-  // If user is authenticated
+
+  // If user is authenticated — validate tenant matches
   if (session?.user) {
-    // Get tenant from session (stored in JWT token)
     const userTenant = (session as any).tenantName;
-    
-    // ✅ CRITICAL: Validate user's tenant matches URL tenant (case-insensitive)
+
     if (userTenant && userTenant.toLowerCase() !== tenant.toLowerCase()) {
-      // Security: Tenant mismatch detected - redirect to user's correct tenant
-      const signInUrl = new URL(`http://${userTenant.toLowerCase()}.localhost:3000/sign-in?error=cross_tenant_access`, request.url);
-      return NextResponse.redirect(signInUrl);
-    }
-    
-    // If user has no tenant info, allow access but don't redirect (user info might not be loaded yet)
-    if (!userTenant && tenant) {
-      // Don't redirect - let the page handle the missing user info
+      const signInUrl = buildTenantUrl(request, userTenant.toLowerCase(), '/sign-in?error=cross_tenant_access');
+      return NextResponse.redirect(new URL(signInUrl, request.url));
     }
   }
-  
-  // Add tenant to headers for API routes
+
+  // Add tenant to headers for downstream API routes
   const requestHeaders = new Headers(request.headers);
-  if (tenant) {
-    requestHeaders.set('X-Tenant-Subdomain', tenant);
-  }
-  
+  requestHeaders.set('X-Tenant-Subdomain', tenant);
+
   return NextResponse.next({
     request: {
       headers: requestHeaders,
