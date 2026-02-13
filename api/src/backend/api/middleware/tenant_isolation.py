@@ -142,24 +142,24 @@ class TenantIsolationMiddleware(MiddlewareMixin):
             return None
     
     def _is_public_endpoint(self, path):
-        """Check if endpoint is public (no tenant required)"""
-        public_paths = [
-            '/api/v1/tenant/register/',
+        """Check if endpoint is public (no tenant required). Handles path prefix from proxies."""
+        # Strip query string; normalize for comparison
+        path_clean = path.split('?')[0]
+        public_subpaths = [
             '/api/v1/tenant/register',
-            '/api/v1/tenant/public-info/',
             '/api/v1/tenant/public-info',
-            '/api/v1/tenant/validate-invite/',  # Invite validation - tenant from token, not subdomain
-            '/api/v1/tenant/validate-invite',  # Invite validation - tenant from token, not subdomain
-            '/api/v1/tenant/accept-invite/',  # Accept invite - tenant from token, not subdomain
-            '/api/v1/tenant/accept-invite',  # Accept invite - tenant from token, not subdomain
-            '/api/v1/scim/v2/ServiceProviderConfig/',
+            '/api/v1/tenant/validate-invite',
+            '/api/v1/tenant/accept-invite',
             '/api/v1/scim/v2/ServiceProviderConfig',
             '/api/auth/',
             '/health/',
             '/status/',
         ]
-        
-        return any(path.startswith(public_path) for public_path in public_paths)
+        # Match startswith or contains (so /prefix/api/v1/tenant/register is allowed)
+        return any(
+            path_clean.startswith(p) or p in path_clean
+            for p in public_subpaths
+        )
     
     def _validate_user_tenant_access(self, user, tenant):
         """Validate user has access to tenant"""
