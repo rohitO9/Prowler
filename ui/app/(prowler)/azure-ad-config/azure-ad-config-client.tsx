@@ -37,6 +37,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog/dialog';
+import { DEV_APP_HOST_DISPLAY } from '@/lib/env';
 
 interface TenantInfo {
   id: string;
@@ -1077,7 +1078,7 @@ export function AzureADConfigClient() {
                   <li>Click "New registration"</li>
                   <li>Enter application name: "Prowler SSO"</li>
                   <li>Select "Single tenant"</li>
-                  <li>Set redirect URI: "https://{tenant?.subdomain}.localhost:3000/api/auth/callback/azure"</li>
+                  <li>Set redirect URI: &quot;https://{tenant?.subdomain}.{DEV_APP_HOST_DISPLAY}/api/auth/callback/azure&quot;</li>
                   <li>Click "Register"</li>
                 </ol>
               </div>
@@ -1090,7 +1091,7 @@ export function AzureADConfigClient() {
                 <ol className="list-decimal list-inside space-y-2 text-sm text-gray-700 dark:text-gray-300 ml-10">
                   <li>Go to Authentication → Platform configurations</li>
                   <li>Add Web platform</li>
-                  <li>Set redirect URI: "https://{tenant?.subdomain}.localhost:3000/api/auth/callback/azure"</li>
+                  <li>Set redirect URI: &quot;https://{tenant?.subdomain}.{DEV_APP_HOST_DISPLAY}/api/auth/callback/azure&quot;</li>
                   <li>Enable "ID tokens" and "Access tokens"</li>
                   <li>Save configuration</li>
                 </ol>

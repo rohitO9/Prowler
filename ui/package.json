@@ -85,7 +85,9 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "clean": "npx --yes rimraf .next",
     "build": "next build",
+    "build:standalone": "npm run clean && next build",
     "start": "next start",
     "typecheck": "tsc",
     "healthcheck": "npm run typecheck && npm run lint:check",

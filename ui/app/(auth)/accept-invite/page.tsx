@@ -144,15 +144,13 @@ export default function AcceptInvitePage() {
         throw new Error('Tenant subdomain not found');
       }
 
-      // Construct tenant-specific SSO URL
-      // Format: http://{subdomain}.localhost:3000/sign-in?mode=sso
       const protocol = window.location.protocol;
       const hostname = window.location.hostname;
       const port = window.location.port ? `:${window.location.port}` : '';
-      
-      // If on localhost, use subdomain format
-      if (hostname.includes('localhost') || hostname === '127.0.0.1') {
-        const baseHost = hostname.replace(/^[^.]+\./, ''); // Remove existing subdomain if any
+
+      const { isDevHost, DEV_DOMAIN } = await import('@/lib/env');
+      if (isDevHost(hostname)) {
+        const baseHost = hostname.replace(/^[^.]+\./, '') || DEV_DOMAIN;
         const ssoUrl = data.sso_redirect_url || `${protocol}//${tenantSubdomain}.${baseHost}${port}/sign-in?mode=sso&invite_accepted=true`;
         window.location.href = ssoUrl;
       } else {

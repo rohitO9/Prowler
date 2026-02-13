@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getApiBaseUrl } from '@/lib/helper';
+import { getSubdomainFromHost } from '@/src/utils/subdomain';
+import { isDevHost, getDevTenantApiBaseUrl } from '@/lib/env';
 
 /**
  * Tenant Access Validation API Route
@@ -20,14 +22,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Get the API base URL with tenant context
     const host = request.headers.get('host') || '';
+    const subdomainFromHost = getSubdomainFromHost(host);
     let apiBaseUrl = getApiBaseUrl();
-    
-    // For subdomain requests, ensure we're calling the correct backend
-    if (host.includes('.localhost')) {
-      const subdomain = host.split('.')[0];
-      apiBaseUrl = `http://${subdomain}.localhost:8080/api/v1`;
+
+    if (isDevHost(host) && subdomainFromHost) {
+      apiBaseUrl = getDevTenantApiBaseUrl(subdomainFromHost);
     }
 
     // Forward the request to the backend with proper headers

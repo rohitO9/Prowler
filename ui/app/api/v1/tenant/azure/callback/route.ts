@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getApiBaseUrl } from '@/lib/helper';
+import { getSubdomainFromHost } from '@/src/utils/subdomain';
+import { isDevHost, getDevTenantApiBaseUrl } from '@/lib/env';
 
 /**
  * Azure AD Callback API Route
@@ -11,12 +13,11 @@ import { getApiBaseUrl } from '@/lib/helper';
 export async function POST(request: NextRequest) {
   try {
     const host = request.headers.get('host') || '';
+    const subdomain = getSubdomainFromHost(host);
     let apiBaseUrl = getApiBaseUrl();
-    
-    // For subdomain requests, ensure we're calling the correct backend
-    if (host.includes('.localhost')) {
-      const subdomain = host.split('.')[0];
-      apiBaseUrl = `http://${subdomain}.localhost:8080/api/v1`;
+
+    if (isDevHost(host) && subdomain) {
+      apiBaseUrl = getDevTenantApiBaseUrl(subdomain);
     }
 
     // Get request body
@@ -35,7 +36,7 @@ export async function POST(request: NextRequest) {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'x-tenant-subdomain': host.split('.')[0] || '',
+        'x-tenant-subdomain': subdomain || '',
       },
       body: JSON.stringify({ code, state })
     });

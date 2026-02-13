@@ -22,6 +22,7 @@ import {
   Mail
 } from 'lucide-react';
 import { useToast } from '@/components/ui/toast/use-toast';
+import { DEV_APP_HOST_DISPLAY } from '@/lib/env';
 
 interface TenantInfo {
   id: string;
@@ -243,7 +244,7 @@ export default function AdminDashboard() {
               <Shield className="h-8 w-8 text-blue-600" />
               <div className="ml-3">
                 <h1 className="text-2xl font-bold text-gray-900">{tenant?.name}</h1>
-                <p className="text-sm text-gray-500">{tenant?.subdomain}.localhost:3000</p>
+                <p className="text-sm text-gray-500">{tenant?.subdomain}.{DEV_APP_HOST_DISPLAY}</p>
               </div>
             </div>
             <Button

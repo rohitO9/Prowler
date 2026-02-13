@@ -1,24 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getSubdomainFromHost } from '@/src/utils/subdomain';
+import { DEFAULT_DEV_API_BASE_URL } from '@/lib/env';
 
-const API_BASE_URL = process.env.API_BASE_URL || 'http://localhost:8080';
+const API_BASE_URL = process.env.API_BASE_URL || DEFAULT_DEV_API_BASE_URL;
 
 export async function POST(request: NextRequest) {
   try {
-    // Get the hostname to determine the tenant
     const hostname = request.headers.get('host') || '';
-    console.log('🔍 [sync-users POST] Hostname:', hostname);
-    
-    // Extract subdomain from hostname like "company1.localhost:3000"
-    const subdomain = hostname.split('.')[0];
-    console.log('🔍 [sync-users POST] Extracted subdomain:', subdomain);
+    const subdomain = getSubdomainFromHost(hostname);
 
-    // Only reject if it's exactly "localhost" or "127.0.0.1" (main domain)
-    if (subdomain === 'localhost' || subdomain === '127.0.0.1') {
-      console.log('🔍 [sync-users POST] Rejecting main domain access');
+    if (!subdomain) {
       return NextResponse.json({ error: 'Invalid tenant context' }, { status: 400 });
     }
-    
-    console.log('🔍 [sync-users POST] Using tenant:', subdomain);
 
     // Get authorization header for authenticated requests
     const authHeader = request.headers.get('authorization');

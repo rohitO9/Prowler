@@ -1,47 +1,54 @@
+import { DEV_APP_PORT, DEV_DOMAIN, isDevHost } from "@/lib/env";
+
 /**
- * Utility functions for handling subdomain routing
+ * Utility functions for handling subdomain routing.
+ *
+ * Two-level subdomain rule: we only treat the host as a tenant subdomain when
+ * there are at least two levels of subdomain (e.g. tenant1.valnarq.ananracloude.com).
+ * Then the tenant is the leftmost segment (tenant1). Single-level subdomains
+ * (e.g. valnarq.vaniva.shop) are treated as the app domain, not a tenant.
  */
+
+/**
+ * Extract tenant subdomain from a host string (hostname or host:port).
+ * Returns the first segment only when the host has two-level subdomain:
+ * - Production: 4+ parts (e.g. tenant1.valnarq.ananracloude.com → "tenant1")
+ * - Dev (localhost): 2+ parts (e.g. company1.localhost → "company1")
+ * Otherwise returns null (e.g. valnarq.vaniva.shop → null).
+ */
+export function getSubdomainFromHost(host: string): string | null {
+  if (!host || typeof host !== "string") return null;
+  const hostname = host.split(":")[0].trim();
+  const parts = hostname.split(".");
+
+  if (isDevHost(hostname)) {
+    if (parts.length > 1 && parts[0] !== "www") return parts[0];
+    return null;
+  }
+
+  if (parts.length >= 4 && parts[0] !== "www") return parts[0];
+  return null;
+}
 
 export const getSubdomain = (): string | null => {
   if (typeof window === 'undefined') return null;
-  
-  const hostname = window.location.hostname;
-  
-  // Handle localhost development
-  if (hostname.includes('localhost')) {
-    const parts = hostname.split('.');
-    if (parts.length > 1 && parts[0] !== 'www') {
-      return parts[0];
-    }
-    return null;
-  }
-  
-  // Handle production domains
-  const parts = hostname.split('.');
-  if (parts.length > 2 && parts[0] !== 'www') {
-    return parts[0];
-  }
-  
-  return null;
+  return getSubdomainFromHost(window.location.hostname);
 };
 
 export const getMainDomain = (): string => {
-  if (typeof window === 'undefined') return '';
-  
+  if (typeof window === "undefined") return "";
+
   const hostname = window.location.hostname;
-  const port = window.location.port || '3000';
-  
-  // Handle localhost development
-  if (hostname.includes('localhost')) {
-    return `localhost:${port}`;
+  const port = window.location.port || DEV_APP_PORT;
+
+  if (isDevHost(hostname)) {
+    return `${DEV_DOMAIN}:${port}`;
   }
-  
-  // Handle production domains
-  const parts = hostname.split('.');
+
+  const parts = hostname.split(".");
   if (parts.length > 2) {
-    return parts.slice(-2).join('.');
+    return parts.slice(-2).join(".");
   }
-  
   return hostname;
 };
 

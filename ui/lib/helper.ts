@@ -3,54 +3,47 @@ import { getTask } from "@/actions/task";
 import { auth } from "@/auth.config";
 import { useToast } from "@/components/ui";
 import { AuthSocialProvider, MetaDataProps, PermissionInfo } from "@/types";
+import { DEV_API_PORT, DEV_APP_PORT, isDevHost } from "@/lib/env";
 
-export const baseUrl = process.env.AUTH_URL || "http://localhost:3000";
+export const baseUrl =
+  process.env.AUTH_URL || `http://localhost:${DEV_APP_PORT}`;
 // Dynamic API base URL that respects subdomains
 export const getApiBaseUrl = () => {
-  if (typeof window !== 'undefined') {
+  if (typeof window !== "undefined") {
     const hostname = window.location.hostname;
-    const port = '8080'; // Backend API port
-    
-    console.log('🔍 [getApiBaseUrl] Current hostname:', hostname);
-    console.log('🔍 [getApiBaseUrl] Current URL:', window.location.href);
-    
-    // Handle localhost development with subdomains
-    if (hostname.includes('localhost')) {
-      const apiUrl = `http://${hostname}:${port}/api/v1`;
-      console.log('🔍 [getApiBaseUrl] Generated API URL:', apiUrl);
-      return apiUrl;
+
+    if (isDevHost(hostname)) {
+      return `http://${hostname}:${DEV_API_PORT}/api/v1`;
     }
-    
-    // Handle production - use the production API URL
-    // For production, API might be on a different subdomain or same domain
-    const productionApiUrl = process.env.NEXT_PUBLIC_API_BASE_URL || `https://api.vulneralq.anantacloud.com/api/v1`;
-    console.log('🔍 [getApiBaseUrl] Generated production API URL:', productionApiUrl);
-    return productionApiUrl;
+
+    const base =
+      process.env.NEXT_PUBLIC_API_BASE_URL ||
+      process.env.API_BASE_URL ||
+      "https://api.vulneralq.anantacloud.com/api/v1";
+    return base.endsWith("/api/v1") ? base : base.replace(/\/?$/, "") + "/api/v1";
   }
-  
-  // Server-side fallback - try to detect tenant from headers
-  const fallbackUrl = process.env.API_BASE_URL || "http://127.0.0.1:8080/api/v1";
-  console.log('🔍 [getApiBaseUrl] Server-side fallback URL:', fallbackUrl);
-  return fallbackUrl;
+
+  const base =
+    process.env.API_BASE_URL || `http://127.0.0.1:${DEV_API_PORT}`;
+  return base.endsWith("/api/v1") ? base : base.replace(/\/?$/, "") + "/api/v1";
 };
 
 // Server-side function to get API URL with tenant context
 export const getServerApiBaseUrl = (host?: string) => {
-  if (host && host.includes('localhost')) {
-    // Extract hostname from host header (remove port if present)
-    const hostname = host.split(':')[0];
-    const port = '8080';
-    const apiUrl = `http://${hostname}:${port}/api/v1`;
-    console.log('🔍 [getServerApiBaseUrl] Generated server API URL:', apiUrl);
-    return apiUrl;
+  if (host && isDevHost(host)) {
+    const hostname = host.split(":")[0];
+    return `http://${hostname}:${DEV_API_PORT}/api/v1`;
   }
-  
-  const fallbackUrl = process.env.API_BASE_URL || "http://127.0.0.1:8080/api/v1";
-  console.log('🔍 [getServerApiBaseUrl] Server-side fallback URL:', fallbackUrl);
-  return fallbackUrl;
+  const base =
+    process.env.API_BASE_URL || `http://127.0.0.1:${DEV_API_PORT}`;
+  return base.endsWith("/api/v1") ? base : base.replace(/\/?$/, "") + "/api/v1";
 };
 
-export const apiBaseUrl = process.env.API_BASE_URL || "http://127.0.0.1:8080/api/v1";
+const _apiBase =
+  process.env.API_BASE_URL || `http://127.0.0.1:${DEV_API_PORT}`;
+export const apiBaseUrl = _apiBase.endsWith("/api/v1")
+  ? _apiBase
+  : _apiBase.replace(/\/?$/, "") + "/api/v1";
 
 export const getAuthHeaders = async (options?: { contentType?: boolean }) => {
   const session = await auth();

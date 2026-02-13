@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
+import { getSubdomain } from '@/src/utils/subdomain';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -46,23 +47,18 @@ export default function LandingPage() {
     password: ''
   });
 
-  // Detect if we're on a tenant subdomain
+  // Detect if we're on a tenant subdomain (two-level: e.g. tenant1.valnarq.ananracloude.com)
   useEffect(() => {
-    const hostname = window.location.hostname;
-    if (hostname.includes('.vulneralq.anantacloud.com') && hostname !== 'vulneralq.anantacloud.com') {
-      // Extract subdomain from company2.localhost
-      const subdomain = hostname.split('.')[0];
+    const subdomain = getSubdomain();
+    if (subdomain) {
       setIsTenantSubdomain(true);
       setTenantName(subdomain);
-      
-      // Only redirect to sign-in if user is not authenticated
+
       if (status === 'unauthenticated') {
         window.location.href = '/sign-in';
       } else if (status === 'authenticated') {
-        // If authenticated, redirect to overview or dashboard
         window.location.href = '/overview';
       }
-      // If status is 'loading', wait for authentication check to complete
     }
   }, [status]);
 
