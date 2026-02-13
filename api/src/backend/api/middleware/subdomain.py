@@ -13,16 +13,23 @@ class SubdomainMiddleware(MiddlewareMixin):
     Must run BEFORE authentication middleware
     """
     
-    # Paths that don't require tenant context
+    # Paths that don't require tenant context (include /v1/... when proxy strips /api)
     EXEMPT_PATHS = [
         '/admin/',
         '/api/v1/tenant/register',
         '/api/v1/tenant/login',
         '/api/v1/tenant/list',
-        '/api/v1/tokens',  # Add tokens endpoint for authentication
-        '/api/v1/users/me',  # Add users/me endpoint for user info
-        '/api/v1/tenant/validate-invite',  # Invite validation - tenant from token, not subdomain
-        '/api/v1/tenant/accept-invite',  # Accept invite - tenant from token, not subdomain
+        '/api/v1/tenant/public-info',
+        '/api/v1/tokens',
+        '/api/v1/users/me',
+        '/api/v1/tenant/validate-invite',
+        '/api/v1/tenant/accept-invite',
+        '/v1/tenant/register',
+        '/v1/tenant/login',
+        '/v1/tenant/list',
+        '/v1/tenant/public-info',
+        '/v1/tenant/validate-invite',
+        '/v1/tenant/accept-invite',
         '/health',
         '/static/',
         '/media/',
@@ -63,39 +70,54 @@ class SubdomainMiddleware(MiddlewareMixin):
         return any(path.startswith(exempt) for exempt in self.EXEMPT_PATHS)
     
     def _get_tenant_from_request(self, request):
-        """Extract tenant from subdomain or header"""
-        # Priority 1: Subdomain
-        host = request.get_host().split(':')[0]  # Remove port
-        
-        if '.' in host and not host.startswith('www'):
-            subdomain = host.split('.')[0].lower()
-            
-            # Skip localhost, IP addresses
-            if subdomain not in ['localhost', 'www', 'api', '127'] and not subdomain.replace('.', '').isdigit():
-                try:
-                    tenant = Tenant.objects.get(
-                        subdomain=subdomain,
-                        is_active=True
-                    )
-                    logger.debug(f"Found tenant by subdomain: {subdomain}")
-                    return tenant
-                except Tenant.DoesNotExist:
-                    logger.warning(f"Tenant not found for subdomain: {subdomain}")
-                except Tenant.MultipleObjectsReturned:
-                    logger.error(f"Multiple tenants found for subdomain: {subdomain}")
-                    # This shouldn't happen with unique constraint!
-        
-        # Priority 2: Custom header (for API calls)
+        """Extract tenant from subdomain or header. Uses two-level subdomain rule:
+        - Production (e.g. vulneralq.anantacloud.com): 3 parts = app domain, no tenant.
+        - Production (e.g. tenant1.vulneralq.anantacloud.com): 4+ parts = first part is tenant.
+        - Localhost: company1.localhost = tenant company1.
+        """
+        # Priority 1: X-Tenant-Subdomain header
         tenant_header = request.headers.get('X-Tenant-Subdomain')
         if tenant_header:
             try:
                 tenant = Tenant.objects.get(
-                    subdomain=tenant_header.lower(),
+                    subdomain=tenant_header.lower().strip(),
                     is_active=True
                 )
                 logger.debug(f"Found tenant by header: {tenant_header}")
                 return tenant
             except Tenant.DoesNotExist:
                 logger.warning(f"Tenant not found for header: {tenant_header}")
-        
+            except Tenant.MultipleObjectsReturned:
+                logger.error(f"Multiple tenants found for header: {tenant_header}")
+                return None
+
+        # Priority 2: Subdomain with two-level rule
+        host = request.get_host().split(':')[0].strip().lower()
+        parts = host.split('.')
+
+        # Localhost / dev
+        if host == 'localhost' or host == '127.0.0.1' or '.localhost' in host or '.127.0.0.1' in host:
+            if len(parts) >= 2 and parts[0] not in ('www', 'api', '127'):
+                subdomain = parts[0]
+                try:
+                    return Tenant.objects.get(subdomain=subdomain, is_active=True)
+                except Tenant.DoesNotExist:
+                    pass
+                except Tenant.MultipleObjectsReturned:
+                    logger.error(f"Multiple tenants found for subdomain: {subdomain}")
+                    return None
+            return None
+
+        # Production: only 4+ parts = tenant subdomain (e.g. tenant1.vulneralq.anantacloud.com)
+        # 3 parts (vulneralq.anantacloud.com) = app domain, not a tenant
+        if len(parts) >= 4 and parts[0] not in ('www', 'api', 'admin', 'app', 'dashboard'):
+            subdomain = parts[0]
+            try:
+                return Tenant.objects.get(subdomain=subdomain, is_active=True)
+            except Tenant.DoesNotExist:
+                logger.warning(f"Tenant not found for subdomain: {subdomain}")
+            except Tenant.MultipleObjectsReturned:
+                logger.error(f"Multiple tenants found for subdomain: {subdomain}")
+                return None
+
         return None
